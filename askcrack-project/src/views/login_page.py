@@ -4,111 +4,138 @@ from config import Config
 
 class LoginPage(TemplatePage):
     def __init__(self, page: ft.Page):
-        # Call parent constructor to configure page
         super().__init__(page)
 
-    def build(self):
-        # --- Title ---
-        title = ft.Text(
-            value=Config.APP_TITLE,
-            size=48,
-            weight=ft.FontWeight.BOLD,
-            text_align=ft.TextAlign.CENTER,
+    def build(self) -> ft.View:
+        # Back button
+        self.back_button = ft.IconButton(
+            icon=ft.Icons.ARROW_BACK,
+            tooltip="Back",
+            on_click=lambda e: self.page.go("/"),  # go back to WelcomePage,
         )
 
-        subtitle = ft.Text(
-            value="A crack detection system for mobile",
-            size=14,
-            opacity=0.7,
-            text_align=ft.TextAlign.CENTER,
-        )
-
-        # --- Inputs ---
-        username_input = ft.TextField(
-            label="Username",
-            hint_text="Enter your username or email",
+        # Inputs
+        self.email_input = ft.TextField(
+            label="Email",
+            hint_text="Enter your email",
+            keyboard_type=ft.KeyboardType.EMAIL,
+            border_color=ft.Colors.BLUE_400,
             prefix_icon=ft.Icons.PERSON,
-            autofocus=True,
-            width=450,
+            width=self.dynamic_width(),
+            border_radius=ft.border_radius.all(10)
         )
 
-        password_input = ft.TextField(
+        self.password_input = ft.TextField(
             label="Password",
             hint_text="Enter your password",
+            border_color=ft.Colors.BLUE_400,
             prefix_icon=ft.Icons.LOCK,
             password=True,
             can_reveal_password=True,
-            width=450,
+            width=self.dynamic_width(),
+            border_radius=ft.border_radius.all(10)
         )
 
-        forgot_button = ft.TextButton(
-            "Forgot Password?",
-            style=ft.ButtonStyle(color=ft.Colors.BLUE),
+        # Forgot password button
+        self.forgot_button = ft.GestureDetector(
+            content=ft.Text(
+                "Forgot your Password?",
+                text_align="center"
+            ),
+            on_tap=lambda _: print('hello world')
         )
 
-        login_button = ft.ElevatedButton(
-            text="Login",
+        # Login button
+        self.login_button = ft.FilledButton(
+            "Login",
             icon=ft.Icons.LOGIN,
-            width=450,
-            height=48,
+            width=self.dynamic_width(),
+            height=50,
             style=ft.ButtonStyle(text_style=ft.TextStyle(size=16))
         )
 
+        # OR Divider
         or_divider = ft.Row(
             controls=[
                 ft.Container(content=ft.Divider(), expand=True),
-                ft.Text("OR", opacity=0.7),
+                ft.Text("Or", opacity=0.7),
                 ft.Container(content=ft.Divider(), expand=True)
-            ]
+            ],
+            width=self.dynamic_width(),
+            alignment=ft.MainAxisAlignment.CENTER
         )
 
-        google_login = ft.OutlinedButton(
+        # Google login
+        self.google_login = ft.FilledTonalButton(
             content=ft.Row(
                 controls=[
                     ft.Image(src="Google_logo.png", width=20, height=20),
-                    ft.Text("Sign in with Google", size=16)
+                    ft.Text("Sign in with Google", size=16, weight=ft.FontWeight.NORMAL)
                 ],
-                alignment=ft.MainAxisAlignment.CENTER,
+                alignment=ft.MainAxisAlignment.CENTER
             ),
-            width=450,
-            height=48,
+            width=self.dynamic_width(),
+            height=50
         )
 
-        register_row = ft.Row(
-            controls=[
-                ft.Text("Don't have an account?"),
-                ft.TextButton(
-                    "Register Here",
-                    on_click=lambda e: self.page.go("/register")
-                )
-            ],
-            alignment=ft.MainAxisAlignment.CENTER,
+        main_container = ft.Container(
+            content=ft.ListView(
+                expand=True,
+                padding=ft.padding.all(20),
+                spacing=15,
+                auto_scroll=False,
+                controls=[
+                    ft.Column(
+                        [
+                            ft.Text("Let's Sign You In", size=28, weight="bold"),
+                            ft.Text("Welcome back, you've been missed!", size=14)
+                        ],
+                        spacing=0,
+                        horizontal_alignment=ft.CrossAxisAlignment.CENTER
+                    ),
+                    ft.Divider(opacity=0),
+                    self.email_input,
+                    self.password_input,
+                    # ft.Divider(height=1, opacity=0),
+                    self.forgot_button,
+                    ft.Divider(height=1, opacity=0),
+                    self.login_button,
+                    or_divider,
+                    self.google_login
+                ],
+            ),
+            padding=ft.padding.only(top=30, bottom=30),
+            alignment=ft.alignment.center,
+            border_radius=ft.border_radius.all(20),
+            bgcolor=ft.Colors.BLACK87,
+            
         )
 
-        # --- Use Template Layout ---
+        # Combine all content
         content = [
             ft.Column(
-                horizontal_alignment=ft.CrossAxisAlignment.CENTER,
-                spacing=20,
+                expand=True,
                 controls=[
                     ft.Container(
-                        content=ft.Column(
-                            [title, subtitle],
-                            horizontal_alignment=ft.CrossAxisAlignment.CENTER,
-                            spacing=5,
+                        ft.Row(
+                            [
+                                self.back_button
+                            ],
                         ),
-                        padding=ft.padding.only(top=80),
+                        padding=ft.padding.only(top=10)
                     ),
-                    username_input,
-                    password_input,
-                    ft.Row([forgot_button], alignment=ft.MainAxisAlignment.END, width=450),
-                    login_button,
-                    or_divider,
-                    google_login,
+                    ft.Container(
+                        ft.Text("Cracktify", size=36, weight="bold"),
+                        alignment=ft.alignment.top_center
+                    ),
+                    main_container
                 ],
-            ),
-            ft.Container(content=register_row, padding=20)
+                alignment=ft.MainAxisAlignment.SPACE_BETWEEN
+            )
         ]
 
-        # Return layout using the TemplatePage wrapper
-        return self.layout("Login", content)
+        # Wrap with TemplatePage layout
+        return self.layout(content)
+
+
+

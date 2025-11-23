@@ -1,13 +1,18 @@
 import flet as ft
-from views import WelcomePage, LoginPage, RegisterPage
-
+from views import (
+    WelcomePage,
+    LoginPage,
+    RegisterPage,
+    OTPPage,
+    MainPage
+)
 
 def main(page: ft.Page):
-    page.title = "Flet App with Views"
+    page.title = "Cracktify"
     page.window_width = 400
     page.window_height = 700
 
-    # --- Routing ---
+    # Routing
     def route_change(route):
         page.views.clear()
 
@@ -20,12 +25,18 @@ def main(page: ft.Page):
         elif page.route == "/register":
             page.views.append(RegisterPage(page).build())
 
+        elif page.route == "/otp":
+            page.views.append(OTPPage(page).build())
+
+        elif page.route == "/home":
+            page.views.append(MainPage(page).build())
+
         else:
             page.views.append(ft.View("/", controls=[ft.Text("Page not found")]))
         
         page.update()
 
-    # --- Handle back button / view pop ---
+    # Handle back button / view pop
     def view_pop(view):
         if len(page.views) > 1:
             page.views.pop()
@@ -39,5 +50,5 @@ def main(page: ft.Page):
     # Go to initial route
     page.go(page.route)
 
-
-ft.app(target=main)
+if __name__ == "__main__":
+    ft.app(target=main)

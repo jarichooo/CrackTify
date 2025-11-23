@@ -10,28 +10,34 @@ class TemplatePage:
         """Page/window configuration"""
         self.page.title = Config.APP_TITLE
         self.page.theme_mode = ft.ThemeMode.SYSTEM
-        self.page.padding = 100
-        self.page.spacing = 30
+        self.page.padding = 0
+        self.page.spacing = 0
 
-        # Window properties
-        self.page.window.min_width = Config.MIN_WIDTH
-        self.page.window.max_width = Config.MAX_WIDTH
-        self.page.window.height = Config.MAX_HEIGHT
-        self.page.window.width = Config.MAX_WIDTH
-        self.page.window.min_height = Config.MIN_HEIGHT
-        self.page.window.max_height = Config.MAX_HEIGHT
+        self.page.window.width = Config.APP_WIDTH
+        self.page.window.height = Config.APP_HEIGHT
 
-        self.page.vertical_alignment = ft.CrossAxisAlignment.CENTER
+        self.page.vertical_alignment = ft.CrossAxisAlignment.START
         self.page.horizontal_alignment = ft.MainAxisAlignment.CENTER
-        self.page.window.alignment = ft.alignment.center
 
-    def layout(self, title: str, content: list[ft.Control]):
-        """Base layout wrapper for all pages."""
+    def dynamic_width(self, width_ratio=0.9):
+        """Return width based on page size for responsive controls"""
+        return self.page.window.width * width_ratio
+    
+    def layout(
+        self,
+        content: list[ft.Control],
+        drawer: ft.NavigationDrawer = None,
+        appbar: ft.AppBar = None,
+        floating_action_button: ft.FloatingActionButton = None
+
+    ) -> ft.View:
+        """Return a View with content directly."""
+
         return ft.View(
+            padding=ft.padding.only(top=30, bottom=30),
             route=self.page.route,
-            controls=[
-                ft.Text(title, size=28, weight="bold"),
-                ft.Divider(),
-                ft.Column(content, spacing=15)
-            ]
+            appbar=appbar,
+            drawer=drawer,
+            controls=content,
+            floating_action_button=floating_action_button
         )

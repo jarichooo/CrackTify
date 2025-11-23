@@ -1,10 +1,12 @@
-'''Configuration management for the app'''
+"""Configuration management for the app"""
+import os
+from dotenv import load_dotenv
+
+load_dotenv()
 
 class Config:
-    # App Configuration
+    """Application configuration"""
     APP_TITLE = 'AskCrack'
-    MIN_WIDTH = 240
-    MIN_HEIGHT = 320
 
-    MAX_WIDTH = 540
-    MAX_HEIGHT = 960
+    APP_WIDTH = 540
+    APP_HEIGHT = 960

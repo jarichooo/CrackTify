@@ -3,15 +3,55 @@ from .template import TemplatePage
 
 class WelcomePage(TemplatePage):
     def __init__(self, page: ft.Page):
-        super().__init__(page)  # configure page automatically
+        super().__init__(page)
 
-    def build(self) -> ft.View:
-        # --- Main content ---
+    def build(self):
+        """Build the welcome page UI"""
         content = [
-            ft.Text("Welcome!", size=30, weight="bold"),
-            ft.ElevatedButton("Login", on_click=lambda _: self.page.go("/login")),
-            ft.TextButton("Create an account", on_click=lambda _: self.page.go("/register")),
+            ft.Stack(
+                expand=True,  # fills the screen
+                controls=[
+                    # Centered title
+                    ft.Container(
+                        ft.Text("Cracktify", size=36, weight="bold"),
+                        alignment=ft.alignment.center
+                    ),
+
+                    # Buttons pinned to bottom
+                    ft.Container(
+                        ft.Column(
+                            controls=[
+                                ft.FilledButton(
+                                    "Create an account",
+                                    width=self.dynamic_width(),
+                                    height=50,
+                                    style=ft.ButtonStyle(text_style=ft.TextStyle(size=16)),
+                                    on_click=lambda _: self.page.go("/register")
+                                ),
+                                ft.FilledTonalButton(
+                                    "Login",
+                                    width=self.dynamic_width(),
+                                    height=50,
+                                    style=ft.ButtonStyle(text_style=ft.TextStyle(size=16)),
+                                    on_click=lambda _: self.page.go("/login")
+                                ),
+                                ft.Text(
+                                    "By continuing, you agree to our Terms of Service and Privacy Policy.",
+                                    size=10,
+                                )
+                            ],
+                            scroll=ft.ScrollMode.AUTO,
+                            spacing=10,
+                            horizontal_alignment=ft.CrossAxisAlignment.CENTER,
+                        ),
+                        padding=ft.padding.only(top=20, bottom=30),
+                        left=20,
+                        right=20,
+                        bottom=10
+                    ),
+                ],
+
+            )
         ]
 
-        # --- Wrap with template layout ---
-        return self.layout("Welcome", content)
+        return self.layout(content)
