@@ -7,11 +7,20 @@ class LoginPage(TemplatePage):
         super().__init__(page)
 
     def build(self) -> ft.View:
+        """Build the login page UI"""
         # Back button
-        self.back_button = ft.IconButton(
-            icon=ft.Icons.ARROW_BACK,
-            tooltip="Back",
-            on_click=lambda e: self.page.go("/"),  # go back to WelcomePage,
+        self.appbar = ft.AppBar(
+            leading=ft.IconButton(
+                icon=ft.Icons.ARROW_BACK,
+                tooltip="Back",
+                on_click=lambda e: self.page.go("/"),
+            ),
+            title=ft.Container(
+                content=ft.Text("Login", size=18, weight="bold"),
+                padding=ft.padding.symmetric(horizontal=10)
+            ),
+            center_title=True,
+            force_material_transparency=True
         )
 
         # Inputs
@@ -19,7 +28,7 @@ class LoginPage(TemplatePage):
             label="Email",
             hint_text="Enter your email",
             keyboard_type=ft.KeyboardType.EMAIL,
-            border_color=ft.Colors.BLUE_400,
+            border_color=ft.Colors.BLUE_ACCENT_100,
             prefix_icon=ft.Icons.PERSON,
             width=self.dynamic_width(),
             border_radius=ft.border_radius.all(10)
@@ -28,7 +37,7 @@ class LoginPage(TemplatePage):
         self.password_input = ft.TextField(
             label="Password",
             hint_text="Enter your password",
-            border_color=ft.Colors.BLUE_400,
+            border_color=ft.Colors.BLUE_ACCENT_100,
             prefix_icon=ft.Icons.LOCK,
             password=True,
             can_reveal_password=True,
@@ -106,8 +115,8 @@ class LoginPage(TemplatePage):
             ),
             padding=ft.padding.only(top=30, bottom=30),
             alignment=ft.alignment.center,
-            border_radius=ft.border_radius.all(20),
-            bgcolor=ft.Colors.BLACK87,
+            border_radius=30,
+            bgcolor=ft.Colors.BLUE_50 if self.is_light else ft.Colors.BLACK87,
             
         )
 
@@ -116,14 +125,6 @@ class LoginPage(TemplatePage):
             ft.Column(
                 expand=True,
                 controls=[
-                    ft.Container(
-                        ft.Row(
-                            [
-                                self.back_button
-                            ],
-                        ),
-                        padding=ft.padding.only(top=10)
-                    ),
                     ft.Container(
                         ft.Text("Cracktify", size=36, weight="bold"),
                         alignment=ft.alignment.top_center
@@ -135,7 +136,7 @@ class LoginPage(TemplatePage):
         ]
 
         # Wrap with TemplatePage layout
-        return self.layout(content)
+        return self.layout(content, appbar=self.appbar)
 
 
 
