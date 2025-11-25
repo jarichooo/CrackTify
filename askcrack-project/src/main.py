@@ -8,12 +8,15 @@ from views import (
 )
 
 def main(page: ft.Page):
+    """Main function to run the app"""
     page.title = "Cracktify"
+    page.platform = ft.PagePlatform.ANDROID
     page.window_width = 400
     page.window_height = 700
 
     # Routing
     def route_change(route):
+        """Handle route changes"""
         page.views.clear()
 
         if page.route == "/" or page.route == "":
