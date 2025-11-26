@@ -1,5 +1,15 @@
 import flet as ft
+
 from .template import TemplatePage
+from widgets.divider import or_divider
+from widgets.inputs import AppTextField
+from widgets.buttons import (
+    BackButton,
+    PrimaryButton,
+    GoogleButton,
+    CustomTextButton
+)
+from config import Config
 
 class RegisterPage(TemplatePage):
     def __init__(self, page: ft.Page):
@@ -10,10 +20,8 @@ class RegisterPage(TemplatePage):
 
         # Back button and header
         self.appbar = ft.AppBar(
-            leading=ft.IconButton(
-                icon=ft.Icons.ARROW_BACK,
-                tooltip="Back",
-                on_click=lambda e: self.page.go("/"),
+            leading=BackButton(
+                on_click=lambda e: self.page.go("/")
             ),
             title=ft.Container(
                 content=ft.Text("Register", size=18, weight="bold"),
@@ -24,73 +32,35 @@ class RegisterPage(TemplatePage):
         )
 
         # Inputs
-        self.full_name = ft.TextField(
+        self.full_name = AppTextField(
             label="Full Name",
-            # prefix_icon=ft.Icons.PERSON,
             hint_text="Enter your full name",
-            border_color=ft.Colors.BLUE_ACCENT_100,
-            width=self.dynamic_width(),
-            border_radius=ft.border_radius.all(10)
         )
 
-        self.email_input = ft.TextField(
+        self.email_input = AppTextField(
             label="Email",
             hint_text="Enter your email",
-            # prefix_icon=ft.Icons.EMAIL,
-            border_color=ft.Colors.BLUE_ACCENT_100,
-            width=self.dynamic_width(),
-            border_radius=ft.border_radius.all(10)
         )
 
-        self.username_input = ft.TextField(
-            label="Username",
-            hint_text="Choose a username",
-            # prefix_icon=ft.Icons.PERSON,
-            border_color=ft.Colors.BLUE_ACCENT_100,
-            width=self.dynamic_width(),
-            border_radius=ft.border_radius.all(10)
-        )
-
-        self.password_input = ft.TextField(
+        self.password_input = AppTextField(
             label="Password",
             hint_text="Enter your password",
-            border_color=ft.Colors.BLUE_ACCENT_100,
-            # prefix_icon=ft.Icons.LOCK,
             password=True,
             can_reveal_password=True,
-            width=self.dynamic_width(),
-            border_radius=ft.border_radius.all(10)
         )
 
-        self.confirm_password_input = ft.TextField(
+        self.confirm_password_input = AppTextField(
             label="Confirm Password",
             hint_text="Re-enter your password",
-            border_color=ft.Colors.BLUE_ACCENT_100,
-            # prefix_icon=ft.Icons.LOCK,
             password=True,
             can_reveal_password=True,
-            width=self.dynamic_width(),
-            border_radius=ft.border_radius.all(10)
         )
 
         # Register button
-        self.continue_button = ft.FilledButton(
-            "Continue",
-            width=self.dynamic_width(),
-            height=50,
-            style=ft.ButtonStyle(text_style=ft.TextStyle(size=16)),
-            on_click=self.on_continue
-        )
-
-        # OR Divider
-        or_divider = ft.Row(
-            controls=[
-                ft.Container(content=ft.Divider(), expand=True),
-                ft.Text("Or", opacity=0.7),
-                ft.Container(content=ft.Divider(), expand=True),
-            ],
-            width=self.dynamic_width(),
-            alignment=ft.MainAxisAlignment.CENTER
+        self.continue_button = PrimaryButton(
+            text="Continue",
+            icon=ft.Icons.ARROW_FORWARD,
+            on_click=self.on_continue,
         )
 
         self.agree_checkbox = ft.Checkbox(
@@ -100,20 +70,13 @@ class RegisterPage(TemplatePage):
         )
 
         # Google Register Button
-        self.google_register = ft.FilledTonalButton(
-            content=ft.Row(
-                controls=[
-                    ft.Image(src="Google_logo.png", width=20, height=20),
-                    ft.Text("Sign up with Google", size=16)
-                ],
-                alignment=ft.MainAxisAlignment.CENTER
-            ),
-            width=self.dynamic_width(),
-            height=50
+        self.google_register = GoogleButton(
+            text="Sign up with Google",
+            on_click=lambda e: print("Google register clicked")  # Placeholder action
         )
 
         # Main content container
-        self.main_container = ft.Container(
+        main_container = ft.Container(
             content= ft.ListView(
                 # expand=True,
                 padding=ft.padding.all(20),
@@ -131,7 +94,7 @@ class RegisterPage(TemplatePage):
                     ft.Divider(height=1, opacity=0),
 
                     self.google_register,
-                    or_divider,
+                    or_divider(),
 
                     self.full_name,
                     self.email_input,
@@ -149,13 +112,12 @@ class RegisterPage(TemplatePage):
             expand=True
         )
 
-
         # Page layout
         content = [
             ft.Column(
                 expand=True,
                 controls=[
-                    self.main_container,   # starts immediately below back button
+                    main_container,   # starts immediately below back button
                 ]
             )
         ]
@@ -173,11 +135,10 @@ class OTPPage(TemplatePage):
     def build(self) -> ft.View:
         email_address = "sample_email@gmail.com"
 
+        # Back button and header
         self.appbar = ft.AppBar(
-            leading=ft.IconButton(
-                icon=ft.Icons.ARROW_BACK,
-                tooltip="Back",
-                on_click=lambda e: self.page.go("/register"),
+            leading=BackButton(
+                on_click=lambda e: self.page.go("/register")
             ),
             title=ft.Container(
                 content=ft.Text("Enter OTP", size=18, weight="bold"),
@@ -187,29 +148,27 @@ class OTPPage(TemplatePage):
             force_material_transparency=True
         )
 
-        self.otp_input = ft.TextField(
+        # OTP input field
+        self.otp_input = AppTextField(
             label="One-Time PIN",
             hint_text="XXXXXX",
             keyboard_type=ft.KeyboardType.NUMBER,
             max_length=6,
-            border_color=ft.Colors.BLUE_ACCENT_100,
-            width=self.dynamic_width(),
-            border_radius=ft.border_radius.all(10)
         )
 
-        self.submit_button = ft.FilledButton(
-            "Submit",
-            width=self.dynamic_width(),
-            height=50,
-            style=ft.ButtonStyle(text_style=ft.TextStyle(size=16)),
-            on_click=self.on_submit
+        # Submit button
+        self.submit_button = PrimaryButton(
+            text="Submit",
+            icon=ft.Icons.CHECK,
+            on_click=self.on_submit,
         )
 
+        # Resend OTP row
         self.resend_otp = ft.Row(
             controls=[
                 ft.Text("Didn't receive the code?", size=14),
-                ft.GestureDetector(
-                    content=ft.Text(" Resend", size=14, color=ft.Colors.BLUE_ACCENT_100, weight="bold"),
+                CustomTextButton(
+                    text="Resend OTP",
                     on_tap=lambda e: print("Resend OTP clicked")
                 )
             ],
@@ -217,7 +176,7 @@ class OTPPage(TemplatePage):
             alignment=ft.MainAxisAlignment.CENTER
         )
 
-        self.main_container = ft.Container(
+        main_container = ft.Container(
             content= ft.ListView(
                 expand=True,
                 padding=20,
@@ -250,7 +209,7 @@ class OTPPage(TemplatePage):
             ft.Column(
                 expand=True,
                 controls=[
-                    self.main_container
+                    main_container
                 ]
             )
         ]

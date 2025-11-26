@@ -1,5 +1,7 @@
 import flet as ft
+
 from .template import TemplatePage
+from widgets.buttons import PrimaryButton, SecondaryButton
 
 class WelcomePage(TemplatePage):
     def __init__(self, page: ft.Page):
@@ -21,18 +23,14 @@ class WelcomePage(TemplatePage):
                     ft.Container(
                         ft.Column(
                             controls=[
-                                ft.FilledButton(
-                                    "Create an account",
+                                PrimaryButton(
+                                    text="Create an account",
                                     width=self.dynamic_width(),
-                                    height=50,
-                                    style=ft.ButtonStyle(text_style=ft.TextStyle(size=16)),
                                     on_click=lambda _: self.page.go("/register")
                                 ),
-                                ft.FilledTonalButton(
-                                    "Login",
+                                SecondaryButton(
+                                    text="Login",
                                     width=self.dynamic_width(),
-                                    height=50,
-                                    style=ft.ButtonStyle(text_style=ft.TextStyle(size=16)),
                                     on_click=lambda _: self.page.go("/login")
                                 ),
                                 ft.Text(

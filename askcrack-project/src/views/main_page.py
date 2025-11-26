@@ -54,7 +54,6 @@ class MainPage(TemplatePage):
 
         # App Bar
         self.appbar = ft.AppBar(
-            # automatically_imply_leading=False,
             toolbar_height=60,
             leading=ft.IconButton(
                 icon=ft.Icons.MENU,
@@ -76,9 +75,6 @@ class MainPage(TemplatePage):
             ]
         )
         
-        # Animation for FABs
-        self.anim = ft.Animation(300, ft.AnimationCurve.EASE_IN_OUT_QUINT)
-
         # Floating action buttons for detection
         self.action_buttons = ft.Column(
             [
@@ -107,11 +103,14 @@ class MainPage(TemplatePage):
 
         )
 
+        # Animation for FABs
+        self.anim = ft.Animation(300, ft.AnimationCurve.EASE_IN_OUT_QUINT)
+
         # Main FAB
         self.detect_button = ft.FloatingActionButton(
             icon=ft.Icons.ADD,  
             text="New Detection",
-            mini=False,
+            mini=True,
             animate_size=self.anim,
             on_click=self.open_detect_menu,
         )

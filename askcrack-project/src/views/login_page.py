@@ -1,5 +1,14 @@
 import flet as ft
+
 from .template import TemplatePage
+from widgets.divider import or_divider
+from widgets.inputs import AppTextField
+from widgets.buttons import (
+    BackButton,
+    PrimaryButton,
+    GoogleButton,
+    CustomTextButton
+)
 from config import Config
 
 class LoginPage(TemplatePage):
@@ -10,10 +19,8 @@ class LoginPage(TemplatePage):
         """Build the login page UI"""
         # Back button
         self.appbar = ft.AppBar(
-            leading=ft.IconButton(
-                icon=ft.Icons.ARROW_BACK,
-                tooltip="Back",
-                on_click=lambda e: self.page.go("/"),
+            leading=BackButton(
+                on_click=lambda e: self.page.go("/")
             ),
             title=ft.Container(
                 content=ft.Text("Login", size=18, weight="bold"),
@@ -24,67 +31,37 @@ class LoginPage(TemplatePage):
         )
 
         # Inputs
-        self.email_input = ft.TextField(
+        self.email_input = AppTextField(
             label="Email",
             hint_text="Enter your email",
-            keyboard_type=ft.KeyboardType.EMAIL,
-            border_color=ft.Colors.BLUE_ACCENT_100,
             prefix_icon=ft.Icons.PERSON,
-            width=self.dynamic_width(),
-            border_radius=ft.border_radius.all(10)
+            keyboard_type=ft.KeyboardType.EMAIL,
         )
 
-        self.password_input = ft.TextField(
+        self.password_input = AppTextField(
             label="Password",
             hint_text="Enter your password",
-            border_color=ft.Colors.BLUE_ACCENT_100,
             prefix_icon=ft.Icons.LOCK,
             password=True,
             can_reveal_password=True,
-            width=self.dynamic_width(),
-            border_radius=ft.border_radius.all(10)
         )
 
         # Forgot password button
-        self.forgot_button = ft.GestureDetector(
-            content=ft.Text(
-                "Forgot your Password?",
-                text_align="center"
-            ),
-            on_tap=lambda _: print('hello world')
+        self.forgot_button = CustomTextButton(
+            text="Forgot your Password?",
+            on_tap=lambda e: print("Forgot Password clicked")
         )
 
         # Login button
-        self.login_button = ft.FilledButton(
-            "Login",
+        self.login_button = PrimaryButton(
+            text="Login",
             icon=ft.Icons.LOGIN,
-            width=self.dynamic_width(),
-            height=50,
-            style=ft.ButtonStyle(text_style=ft.TextStyle(size=16))
-        )
-
-        # OR Divider
-        or_divider = ft.Row(
-            controls=[
-                ft.Container(content=ft.Divider(), expand=True),
-                ft.Text("Or", opacity=0.7),
-                ft.Container(content=ft.Divider(), expand=True)
-            ],
-            width=self.dynamic_width(),
-            alignment=ft.MainAxisAlignment.CENTER
+            on_click=lambda e: print("Login clicked"),
         )
 
         # Google login
-        self.google_login = ft.FilledTonalButton(
-            content=ft.Row(
-                controls=[
-                    ft.Image(src="Google_logo.png", width=20, height=20),
-                    ft.Text("Sign in with Google", size=16, weight=ft.FontWeight.NORMAL)
-                ],
-                alignment=ft.MainAxisAlignment.CENTER
-            ),
-            width=self.dynamic_width(),
-            height=50
+        self.google_login = GoogleButton(
+            on_click=lambda e: print("Google login clicked")  # Placeholder action
         )
 
         main_container = ft.Container(
@@ -109,7 +86,7 @@ class LoginPage(TemplatePage):
                     self.forgot_button,
                     ft.Divider(height=1, opacity=0),
                     self.login_button,
-                    or_divider,
+                    or_divider(),
                     self.google_login
                 ],
             ),
@@ -137,6 +114,3 @@ class LoginPage(TemplatePage):
 
         # Wrap with TemplatePage layout
         return self.layout(content, appbar=self.appbar)
-
-
-
