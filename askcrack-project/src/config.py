@@ -10,3 +10,6 @@ class Config:
 
     APP_WIDTH = 540
     APP_HEIGHT = 960
+
+    API_BASE_URL = os.getenv("API_BASE_URL")
+    DB_PATH = os.path.join(os.path.dirname(__file__), "..", "storage", "data", "app_database.db")
