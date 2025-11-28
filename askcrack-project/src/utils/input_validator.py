@@ -1,6 +1,12 @@
 import re
 
-def validate_registration(full_name: str, email: str, password: str, confirm_password: str) -> tuple[bool, dict]:
+def validate_registration(
+        first_name: str,
+        last_name: str,
+        email: str,
+        password: str,
+        confirm_password: str
+    ) -> tuple[bool, dict]:
     """
     Validates registration fields.
     Returns:
@@ -10,9 +16,14 @@ def validate_registration(full_name: str, email: str, password: str, confirm_pas
     errors = {}
     is_valid = True
 
-    # Validate full name
-    if not full_name.strip():
-        errors["full_name"] = "Please enter your full name."
+    # Validate first name
+    if not first_name.strip():
+        errors["first_name"] = "Please enter your first name."
+        is_valid = False
+
+    # Validate last name
+    if not last_name.strip():
+        errors["last_name"] = "Please enter your last name."
         is_valid = False
 
     # Validate email

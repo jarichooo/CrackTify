@@ -3,8 +3,8 @@ from config import Config
 
 api_url = Config.API_BASE_URL
 
-async def send_otp(email: str, fullname: str):
-    data = {"email": email, "fullname": fullname}
+async def send_otp(email: str, name: str):
+    data = {"email": email, "name": name}
 
     async with httpx.AsyncClient(timeout=10) as client:
         try:
