@@ -28,5 +28,3 @@ class AppTextField(ft.TextField):
     def clear_error(self):
         self.error_text = None
         self.page.update()
-
-ft.TextField()

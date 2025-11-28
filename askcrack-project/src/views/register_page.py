@@ -19,7 +19,8 @@ from config import Config
 class RegisterPage(TemplatePage):
     def __init__(self, page: ft.Page):
         super().__init__(page)
-        self.saved_full_name = self.page.client_storage.get("register_full_name") or None
+        self.saved_first_name = self.page.client_storage.get("register_first_name") or None
+        self.saved_last_name = self.page.client_storage.get("register_last_name") or None
         self.saved_email = self.page.client_storage.get("register_email") or None
         self.saved_password = self.page.client_storage.get("register_password") or None
         self.saved_confirm_pw = self.page.client_storage.get("register_confirm_pw") or None
@@ -42,11 +43,18 @@ class RegisterPage(TemplatePage):
         )
 
         # Inputs
-        self.full_name = AppTextField(
-            value=self.saved_full_name,
-            label="Full Name",
-            hint_text="Enter your full name",
-            on_change=lambda e: self.full_name.clear_error()
+        self.first_name = AppTextField(
+            label="First Name",
+            hint_text="Enter your first name",
+            expand=1,
+            on_change=lambda e: self.first_name.clear_error()
+        )
+
+        self.last_name = AppTextField(
+            label="Last Name",
+            hint_text="Enter your last name",
+            expand=1,
+            on_change=lambda e: self.last_name.clear_error()
         )
 
         self.email_input = AppTextField(
@@ -116,7 +124,13 @@ class RegisterPage(TemplatePage):
                     self.google_register,
                     or_divider(),
 
-                    self.full_name,
+                    ft.Row(
+                        spacing=5,
+                        controls=[
+                            self.first_name,
+                            self.last_name
+                        ]
+                    ),
                     self.email_input,
                     self.password_input,
                     self.confirm_password_input,
@@ -146,23 +160,26 @@ class RegisterPage(TemplatePage):
 
     def on_continue(self, e):
         """Handle continue button click"""
-        full_name = self.full_name.value
+        first_name = self.first_name.value
+        last_name = self.last_name.value
         email = self.email_input.value
         password = self.password_input.value
         confirm_password = self.confirm_password_input.value
         agree_terms = self.agree_checkbox.value
 
         # Call the utils function
-        is_valid, errors = validate_registration(full_name, email, password, confirm_password)
+        is_valid, errors = validate_registration(first_name, last_name, email, password, confirm_password)
 
         # Update input error texts
-        self.full_name.error_text = errors.get("full_name")
+        self.first_name.error_text = errors.get("first_name")
+        self.last_name.error_text = errors.get("last_name")
         self.email_input.error_text = errors.get("email")
         self.password_input.error_text = errors.get("password")
         self.confirm_password_input.error_text = errors.get("confirm_password")
 
         # Refresh the inputs to show errors
-        self.full_name.update()
+        self.first_name.update()
+        self.last_name.update()
         self.email_input.update()
         self.password_input.update()
         self.confirm_password_input.update()
@@ -176,17 +193,18 @@ class RegisterPage(TemplatePage):
                 pass
 
             # Save the values temporarily in client storage
-            self.page.client_storage.set("register_full_name", full_name)
+            self.page.client_storage.set("register_first_name", first_name)
+            self.page.client_storage.set("register_last_name", last_name)
             self.page.client_storage.set("register_email", email)
             self.page.client_storage.set("register_password", password)
             self.page.client_storage.set("register_confirm_pw", confirm_password)
             self.page.client_storage.set("register_terms", agree_terms)
 
     async def send_otp_email(self):
-        full_name = self.full_name.value
+        first_name = self.first_name.value
         email = self.email_input.value
 
-        response = await send_otp(email, full_name)
+        response = await send_otp(email, first_name)
 
         if response.get("success"):
             print(response.get("message"))
@@ -316,6 +334,7 @@ class OTPPage(TemplatePage):
         email = self.email_address
         entered_otp = self.otp_input.value
 
+        self.show_loading()
         response = await verify_otp(email, entered_otp)
 
         if response.get("success"):
@@ -326,6 +345,8 @@ class OTPPage(TemplatePage):
         else:
             print(response.get("message"))
             self.page.open(error_dialog)
+
+        self.hide_loading()
 
 
     def on_resend(self, e):
