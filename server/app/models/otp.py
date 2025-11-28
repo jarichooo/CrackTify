@@ -1,6 +1,6 @@
-from sqlalchemy import Column, Integer, String, DateTime
 from datetime import datetime, timezone, timedelta
-from .base import Base
+from sqlalchemy import Column, Integer, String, DateTime
+from app.database.db import Base
 
 class OTP(Base):
     __tablename__ = "otps"

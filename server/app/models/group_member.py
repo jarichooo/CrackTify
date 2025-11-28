@@ -1,6 +1,6 @@
-from sqlalchemy import Column, Integer, ForeignKey, DateTime
 from datetime import datetime, timezone
-from .base import Base
+from sqlalchemy import Column, Integer, ForeignKey, DateTime
+from app.database.db import Base
 
 class GroupMember(Base):
     __tablename__ = "group_members"
