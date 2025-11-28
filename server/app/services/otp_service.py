@@ -7,7 +7,7 @@ from app.templates.otp_template import otp_email_template
 OTP_EXPIRATION_MINUTES = 5
 OTP_RESEND_COOLDOWN_SEC = 30
 
-def send_email_otp(email: str, fullname: str, db):
+def send_email_otp(email: str, name: str, db):
     now = datetime.now(timezone.utc)
 
     if not email:
@@ -35,7 +35,7 @@ def send_email_otp(email: str, fullname: str, db):
     db.commit()
 
     # Send Email
-    html = otp_email_template(fullname, otp_code)
+    html = otp_email_template(name, otp_code)
     send_email(email, "Your OTP Code", html)
 
     return {"success": True, "message": "OTP sent successfully"}

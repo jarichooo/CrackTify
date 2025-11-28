@@ -8,9 +8,9 @@ router = APIRouter()
 @router.post("/send-otp")
 def api_send_otp(data: dict = Body(...), db: Session = Depends(get_db)):
     email = data.get("email")
-    fullname = data.get("fullname")
+    name = data.get("name")
 
-    return send_email_otp(email, fullname, db)
+    return send_email_otp(email, name, db)
 
 @router.post("/verify-otp")
 def api_verify_otp(data: dict = Body(...), db: Session = Depends(get_db)):
