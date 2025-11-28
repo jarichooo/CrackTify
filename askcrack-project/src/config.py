@@ -6,7 +6,7 @@ load_dotenv()
 
 class Config:
     """Application configuration"""
-    APP_TITLE = 'AskCrack'
+    APP_TITLE = 'Cracktify'
 
     APP_WIDTH = 540
     APP_HEIGHT = 960

@@ -1,4 +1,5 @@
 import flet as ft
+import asyncio
 
 from .template import TemplatePage
 from widgets.buttons import (
@@ -11,6 +12,8 @@ from widgets.divider import or_divider
 from widgets.inputs import AppTextField
 from services.otp_service import send_otp, verify_otp
 from utils.input_validator import validate_registration
+
+from config import Config
 
 
 class RegisterPage(TemplatePage):
@@ -140,7 +143,7 @@ class RegisterPage(TemplatePage):
         ]
 
         return self.layout(content, appbar=self.appbar)
-    
+
     def on_continue(self, e):
         """Handle continue button click"""
         full_name = self.full_name.value
@@ -167,6 +170,7 @@ class RegisterPage(TemplatePage):
         # Check validation and terms agreement
         if is_valid and agree_terms:
             try:
+                self.show_loading()
                 self.page.run_task(self.send_otp_email)
             except Exception:
                 pass
@@ -189,6 +193,8 @@ class RegisterPage(TemplatePage):
             self.page.go("/otp")
         else:
             print(response.get("message"))
+
+        self.hide_loading()
         
 
 class OTPPage(TemplatePage):
