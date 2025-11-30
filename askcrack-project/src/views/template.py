@@ -4,8 +4,23 @@ from config import Config
 class TemplatePage:
     def __init__(self, page: ft.Page):
         self.page = page
-        self.configure_page()
         self.is_light = True if self.page.theme_mode == ft.ThemeMode.LIGHT else False
+        self.loading_overlay = ft.Container(
+            visible=False,
+            expand=True,
+            bgcolor=ft.Colors.with_opacity(0.6, ft.Colors.BLACK),
+            alignment=ft.alignment.center,
+            content=ft.Container(
+                width=120,
+                height=120,
+                # bgcolor=ft.Colors.WHITE,
+                border_radius=12,
+                alignment=ft.alignment.center,
+                content=ft.ProgressRing(),
+            ),
+        )
+
+        self.configure_page()
 
     def configure_page(self):
         """Page/window configuration"""
@@ -19,11 +34,21 @@ class TemplatePage:
 
         self.page.vertical_alignment = ft.CrossAxisAlignment.START
         self.page.horizontal_alignment = ft.MainAxisAlignment.CENTER
-    
+
+        self.page.overlay.append(self.loading_overlay)
+
     def dynamic_width(self, width_ratio=0.9):
         """Return width based on page size for responsive controls"""
         return self.page.window.width * width_ratio
     
+    def show_loading(self):
+        self.loading_overlay.visible = True
+        self.page.update()
+
+    def hide_loading(self):
+        self.loading_overlay.visible = False
+        self.page.update()
+
     def layout(
         self,
         content: list[ft.Control] | None = None,

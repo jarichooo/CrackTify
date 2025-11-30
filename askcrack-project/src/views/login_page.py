@@ -9,6 +9,7 @@ from widgets.buttons import (
     GoogleButton,
     CustomTextButton
 )
+# from services.database import get_connection
 from config import Config
 
 class LoginPage(TemplatePage):
@@ -56,7 +57,7 @@ class LoginPage(TemplatePage):
         self.login_button = PrimaryButton(
             text="Login",
             icon=ft.Icons.LOGIN,
-            on_click=lambda e: print("Login clicked"),
+            # on_click=self.login,
         )
 
         # Google login
@@ -114,3 +115,46 @@ class LoginPage(TemplatePage):
 
         # Wrap with TemplatePage layout
         return self.layout(content, appbar=self.appbar)
+    
+    # def login(self, e):
+    #     """Handle login button click"""
+    #     email = self.email_input.value
+    #     password = self.password_input.value
+
+    #     if not email or not password:
+    #         self.page.snack_bar = ft.SnackBar(
+    #             ft.Text("Please enter both email and password."),
+    #             bgcolor=ft.Colors.RED
+    #         )
+    #         self.page.snack_bar.open = True
+    #         self.page.update()
+    #         return
+
+    #     if self.authenticate_user(email, password):
+    #         self.page.go("/home")
+    #     else:
+    #         self.page.snack_bar = ft.SnackBar(
+    #             ft.Text("Invalid email or password."),
+    #             bgcolor=ft.Colors.RED
+    #         )
+    #         self.page.snack_bar.open = True
+    #         self.page.update()
+
+
+    # def authenticate_user(self, email: str, password: str) -> bool:
+    #     """Authenticate user with given email and password"""
+    #     connection = get_connection()
+    #     cursor = connection.cursor()
+
+    #     cursor.execute(
+    #         "SELECT password_hash FROM users WHERE email = ?", (email,)
+    #     )
+    #     result = cursor.fetchone()
+
+    #     connection.close()
+
+    #     if result:
+    #         stored_password_hash = result[0]
+    #         # Here you would normally hash the provided password and compare
+    #         return stored_password_hash == password  # Simplified for example
+    #     return False
