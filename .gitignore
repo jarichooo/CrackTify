@@ -11,3 +11,5 @@ __pycache__/
 # VSCode and system files
 .vscode/
 .DS_Store
+
+.vs
