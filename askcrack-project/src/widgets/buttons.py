@@ -112,4 +112,3 @@ class CustomTextButton(ft.GestureDetector):
             on_tap=on_tap,
             **kwargs
         )
-        ft.GestureDetector()

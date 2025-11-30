@@ -20,7 +20,7 @@ class WelcomePage(TemplatePage):
                     ),
 
                     # Buttons pinned to bottom
-                    ft.Container(
+                    ft.SafeArea(
                         ft.Column(
                             controls=[
                                 PrimaryButton(
@@ -42,7 +42,7 @@ class WelcomePage(TemplatePage):
                             spacing=10,
                             horizontal_alignment=ft.CrossAxisAlignment.CENTER,
                         ),
-                        padding=ft.padding.only(top=20, bottom=30),
+                        # padding=ft.padding.only(top=20, bottom=30),
                         left=20,
                         right=20,
                         bottom=10
