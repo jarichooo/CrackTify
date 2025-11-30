@@ -12,4 +12,4 @@ __pycache__/
 .vscode/
 .DS_Store
 
-.vs
+dataset_and_model/
