@@ -15,7 +15,7 @@ from config import Config
 class LoginPage(TemplatePage):
     def __init__(self, page: ft.Page):
         super().__init__(page)
-
+    
     def build(self) -> ft.View:
         """Build the login page UI"""
         # Back button
@@ -23,10 +23,7 @@ class LoginPage(TemplatePage):
             leading=BackButton(
                 on_click=lambda e: self.page.go("/")
             ),
-            title=ft.Container(
-                content=ft.Text("Login", size=18, weight="bold"),
-                padding=ft.padding.symmetric(horizontal=10)
-            ),
+            title=ft.Text("Login", size=18, weight="bold"),
             center_title=True,
             force_material_transparency=True
         )
@@ -47,74 +44,72 @@ class LoginPage(TemplatePage):
             can_reveal_password=True,
         )
 
-        # Forgot password button
+        # Buttons
         self.forgot_button = CustomTextButton(
             text="Forgot your Password?",
-            on_tap=lambda e: print("Forgot Password clicked")
+            on_tap=lambda e: print("Forgot clicked")
         )
 
-        # Login button
+        # Login Button  
         self.login_button = PrimaryButton(
             text="Login",
             icon=ft.Icons.LOGIN,
-            # on_click=self.login,
+            on_click=lambda e: print("Login clicked")
         )
 
-        # Google login
-        self.google_login = GoogleButton(
-            on_click=lambda e: print("Google login clicked")  # Placeholder action
-        )
+        self.google_login = GoogleButton(on_click=lambda e: print("Google"))
 
+        # Main container content
         main_container = ft.Container(
             content=ft.ListView(
-                expand=True,
                 padding=ft.padding.all(20),
                 spacing=15,
                 auto_scroll=False,
                 controls=[
                     ft.Column(
                         [
-                            ft.Text("Let's Sign You In", size=28, weight="bold"),
-                            ft.Text("Welcome back, you've been missed!", size=14)
+                            ft.Text("Let’s Sign You In", size=28, weight="bold"),
+                            ft.Text("Welcome back, you've been missed!", size=14),
                         ],
                         spacing=0,
-                        horizontal_alignment=ft.CrossAxisAlignment.CENTER
+                        horizontal_alignment=ft.CrossAxisAlignment.CENTER,
                     ),
                     ft.Divider(opacity=0),
                     self.email_input,
                     self.password_input,
-                    # ft.Divider(height=1, opacity=0),
                     self.forgot_button,
                     ft.Divider(height=1, opacity=0),
                     self.login_button,
                     or_divider(),
-                    self.google_login
-                ],
+                    self.google_login,
+                ]
             ),
-            padding=ft.padding.only(top=30, bottom=30),
+            padding=ft.padding.only(top=30, bottom=0),
             alignment=ft.alignment.center,
-            border_radius=30,
-            bgcolor=ft.Colors.BLUE_50 if self.is_light else ft.Colors.BLACK87,
-            
+            border_radius=ft.border_radius.only(top_left=30, top_right=30),
+            bgcolor=ft.Colors.ON_INVERSE_SURFACE,
+            expand=True
         )
 
-        # Combine all content
         content = [
             ft.Column(
                 expand=True,
                 controls=[
+                    # Title outside container
+                    ft.Column(height=20),  # spacer
                     ft.Container(
                         ft.Text("Cracktify", size=36, weight="bold"),
-                        alignment=ft.alignment.top_center
+                        alignment=ft.alignment.center,
                     ),
-                    main_container
-                ],
-                alignment=ft.MainAxisAlignment.SPACE_BETWEEN
+                    ft.Column(height=20),  # spacer
+                    main_container,  # the login box
+                ]
             )
         ]
 
-        # Wrap with TemplatePage layout
         return self.layout(content, appbar=self.appbar)
+
+
     
     # def login(self, e):
     #     """Handle login button click"""
