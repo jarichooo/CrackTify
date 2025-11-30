@@ -9,9 +9,6 @@ from views import (
 
 def main(page: ft.Page):
     """Main function to run the app"""
-    page.title = "Cracktify"
-    page.platform = ft.PagePlatform.ANDROID
-
     # Routing
     def route_change(route):
         """Handle route changes"""
