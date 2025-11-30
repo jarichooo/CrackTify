@@ -20,11 +20,16 @@ from config import Config
 class RegisterPage(TemplatePage):
     def __init__(self, page: ft.Page):
         super().__init__(page)
-
+        
     def build(self) -> ft.View:
         """Build the registration page UI"""
         # Loads saved values
-        self.page.run_task(self.load_saved_values)
+        self.saved_first_name = self.page.client_storage.get("register_first_name") or None
+        self.saved_last_name = self.page.client_storage.get("register_last_name") or None
+        self.saved_email = self.page.client_storage.get("register_email") or None
+        self.saved_password = self.page.client_storage.get("register_password") or None
+        self.saved_confirm_pw = self.page.client_storage.get("register_confirm_pw") or None
+        self.saved_terms = self.page.client_storage.get("register_terms") or None
 
         # Back button and header
         self.appbar = ft.AppBar(
@@ -157,14 +162,6 @@ class RegisterPage(TemplatePage):
 
         return self.layout(content, appbar=self.appbar)
 
-    async def load_saved_values(self):
-        self.saved_first_name = self.page.client_storage.get("register_first_name") or None
-        self.saved_last_name = self.page.client_storage.get("register_last_name") or None
-        self.saved_email = self.page.client_storage.get("register_email") or None
-        self.saved_password = self.page.client_storage.get("register_password") or None
-        self.saved_confirm_pw = self.page.client_storage.get("register_confirm_pw") or None
-        self.saved_terms = self.page.client_storage.get("register_terms") or None
-
     def on_continue(self, e):
         """Handle continue button click"""
         first_name = self.first_name.value
@@ -239,9 +236,11 @@ class RegisterPage(TemplatePage):
 class OTPPage(TemplatePage):
     def __init__(self, page: ft.Page):
         super().__init__(page)
-        self.email_address = self.page.client_storage.get("register_email") or None
 
     def build(self) -> ft.View:
+        # Loads the saved email address
+        self.email_address = self.page.client_storage.get("register_email") or None
+
         # Back button and header
         self.appbar = ft.AppBar(        
             leading=BackButton(
@@ -341,10 +340,10 @@ class OTPPage(TemplatePage):
         entered_otp = self.otp_input.value
 
         invalid_otp_dialog = ErrorDialog(
-            title=ft.Text("Invalid OTP", text_align=ft.TextAlign.CENTER),
+            title=ft.Text("Invalid OTP"),
             content=ft.Text("The OTP you entered is incorrect. Please try again."),
             actions=[
-                ft.TextButton("OK", on_click=lambda e: clear_input())
+                ft.TextButton("OK", on_click=lambda e: clear_input(e))
             ]
         )
 
