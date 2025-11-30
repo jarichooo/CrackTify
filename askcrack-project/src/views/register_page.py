@@ -10,6 +10,7 @@ from widgets.buttons import (
 )
 from widgets.divider import or_divider
 from widgets.inputs import AppTextField
+from widgets.dialogs import ErrorDialog
 from services.otp_service import send_otp, verify_otp
 from utils.input_validator import validate_registration
 
@@ -19,15 +20,11 @@ from config import Config
 class RegisterPage(TemplatePage):
     def __init__(self, page: ft.Page):
         super().__init__(page)
-        self.saved_first_name = self.page.client_storage.get("register_first_name") or None
-        self.saved_last_name = self.page.client_storage.get("register_last_name") or None
-        self.saved_email = self.page.client_storage.get("register_email") or None
-        self.saved_password = self.page.client_storage.get("register_password") or None
-        self.saved_confirm_pw = self.page.client_storage.get("register_confirm_pw") or None
-        self.saved_terms = self.page.client_storage.get("register_terms") or None
 
     def build(self) -> ft.View:
         """Build the registration page UI"""
+        # Loads saved values
+        self.page.run_task(self.load_saved_values)
 
         # Back button and header
         self.appbar = ft.AppBar(
@@ -42,8 +39,15 @@ class RegisterPage(TemplatePage):
             force_material_transparency=True
         )
 
+        # Google Register Button
+        self.google_register = GoogleButton(
+            text="Sign up with Google",
+            on_click=lambda e: print("Google register clicked")  # Placeholder action
+        )
+
         # Inputs
         self.first_name = AppTextField(
+            value=self.saved_first_name,
             label="First Name",
             hint_text="Enter your first name",
             expand=1,
@@ -51,6 +55,7 @@ class RegisterPage(TemplatePage):
         )
 
         self.last_name = AppTextField(
+            value=self.saved_last_name,
             label="Last Name",
             hint_text="Enter your last name",
             expand=1,
@@ -97,12 +102,6 @@ class RegisterPage(TemplatePage):
             on_change=lambda e: self.agree_checkbox.update()
         )
 
-        # Google Register Button
-        self.google_register = GoogleButton(
-            text="Sign up with Google",
-            on_click=lambda e: print("Google register clicked")  # Placeholder action
-        )
-
         # Main content container
         main_container = ft.Container(
             content= ft.ListView(
@@ -125,7 +124,7 @@ class RegisterPage(TemplatePage):
                     or_divider(),
 
                     ft.Row(
-                        spacing=5,
+                        spacing=8,
                         controls=[
                             self.first_name,
                             self.last_name
@@ -158,6 +157,14 @@ class RegisterPage(TemplatePage):
 
         return self.layout(content, appbar=self.appbar)
 
+    async def load_saved_values(self):
+        self.saved_first_name = self.page.client_storage.get("register_first_name") or None
+        self.saved_last_name = self.page.client_storage.get("register_last_name") or None
+        self.saved_email = self.page.client_storage.get("register_email") or None
+        self.saved_password = self.page.client_storage.get("register_password") or None
+        self.saved_confirm_pw = self.page.client_storage.get("register_confirm_pw") or None
+        self.saved_terms = self.page.client_storage.get("register_terms") or None
+
     def on_continue(self, e):
         """Handle continue button click"""
         first_name = self.first_name.value
@@ -167,7 +174,16 @@ class RegisterPage(TemplatePage):
         confirm_password = self.confirm_password_input.value
         agree_terms = self.agree_checkbox.value
 
-        # Call the utils function
+        # Initalize error dialog for not checking checkbox
+        error_dialog = ErrorDialog(
+            title=ft.Text("Agreement Required"),
+            content=ft.Text("You must accept the Terms and Conditions before proceeding"),
+            actions=[
+                ft.TextButton("OK", on_click=lambda _: self.page.close(error_dialog))
+            ]
+        )
+
+        # Validate input values
         is_valid, errors = validate_registration(first_name, last_name, email, password, confirm_password)
 
         # Update input error texts
@@ -184,27 +200,34 @@ class RegisterPage(TemplatePage):
         self.password_input.update()
         self.confirm_password_input.update()
 
+        
         # Check validation and terms agreement
-        if is_valid and agree_terms:
-            try:
-                self.show_loading()
-                self.page.run_task(self.send_otp_email)
-            except Exception:
-                pass
+        if is_valid:
+            if agree_terms:
+                try:
+                    self.show_loading()
+                    self.page.run_task(self.send_otp_email)
+                except Exception:
+                    pass
 
-            # Save the values temporarily in client storage
-            self.page.client_storage.set("register_first_name", first_name)
-            self.page.client_storage.set("register_last_name", last_name)
-            self.page.client_storage.set("register_email", email)
-            self.page.client_storage.set("register_password", password)
-            self.page.client_storage.set("register_confirm_pw", confirm_password)
-            self.page.client_storage.set("register_terms", agree_terms)
+                # Save the values temporarily in client storage
+                self.page.client_storage.set("register_first_name", first_name)
+                self.page.client_storage.set("register_last_name", last_name)
+                self.page.client_storage.set("register_email", email)
+                self.page.client_storage.set("register_password", password)
+                self.page.client_storage.set("register_confirm_pw", confirm_password)
+                self.page.client_storage.set("register_terms", agree_terms)
+
+            else:
+                self.page.open(error_dialog)
+
 
     async def send_otp_email(self):
         first_name = self.first_name.value
         email = self.email_input.value
 
         response = await send_otp(email, first_name)
+        self.hide_loading()
 
         if response.get("success"):
             print(response.get("message"))
@@ -212,8 +235,6 @@ class RegisterPage(TemplatePage):
         else:
             print(response.get("message"))
 
-        self.hide_loading()
-        
 
 class OTPPage(TemplatePage):
     def __init__(self, page: ft.Page):
@@ -311,43 +332,46 @@ class OTPPage(TemplatePage):
             return
 
         # Otherwise, verify the OTP
+        self.show_loading()
         self.page.run_task(self.verify_otp_code)
 
     async def verify_otp_code(self):
         # Create the dialog first
-        error_dialog = ft.AlertDialog(
-            modal=True,
-            icon=ft.Icon(ft.Icons.ERROR),
-            title=ft.Text("Invalid OTP"),
+        email = self.email_address
+        entered_otp = self.otp_input.value
+
+        invalid_otp_dialog = ErrorDialog(
+            title=ft.Text("Invalid OTP", text_align=ft.TextAlign.CENTER),
             content=ft.Text("The OTP you entered is incorrect. Please try again."),
             actions=[
-                ft.TextButton("OK", on_click=lambda e: clear_input(e))
-            ],
-            actions_alignment=ft.MainAxisAlignment.END,
+                ft.TextButton("OK", on_click=lambda e: clear_input())
+            ]
         )
 
         def clear_input(e):
             self.otp_input.value = None
-            self.page.close(error_dialog)
+            self.page.close(invalid_otp_dialog)
             self.otp_input.update()
 
-        email = self.email_address
-        entered_otp = self.otp_input.value
-
-        self.show_loading()
         response = await verify_otp(email, entered_otp)
 
         if response.get("success"):
             print(response.get("message"))
-            # self.page.client_storage.clear()
-            # TODO: Remove client storage on valid otp (successful register)
+            # TODO: Add register user logic
+            self.page.run_task(self.clear_values)
             self.page.go("/home")
+
         else:
             print(response.get("message"))
-            self.page.open(error_dialog)
+            self.page.open(invalid_otp_dialog)
 
         self.hide_loading()
 
+    async def clear_values(self):
+        try:
+            await self.page.client_storage.clear()
+        except:
+            pass
 
     def on_resend(self, e):
         ...

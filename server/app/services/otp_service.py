@@ -29,7 +29,7 @@ def send_email_otp(email: str, name: str, db):
     otp_code = generate_otp()
 
     # Save OTP in DB
-    new_otp = OTP(email=email, otp=otp_code)
+    new_otp = OTP(email=email, otp=otp_code, created_at=now)
 
     db.add(new_otp)
     db.commit()
