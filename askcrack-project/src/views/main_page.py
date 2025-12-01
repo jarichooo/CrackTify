@@ -1,5 +1,16 @@
 import flet as ft
 from .template import TemplatePage
+from .pages import (
+    about_page,
+    admin_dashboard_page,
+    detection_history_page,
+    gallery_page,
+    groups_page,
+    help_page,
+    home_page,
+    reports_page,
+    settings_page,
+)
 
 
 class MainPage(TemplatePage):
@@ -130,17 +141,12 @@ class MainPage(TemplatePage):
         self.body_content = ft.Container(
             content=ft.Column(
                 expand=True,
-                controls=[
-                    ft.Text("Welcome to Cracktify!", size=24, weight="bold"),
-                    ft.Text("Your all-in-one solution for crack detection and analysis.", size=16),
-                ],
-                alignment=ft.MainAxisAlignment.CENTER,
+                controls=home_page.build(self.page),
+                alignment=ft.MainAxisAlignment.START,
                 horizontal_alignment=ft.CrossAxisAlignment.CENTER,
             ),
             expand=True,
-            bgcolor=ft.Colors.WHITE if self.is_light else ft.Colors.BLACK87,
             alignment=ft.alignment.center,
-
         )
         
         return self.layout(
@@ -201,92 +207,26 @@ class MainPage(TemplatePage):
 
         # Update page title and content based on selection
         match selected_index:
-            case 0: self.show_home()
-            case 1: self.show_groups()
-            case 2: self.show_gallery()
-            case 3: self.show_detection_history()
-            case 4: self.show_reports()
-            case 5: self.show_admin_dashboard()
-            case 6: self.show_settings()
-            case 7: self.show_about()
-            case 8: self.show_help()
+            case 0: self.show_content_page("Home", home_page.build)
+            case 1: self.show_content_page("Groups", groups_page.build)
+            case 2: self.show_content_page("Gallery", gallery_page.build)
+            case 3: self.show_content_page("Detection History", detection_history_page.build)
+            case 4: self.show_content_page("Reports", reports_page.build)
+            case 5: self.show_content_page("Admin Dashboard", admin_dashboard_page.build)
+            case 6: self.show_content_page("Settings", settings_page.build)
+            case 7: self.show_content_page("About", about_page.build)
+            case 8: self.show_content_page("Help", help_page.build)
             case _: pass
 
         # Close drawer
         self.drawer.open = False
         self.page.update()
 
-    def show_home(self):
-        """Handle Home navigation"""
-        self.appbar.title.content.value = "Home"
-        self.body_content.content.controls = [
-            ft.Text("Welcome to Cracktify!", size=24, weight="bold"),
-            ft.Text("Your all-in-one solution for crack detection and analysis.", size=16),
-        ]
-
-    def show_groups(self):
-        """Handle Groups navigation"""
-        self.appbar.title.content.value = "Groups"
-        self.body_content.content.controls = [
-            ft.Text("Groups Page", size=24, weight="bold"),
-            ft.Text("Manage and view your groups here.", size=16),
-        ]
-
-    def show_gallery(self):
-        """Handle Gallery navigation"""
-        self.appbar.title.content.value = "Gallery"
-        self.body_content.content.controls = [
-            ft.Text("Gallery Page", size=24, weight="bold"),
-            ft.Text("Browse detected cracks and images here.", size=16),
-        ]
-
-    def show_detection_history(self):
-        """Handle Detection History navigation"""
-        self.appbar.title.content.value = "Detection History"
-        self.body_content.content.controls = [
-            ft.Text("Detection History Page", size=24, weight="bold"),
-            ft.Text("View your past detection records here.", size=16),
-        ]
-    
-    def show_reports(self):
-        """Handle Reports navigation"""
-        self.appbar.title.content.value = "Reports"
-        self.body_content.content.controls = [
-            ft.Text("Reports Page", size=24, weight="bold"),
-            ft.Text("Generate and view reports here.", size=16),
-        ]
-
-    def show_admin_dashboard(self):
-        """Handle Admin Dashboard navigation"""
-        self.appbar.title.content.value = "Admin Dashboard"
-        self.body_content.content.controls = [
-            ft.Text("Admin Dashboard Page", size=24, weight="bold"),
-            ft.Text("Administrative tools and settings.", size=16),
-        ]
-
-    def show_settings(self):
-        """Handle Settings navigation"""
-        self.appbar.title.content.value = "Settings"
-        self.body_content.content.controls = [
-            ft.Text("Settings Page", size=24, weight="bold"),
-            ft.Text("Adjust your application settings here.", size=16),
-        ]
-
-    def show_about(self):
-        """Handle About navigation"""
-        self.appbar.title.content.value = "About"
-        self.body_content.content.controls = [
-            ft.Text("About Page", size=24, weight="bold"),
-            ft.Text("Information about the Cracktify application.", size=16),
-        ]
-
-    def show_help(self):
-        """Handle Help navigation"""
-        self.appbar.title.content.value = "Help"
-        self.body_content.content.controls = [
-            ft.Text("Help Page", size=24, weight="bold"),
-            ft.Text("Get assistance and support here.", size=16),
-        ]                   
+    def show_content_page(self, title: str, content_builder: callable):
+        """Helper to show a content page"""
+        self.appbar.title.content.value = title
+        self.body_content.content.controls = content_builder(self.page)
+        self.page.update()
 
     def show_detect(self, e):
         """Handle New Detection action"""

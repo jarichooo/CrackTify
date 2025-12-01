@@ -1,5 +1,5 @@
 import flet as ft
-from .template import TemplatePage
+from views.template import TemplatePage
 from widgets.buttons import PrimaryButton, SecondaryButton
 
 class WelcomePage(TemplatePage):

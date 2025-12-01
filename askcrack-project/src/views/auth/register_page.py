@@ -1,6 +1,6 @@
 import flet as ft
 
-from .template import TemplatePage
+from views.template import TemplatePage
 from widgets.buttons import (
     BackButton,
     PrimaryButton,
