@@ -1,6 +1,6 @@
 import flet as ft
 
-from .template import TemplatePage
+from views.template import TemplatePage
 from widgets.divider import or_divider
 from widgets.inputs import AppTextField
 from widgets.buttons import (

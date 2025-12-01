@@ -1,6 +1,6 @@
 import flet as ft
 
-from .template import TemplatePage
+from views.template import TemplatePage
 from widgets.buttons import (
     BackButton,
     PrimaryButton,
@@ -90,7 +90,7 @@ class OTPPage(TemplatePage):
             padding=ft.padding.only(top=50, bottom=50),
             alignment=ft.alignment.center,
             border_radius=30,
-            bgcolor=ft.Colors.BLUE_50 if self.is_light else ft.Colors.BLACK87,
+            bgcolor=ft.Colors.ON_INVERSE_SURFACE,
             expand=True
         )
 
