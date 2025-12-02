@@ -1,6 +1,7 @@
 import flet as ft
 
 from views.template import TemplatePage
+from widgets.dialogs import ErrorDialog
 from widgets.divider import or_divider
 from widgets.inputs import AppTextField
 from widgets.buttons import (
@@ -9,7 +10,8 @@ from widgets.buttons import (
     GoogleButton,
     CustomTextButton
 )
-# from services.database import get_connection
+from services.auth_service import login_user
+from utils.input_validator import validate_login
 from config import Config
 
 class LoginPage(TemplatePage):
@@ -34,6 +36,7 @@ class LoginPage(TemplatePage):
             hint_text="Enter your email",
             prefix_icon=ft.Icons.PERSON,
             keyboard_type=ft.KeyboardType.EMAIL,
+            on_change=lambda e: self.email_input.clear_error()
         )
 
         self.password_input = AppTextField(
@@ -42,6 +45,7 @@ class LoginPage(TemplatePage):
             prefix_icon=ft.Icons.LOCK,
             password=True,
             can_reveal_password=True,
+            on_change=lambda e: self.password_input.clear_error()
         )
 
         # Buttons
@@ -54,7 +58,7 @@ class LoginPage(TemplatePage):
         self.login_button = PrimaryButton(
             text="Login",
             icon=ft.Icons.LOGIN,
-            on_click=lambda e: print("Login clicked")
+            on_click=self.on_login,
         )
 
         self.google_login = GoogleButton(on_click=lambda e: print("Google"))
@@ -109,47 +113,58 @@ class LoginPage(TemplatePage):
 
         return self.layout(content, appbar=self.appbar)
 
+    def on_login(self, e):
+        """Handle login button click"""
+        email = self.email_input.value
+        password = self.password_input.value
 
-    
-    # def login(self, e):
-    #     """Handle login button click"""
-    #     email = self.email_input.value
-    #     password = self.password_input.value
+        # Display error dialog if login fails
+        error_dialog = ErrorDialog(
+            title="Login Failed",
+            content="Invalid email or password. Please try again.",
+            actions=[
+                ft.TextButton("OK", on_click=lambda _: self.page.close(error_dialog))
+            ]
+        )
 
-    #     if not email or not password:
-    #         self.page.snack_bar = ft.SnackBar(
-    #             ft.Text("Please enter both email and password."),
-    #             bgcolor=ft.Colors.RED
-    #         )
-    #         self.page.snack_bar.open = True
-    #         self.page.update()
-    #         return
+        # Validate inputs
+        is_valid, errors = validate_login(email, password)
 
-    #     if self.authenticate_user(email, password):
-    #         self.page.go("/home")
-    #     else:
-    #         self.page.snack_bar = ft.SnackBar(
-    #             ft.Text("Invalid email or password."),
-    #             bgcolor=ft.Colors.RED
-    #         )
-    #         self.page.snack_bar.open = True
-    #         self.page.update()
+        if is_valid:
+            self.show_loading()
+            self.page.run_task(self.user_login) # Perform login asynchronously
 
+        else:
+            # Display errors
+            self.email_input.error_text = errors.get("email", "")
+            self.password_input.error_text = errors.get("password", "")
+            self.page.update()
 
-    # def authenticate_user(self, email: str, password: str) -> bool:
-    #     """Authenticate user with given email and password"""
-    #     connection = get_connection()
-    #     cursor = connection.cursor()
+    async def user_login(self):
+        """Perform user login asynchronously"""
+        email = self.email_input.value
+        password = self.password_input.value
 
-    #     cursor.execute(
-    #         "SELECT password_hash FROM users WHERE email = ?", (email,)
-    #     )
-    #     result = cursor.fetchone()
+        response = await login_user(email, password)
 
-    #     connection.close()
+        if response.get("success"):
+            self.hide_loading()
 
-    #     if result:
-    #         stored_password_hash = result[0]
-    #         # Here you would normally hash the provided password and compare
-    #         return stored_password_hash == password  # Simplified for example
-    #     return False
+            token = response.get("token")
+            
+            # Save token to client storage
+            await self.page.client_storage.set_async("auth_token", token)
+
+            self.page.go("/home")
+
+        else:
+            self.hide_loading()
+
+            error_dialog = ErrorDialog(
+                title=ft.Text("Login Failed"),
+                content=ft.Text("Invalid email or password. Please try again."),
+                actions=[
+                    ft.TextButton("OK", on_click=lambda _: self.page.close(error_dialog))
+                ]
+            )
+            self.page.open(error_dialog)

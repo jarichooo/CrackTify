@@ -17,7 +17,9 @@ class Config:
         f"mysql+pymysql://{DB_USER}:{DB_PASSWORD}@{DB_HOST}:{DB_PORT}/{DB_NAME}"
     )
 
-    # Other app configs
-    # SECRET_KEY = os.getenv("SECRET_KEY", "supersecretkey")
+    # Email settings
     EMAIL_SENDER = os.getenv("EMAIL_SENDER", "")
     EMAIL_PASSWORD = os.getenv("EMAIL_PASSWORD", "")
+
+    # JWT Settings
+    JWT_SECRET_KEY = os.getenv("JWT_SECRET_KEY", "secretjwtkey")
