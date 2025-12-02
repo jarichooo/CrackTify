@@ -11,6 +11,7 @@ from widgets.divider import or_divider
 from widgets.inputs import AppTextField
 from widgets.dialogs import ErrorDialog
 from services.otp_service import send_otp, verify_otp
+from services.auth_service import register_user
 from utils.input_validator import validate_registration
 
 from config import Config
@@ -20,8 +21,11 @@ class OTPPage(TemplatePage):
         super().__init__(page)
 
     def build(self) -> ft.View:
-        # Loads the saved email address
-        self.email_address = self.page.client_storage.get("register_email") or None
+        # Loads the saved data
+        self.saved_first_name = self.page.client_storage.get("register_first_name") or None
+        self.saved_last_name = self.page.client_storage.get("register_last_name") or None
+        self.saved_email = self.page.client_storage.get("register_email") or None
+        self.saved_password = self.page.client_storage.get("register_password") or None
 
         # Back button and header
         self.appbar = ft.AppBar(        
@@ -76,7 +80,7 @@ class OTPPage(TemplatePage):
                         [
                             ft.Text("Verify your email", size=28, weight="bold"),
                             ft.Text("A 6-digit authentication code has been sent to", size=14),
-                            ft.Text(self.email_address, size=14, color=ft.Colors.BLUE_ACCENT_100)
+                            ft.Text(self.saved_email, size=14, color=ft.Colors.BLUE_ACCENT_100)
                         ],
                         spacing=5,
                         horizontal_alignment=ft.CrossAxisAlignment.CENTER,
@@ -117,10 +121,16 @@ class OTPPage(TemplatePage):
         self.page.run_task(self.verify_otp_code)
 
     async def verify_otp_code(self):
-        # Create the dialog first
-        email = self.email_address
+        """Verify the entered OTP code"""
         entered_otp = self.otp_input.value
 
+        def clear_input(e):
+            # Clear the OTP input field
+            self.otp_input.value = None
+            self.page.close(invalid_otp_dialog)
+            self.otp_input.update()
+
+        # Create the dialog first
         invalid_otp_dialog = ErrorDialog(
             title=ft.Text("Invalid OTP"),
             content=ft.Text("The OTP you entered is incorrect. Please try again."),
@@ -129,18 +139,35 @@ class OTPPage(TemplatePage):
             ]
         )
 
-        def clear_input(e):
-            self.otp_input.value = None
-            self.page.close(invalid_otp_dialog)
-            self.otp_input.update()
-
-        response = await verify_otp(email, entered_otp)
+        response = await verify_otp(self.saved_email, entered_otp)
 
         if response.get("success"):
             print(response.get("message"))
-            # TODO: Add register user logic
-            self.page.run_task(self.clear_values)
-            self.page.go("/home")
+        
+            reg_response = await register_user(
+                self.saved_first_name,
+                self.saved_last_name,
+                self.saved_email,
+                self.saved_password,
+            )
+
+            if reg_response.get("success"):
+                print(reg_response.get("message"))
+                token = reg_response.get("token")
+
+                # Save token to client storage
+                await self.page.client_storage.set_async("auth_token", token)
+
+                self.page.run_task(self.clear_values)
+                self.page.go("/home")
+            else:
+                self.page.open(ErrorDialog(
+                    title=ft.Text("Registration Failed"),
+                    content=ft.Text("An error occurred during registration. Please try again."),
+                    actions=[
+                        ft.TextButton("OK", on_click=lambda e: self.page.close())
+                    ]
+                ))
 
         else:
             print(response.get("message"))
@@ -150,9 +177,15 @@ class OTPPage(TemplatePage):
 
     async def clear_values(self):
         try:
-            await self.page.client_storage.clear()
-        except:
-            pass
+            await self.page.client_storage.remove_async("register_first_name")
+            await self.page.client_storage.remove_async("register_last_name")
+            await self.page.client_storage.remove_async("register_email")
+            await self.page.client_storage.remove_async("register_password")
+            await self.page.client_storage.remove_async("register_confirm_pw")
+            await self.page.client_storage.remove_async("register_terms")
+
+        except Exception as e:
+            print(f"Error clearing client storage: {e}")
 
     def on_resend(self, e):
         ...

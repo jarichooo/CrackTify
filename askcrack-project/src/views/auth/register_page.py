@@ -10,7 +10,8 @@ from widgets.buttons import (
 from widgets.divider import or_divider
 from widgets.inputs import AppTextField
 from widgets.dialogs import ErrorDialog
-from services.otp_service import send_otp, verify_otp
+from services.otp_service import send_otp
+from services.auth_service import check_email_unique
 from utils.input_validator import validate_registration
 
 from config import Config
@@ -45,7 +46,7 @@ class RegisterPage(TemplatePage):
         # Google Register Button
         self.google_register = GoogleButton(
             text="Sign up with Google",
-            on_click=lambda e: print("Google register clicked")  # Placeholder action
+            on_click=self.google_register_clicked,
         )
 
         # Inputs
@@ -181,31 +182,12 @@ class RegisterPage(TemplatePage):
 
         # Validate input values
         is_valid, errors = validate_registration(first_name, last_name, email, password, confirm_password)
-
-        # Update input error texts
-        self.first_name.error_text = errors.get("first_name")
-        self.last_name.error_text = errors.get("last_name")
-        self.email_input.error_text = errors.get("email")
-        self.password_input.error_text = errors.get("password")
-        self.confirm_password_input.error_text = errors.get("confirm_password")
-
-        # Refresh the inputs to show errors
-        self.first_name.update()
-        self.last_name.update()
-        self.email_input.update()
-        self.password_input.update()
-        self.confirm_password_input.update()
-
         
         # Check validation and terms agreement
-        if is_valid:
-            if agree_terms:
-                try:
-                    self.show_loading()
-                    self.page.run_task(self.send_otp_email)
-                except Exception:
-                    pass
-
+        if is_valid and agree_terms:
+    
+            try:
+                self.show_loading()
                 # Save the values temporarily in client storage
                 self.page.client_storage.set("register_first_name", first_name)
                 self.page.client_storage.set("register_last_name", last_name)
@@ -214,10 +196,49 @@ class RegisterPage(TemplatePage):
                 self.page.client_storage.set("register_confirm_pw", confirm_password)
                 self.page.client_storage.set("register_terms", agree_terms)
 
-            else:
-                self.page.open(error_dialog)
+                self.page.run_task(self.check_email) # First check if email is unique
+
+            except Exception as ex:
+                print("Error during registration process:", ex)
+
+        elif not is_valid:
+            # Display errors
+            self.first_name.error_text = errors.get("first_name", "")       
+            self.last_name.error_text = errors.get("last_name", "")
+            self.email_input.error_text = errors.get("email", "")
+            self.password_input.error_text = errors.get("password", "")
+            self.confirm_password_input.error_text = errors.get("confirm_password", "")
+
+            self.first_name.update()
+            self.last_name.update()
+            self.email_input.update()
+            self.password_input.update()
+            self.confirm_password_input.update()
+
+        elif not agree_terms:
+            self.page.open(error_dialog) # Show error dialog if terms not agreed
 
 
+    async def check_email(self):
+        email = self.email_input.value
+
+        error_dialog = ErrorDialog(
+            title=ft.Text("Email Already Registered"),
+            content=ft.Text("The email you entered is already registered. Please use a different email."),
+            actions=[
+                ft.TextButton("OK", on_click=lambda _: self.page.close(error_dialog))
+            ]
+        )
+        response = await check_email_unique(email)
+
+        if not response.get("success"):
+            # If email is not unique, show error dialog
+            self.hide_loading()
+            self.page.open(error_dialog)
+        else:
+            # If email is unique, proceed to send OTP
+            self.page.run_task(self.send_otp_email) # Send OTP email
+    
     async def send_otp_email(self):
         first_name = self.first_name.value
         email = self.email_input.value
@@ -231,3 +252,5 @@ class RegisterPage(TemplatePage):
         else:
             print(response.get("message"))
 
+    def google_register_clicked(self, e):
+        ...
