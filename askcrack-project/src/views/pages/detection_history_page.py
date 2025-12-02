@@ -3,9 +3,6 @@ from typing import List
 
 def build(page) -> List[ft.Control]:
     return [
-        ft.Text("Admin Dashboard", size=24, weight="bold"),
-        ft.Text(
-            "Welcome to the Admin Dashboard. Here you can manage users, view system statistics, and configure application settings.",
-            size=16,
-        ),
+        ft.Text("Detection History Page", size=24, weight=ft.FontWeight.BOLD),
+        ft.Text("This is the detection history page of the AskCrack project.", size=16),
     ]

@@ -4,18 +4,19 @@ from .pages import (
     about_page,
     admin_dashboard_page,
     detection_history_page,
-    gallery_page,
     groups_page,
     help_page,
     home_page,
     reports_page,
     settings_page,
 )
-
+from .pages.gallery_page import ImageGallery
 
 class MainPage(TemplatePage):
     def __init__(self, page: ft.Page):
         super().__init__(page)
+        self.gallery_instance = ImageGallery(page)
+        self.search_active = False
 
     def build(self) -> ft.View:
         """Build the main page UI"""
@@ -63,6 +64,33 @@ class MainPage(TemplatePage):
             ]
         )
 
+        # Normal title text
+        self.normal_title = ft.Text("Home", size=18, weight="bold")
+
+        # Search bar for gallery
+        self.search_bar = ft.SearchBar(
+            bar_hint_text="Search images...",
+            view_elevation=0,
+            divider_color="transparent",
+            on_change=lambda e: self.on_gallery_search(e.control.value),
+            height=40,
+            expand=True,
+            autofocus=True,
+        )
+
+        # Title container
+        self.title_container = ft.Row(
+            controls=[self.normal_title],
+            vertical_alignment=ft.CrossAxisAlignment.CENTER,
+        )
+
+        # Search toggle button (icon swapped dynamically)
+        self.search_button = ft.IconButton(
+            icon=ft.Icons.SEARCH,
+            tooltip="Search",
+            on_click=self.toggle_search,
+        )
+
         # App Bar
         self.appbar = ft.AppBar(
             toolbar_height=60,
@@ -70,9 +98,7 @@ class MainPage(TemplatePage):
                 icon=ft.Icons.MENU,
                 on_click=lambda e: self.page.open(self.drawer)
             ),
-            title=ft.Container(
-                content=ft.Text("Home", size=18, weight="bold"),
-            ),
+            title=self.title_container,
             center_title=False,
             actions=[
                 ft.Container(
@@ -85,7 +111,7 @@ class MainPage(TemplatePage):
                 )
             ]
         )
-        
+
         # Floating action buttons for detection
         self.action_buttons = ft.Column(
             [
@@ -145,6 +171,7 @@ class MainPage(TemplatePage):
                 alignment=ft.MainAxisAlignment.START,
                 horizontal_alignment=ft.CrossAxisAlignment.CENTER,
             ),
+            margin=ft.margin.only(left=20, right=20),
             expand=True,
             alignment=ft.alignment.center,
         )
@@ -167,18 +194,6 @@ class MainPage(TemplatePage):
         else:
             self.page.theme_mode = ft.ThemeMode.LIGHT
             self.toggle_theme_button.icon = ft.Icons.LIGHT_MODE
-
-        # Determine actual brightness if using SYSTEM
-        # if current_mode == ft.ThemeMode.SYSTEM:
-        #     is_light = self.page.platform_brightness == ft.Brightness.LIGHT
-        # else:
-        #     is_light = current_mode == ft.ThemeMode.LIGHT
-
-        # Toggle logic
-        # if is_light:
-        #     self.page.theme_mode = ft.ThemeMode.DARK
-        # else:
-        #     self.page.theme_mode = ft.ThemeMode.LIGHT
     
         self.page.update()
 
@@ -201,30 +216,102 @@ class MainPage(TemplatePage):
 
     def on_drawer_change(self, e):
         """Handle drawer navigation changes"""
-        # TODO: Close drawer on change when opened by swipe
+        selected = self.drawer.selected_index
 
-        selected_index = self.drawer.selected_index # Get selected index
+        # Map: index -> (title, page builder or instance)
+        navigation_map = {
+            0: ("Home", home_page.build),
+            1: ("Groups", groups_page.build),
+            2: ("Gallery", self.gallery_instance),  # already an instance
+            3: ("Detection History", detection_history_page.build),
+            4: ("Reports", reports_page.build),
+            5: ("Admin Dashboard", admin_dashboard_page.build),
+            6: ("Settings", settings_page.build),
+            7: ("About", about_page.build),
+            8: ("Help", help_page.build),
+        }
 
-        # Update page title and content based on selection
-        match selected_index:
-            case 0: self.show_content_page("Home", home_page.build)
-            case 1: self.show_content_page("Groups", groups_page.build)
-            case 2: self.show_content_page("Gallery", gallery_page.build)
-            case 3: self.show_content_page("Detection History", detection_history_page.build)
-            case 4: self.show_content_page("Reports", reports_page.build)
-            case 5: self.show_content_page("Admin Dashboard", admin_dashboard_page.build)
-            case 6: self.show_content_page("Settings", settings_page.build)
-            case 7: self.show_content_page("About", about_page.build)
-            case 8: self.show_content_page("Help", help_page.build)
-            case _: pass
+        if selected in navigation_map:
+            title, builder = navigation_map[selected]
 
-        # Close drawer
+            # If builder is an instance with build() method
+            if hasattr(builder, "build") and callable(builder.build):
+                self.show_content_page(title, lambda _: builder.build())
+            else:
+                # Function-based page
+                self.show_content_page(title, builder)
+
+        # Close drawer after selection
         self.drawer.open = False
         self.page.update()
 
+
+    # Search Toggle Logic 
+    def toggle_search(self, e):
+        """Toggle search bar in AppBar for Gallery."""
+        self.search_active = not self.search_active
+        self.title_container.controls.clear()
+
+        if self.search_active:
+            # Show search bar
+            self.title_container.controls.append(self.search_bar)
+            self.search_button.icon = ft.Icons.CLOSE
+        else:
+            # Restore normal title
+            self.title_container.controls.append(self.normal_title)
+            self.search_button.icon = ft.Icons.SEARCH
+
+            # Clear gallery filter if gallery is active
+            if self.drawer.selected_index == 2 and hasattr(self.gallery_instance, "filter_images"):
+                self.gallery_instance.filter_images("")
+
+        self.page.update()
+
+    # Called whenever user types text in SearchBar
+    def on_gallery_search(self, query: str):
+        """Filter images in gallery if gallery is active"""
+        if self.drawer.selected_index == 2 and hasattr(self.gallery_instance, "filter_images"):
+            self.gallery_instance.filter_images(query)
+
+    # Navigation helper
     def show_content_page(self, title: str, content_builder: callable):
-        """Helper to show a content page"""
-        self.appbar.title.content.value = title
+        self.normal_title.value = title
+
+        # Reset title container
+        self.title_container.controls.clear()
+        self.title_container.controls.append(self.normal_title)
+        self.search_active = False
+
+        # Reset AppBar actions
+        self.appbar.actions = []
+
+        # Profile button
+        profile_btn = ft.Container(
+            content=ft.IconButton(
+                icon=ft.Icons.PERSON,
+                tooltip="Profile",
+                on_click=lambda e: print("Go to profile"),
+            ),
+            padding=ft.padding.only(right=10),
+        )
+
+        # Insert search only for Gallery
+        if title == "Gallery":
+            self.appbar.actions.append(self.search_button)
+
+            # Restore search state if it was active before
+            if self.search_active:
+                self.title_container.controls.clear()
+                self.title_container.controls.append(self.search_bar)
+                self.search_button.icon = ft.Icons.CLOSE
+            else:
+                self.title_container.controls.clear()
+                self.title_container.controls.append(self.normal_title)
+                self.search_button.icon = ft.Icons.SEARCH
+
+        self.appbar.actions.append(profile_btn)
+
+        # Set page content
         self.body_content.content.controls = content_builder(self.page)
         self.page.update()
 
