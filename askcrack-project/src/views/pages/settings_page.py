@@ -1,11 +1,16 @@
 import flet as ft
 from typing import List
 
-def build(page) -> List[ft.Control]:
-    return [
-        ft.Text("Settings Page", size=24, weight="bold"),
-        ft.Text(
-            "Configure application settings and preferences to customize your experience.",
-            size=16,
-        ),
-    ]
+class SettingsPage:
+    def __init__(self, page: ft.Page):
+        self.page = page
+        self.content: List[ft.Control] = []
+
+    def build(self) -> List[ft.Column]:
+        self.content = [
+            ft.Text("Settings", style="headlineMedium"),
+            ft.Text("Adjust your application settings here.", style="bodyMedium"),
+        ]
+        container = ft.Column(controls=self.content, alignment=ft.MainAxisAlignment.CENTER)
+        
+        return [container]

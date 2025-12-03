@@ -1,8 +1,16 @@
 import flet as ft
 from typing import List
 
-def build(page) -> List[ft.Control]:
-    return [
-        ft.Text("Detection History Page", size=24, weight=ft.FontWeight.BOLD),
-        ft.Text("This is the detection history page of the AskCrack project.", size=16),
-    ]
+class DetectionHistoryPage:
+    def __init__(self, page: ft.Page):
+        self.page = page
+        self.content: List[ft.Control] = []
+
+    def build(self) -> List[ft.Column]:
+        self.content = [
+            ft.Text("Detection History", style="headlineMedium"),
+            ft.Text("View the history of detections made by the system.", style="bodyMedium"),
+        ]
+        container = ft.Column(controls=self.content, alignment=ft.MainAxisAlignment.CENTER)
+        
+        return [container]

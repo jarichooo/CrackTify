@@ -1,11 +1,16 @@
 import flet as ft
 from typing import List
 
-def build(page) -> List[ft.Control]:
-    return [
-        ft.Text("Admin Dashboard", size=24, weight="bold"),
-        ft.Text(
-            "Welcome to the Admin Dashboard. Here you can manage users, view system statistics, and configure application settings.",
-            size=16,
-        ),
-    ]
+class AdminDashboardPage:
+    def __init__(self, page: ft.Page):
+        self.page = page
+        self.content: List[ft.Control] = []
+
+    def build(self) -> List[ft.Column]:
+        self.content = [
+            ft.Text("Admin Dashboard", style="headlineMedium"),
+            ft.Text("Manage users, view statistics, and configure settings.", style="bodyMedium"),
+        ]
+        container = ft.Column(controls=self.content, alignment=ft.MainAxisAlignment.CENTER)
+        
+        return [container]
