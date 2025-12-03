@@ -1,22 +1,51 @@
+import time
 import flet as ft
 from .template import TemplatePage
 from .pages import (
-    about_page,
-    admin_dashboard_page,
-    detection_history_page,
-    groups_page,
-    help_page,
-    home_page,
-    reports_page,
-    settings_page,
+    HomePage,
+    GroupsPage,
+    ImageGallery,
+    DetectionHistoryPage,
+    ReportsPage,
+    AboutPage,
+    AdminDashboardPage,
+    SettingsPage,
+    HelpPage,
 )
-from .pages.gallery_page import ImageGallery
 
 class MainPage(TemplatePage):
+    # Map: index -> (title, page builder or instance)
     def __init__(self, page: ft.Page):
         super().__init__(page)
+
+        # Initialize page instances
+        self.home_instance = HomePage(page)
+        self.groups_instance = GroupsPage(page)
         self.gallery_instance = ImageGallery(page)
-        self.search_active = False
+        self.detection_history_instance = DetectionHistoryPage(page)
+        self.reports_instance = ReportsPage(page)
+        self.admin_dashboard_instance = AdminDashboardPage(page)
+        self.settings_instance = SettingsPage(page)
+        self.about_instance = AboutPage(page)
+        self.help_instance = HelpPage(page)
+
+        # Set initial view
+        self.current_view_instance = self.home_instance
+
+        self.search_active = False # Search bar state
+
+        # Navigation map
+        self.navigation_map = {
+            0: ("Home", self.home_instance),
+            1: ("Groups", self.groups_instance),
+            2: ("Gallery", self.gallery_instance),
+            3: ("Detection History", self.detection_history_instance),
+            4: ("Reports", self.reports_instance),
+            5: ("Admin Dashboard", self.admin_dashboard_instance),
+            6: ("Settings", self.settings_instance),
+            7: ("About", self.about_instance),
+            8: ("Help", self.help_instance),
+        }
 
     def build(self) -> ft.View:
         """Build the main page UI"""
@@ -69,10 +98,10 @@ class MainPage(TemplatePage):
 
         # Search bar for gallery
         self.search_bar = ft.SearchBar(
-            bar_hint_text="Search images...",
+            bar_hint_text="Search...",
             view_elevation=0,
             divider_color="transparent",
-            on_change=lambda e: self.on_gallery_search(e.control.value),
+            on_change=lambda e: self.on_search(e.control.value), # Call on_search method
             height=40,
             expand=True,
             autofocus=True,
@@ -91,6 +120,12 @@ class MainPage(TemplatePage):
             on_click=self.toggle_search,
         )
 
+        self.profile_button = ft.IconButton(
+            icon=ft.Icons.PERSON,
+            tooltip="Profile",
+            on_click=lambda e: print("Go to profile")
+        )
+
         # App Bar
         self.appbar = ft.AppBar(
             toolbar_height=60,
@@ -101,14 +136,7 @@ class MainPage(TemplatePage):
             title=self.title_container,
             center_title=False,
             actions=[
-                ft.Container(
-                    content=ft.IconButton(
-                        icon=ft.Icons.PERSON,
-                        tooltip="Profile",
-                        on_click=lambda e: print("Go to profile")
-                    ),
-                    padding=ft.padding.only(right=10)
-                )
+                self.profile_button
             ]
         )
 
@@ -167,7 +195,7 @@ class MainPage(TemplatePage):
         self.body_content = ft.Container(
             content=ft.Column(
                 expand=True,
-                controls=home_page.build(self.page),
+                controls=self.home_instance.build(),
                 alignment=ft.MainAxisAlignment.START,
                 horizontal_alignment=ft.CrossAxisAlignment.CENTER,
             ),
@@ -218,28 +246,12 @@ class MainPage(TemplatePage):
         """Handle drawer navigation changes"""
         selected = self.drawer.selected_index
 
-        # Map: index -> (title, page builder or instance)
-        navigation_map = {
-            0: ("Home", home_page.build),
-            1: ("Groups", groups_page.build),
-            2: ("Gallery", self.gallery_instance),  # already an instance
-            3: ("Detection History", detection_history_page.build),
-            4: ("Reports", reports_page.build),
-            5: ("Admin Dashboard", admin_dashboard_page.build),
-            6: ("Settings", settings_page.build),
-            7: ("About", about_page.build),
-            8: ("Help", help_page.build),
-        }
+        # Navigate to selected page
+        if selected in self.navigation_map:
+            title, builder = self.navigation_map[selected]
+            self.current_view_instance = builder # Update current view instance
 
-        if selected in navigation_map:
-            title, builder = navigation_map[selected]
-
-            # If builder is an instance with build() method
-            if hasattr(builder, "build") and callable(builder.build):
-                self.show_content_page(title, lambda _: builder.build())
-            else:
-                # Function-based page
-                self.show_content_page(title, builder)
+            self.show_content_page(title, lambda _: builder.build())
 
         # Close drawer after selection
         self.drawer.open = False
@@ -248,30 +260,32 @@ class MainPage(TemplatePage):
 
     # Search Toggle Logic 
     def toggle_search(self, e):
-        """Toggle search bar in AppBar for Gallery."""
+        """Toggle search bar in AppBar for some pages."""
         self.search_active = not self.search_active
         self.title_container.controls.clear()
+        search_val = self.search_bar.value
 
         if self.search_active:
             # Show search bar
             self.title_container.controls.append(self.search_bar)
             self.search_button.icon = ft.Icons.CLOSE
         else:
+            if search_val:
+                # Clear any active search filters
+                self.current_view_instance.filter_content("")
+
             # Restore normal title
             self.title_container.controls.append(self.normal_title)
             self.search_button.icon = ft.Icons.SEARCH
-
-            # Clear gallery filter if gallery is active
-            if self.drawer.selected_index == 2 and hasattr(self.gallery_instance, "filter_images"):
-                self.gallery_instance.filter_images("")
+            self.search_bar.value = None
 
         self.page.update()
 
     # Called whenever user types text in SearchBar
-    def on_gallery_search(self, query: str):
-        """Filter images in gallery if gallery is active"""
-        if self.drawer.selected_index == 2 and hasattr(self.gallery_instance, "filter_images"):
-            self.gallery_instance.filter_images(query)
+    def on_search(self, query: str):
+        """Filter content based on search query."""
+        time.sleep(1)  # Small delay to allow typing to stabilize
+        self.current_view_instance.filter_content(query)
 
     # Navigation helper
     def show_content_page(self, title: str, content_builder: callable):
@@ -295,19 +309,16 @@ class MainPage(TemplatePage):
             padding=ft.padding.only(right=10),
         )
 
+        searchable_views = ["Groups", "Gallery"]
+
         # Insert search only for Gallery
-        if title == "Gallery":
+        if title in searchable_views:
             self.appbar.actions.append(self.search_button)
 
-            # Restore search state if it was active before
-            if self.search_active:
-                self.title_container.controls.clear()
-                self.title_container.controls.append(self.search_bar)
-                self.search_button.icon = ft.Icons.CLOSE
-            else:
-                self.title_container.controls.clear()
-                self.title_container.controls.append(self.normal_title)
-                self.search_button.icon = ft.Icons.SEARCH
+            # If coming from search, restore search bar
+            self.title_container.controls.clear()
+            self.title_container.controls.append(self.normal_title)
+            self.search_button.icon = ft.Icons.SEARCH
 
         self.appbar.actions.append(profile_btn)
 

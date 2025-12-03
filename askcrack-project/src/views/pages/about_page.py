@@ -1,15 +1,17 @@
 import flet as ft
 from typing import List
 
-def build(page) -> List[ft.Control]:
-    return [
-        ft.Text("About Cracktify", size=24, weight="bold"),
-        ft.Text(
-            "Cracktify is a cutting-edge application designed to help users detect and analyze cracks in various materials using advanced algorithms and machine learning techniques.",
-            size=16,
-        ),
-        ft.Text(
-            "Our mission is to provide accurate and efficient crack detection solutions to enhance safety and maintenance processes across industries.",
-            size=16,
-        ),
-    ]
+class AboutPage:
+    def __init__(self, page: ft.Page):
+        self.page = page
+        self.content: List[ft.Control] = []
+
+    def build(self) -> List[ft.Column]:
+        self.content = [
+            ft.Text("About Us", style="headlineMedium"),
+            ft.Text("This application is designed to help users find answers to their questions.", style="bodyMedium"),
+
+        ]
+        container = ft.Column(controls=self.content, alignment=ft.MainAxisAlignment.CENTER)
+        
+        return [container]

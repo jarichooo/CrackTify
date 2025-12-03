@@ -189,21 +189,56 @@ class ImageGallery:
         self.page.overlay.append(full_container)
         self.page.update()
 
-    def filter_images(self, keyword: str):
-        """ Filter images by keyword in filename. """
+    def filter_content(self, keyword: str):
         files = [
             f for f in self.IMAGES_FOLDER.iterdir()
-            if f.suffix.lower() in {".png", ".jpg", ".jpeg", ".bmp"} and keyword.lower() in f.name.lower()
+            if f.suffix.lower() in {".png", ".jpg", ".jpeg", ".bmp"}
+            and keyword.lower() in f.name.lower()
         ]
+
+        # Always clear the grid content
         self.gallery_grid.controls.clear()
 
+        # Remove any existing "no result" container
+        self.page_container.controls = [
+            c for c in self.page_container.controls if getattr(c, "is_no_result", False) != True
+        ]
+
         if not files:
-            self.gallery_grid.controls.append(ft.Text("No images found."))
+            # Only add no result container if gallery grid is not visible
+            no_result = ft.Container(
+                alignment=ft.alignment.center,
+                expand=True,
+                content=ft.Column(
+                    alignment=ft.MainAxisAlignment.CENTER,
+                    horizontal_alignment=ft.CrossAxisAlignment.CENTER,
+                    expand=True,
+                    controls=[
+                        ft.Icon(ft.Icons.SEARCH_OFF, size=100, color=ft.Colors.GREY),
+                        ft.Text("No images found.", size=20, color=ft.Colors.GREY),
+                    ],
+                ),
+            )
+
+            # Mark it uniquely so we can detect/remove it later
+            no_result.is_no_result = True
+
+            # Ensure grid is removed
+            if self.gallery_grid in self.page_container.controls:
+                self.page_container.controls.remove(self.gallery_grid)
+
+            self.page_container.controls.append(no_result)
+
         else:
+            # Ensure gallery grid is shown
+            if self.gallery_grid not in self.page_container.controls:
+                self.page_container.controls.append(self.gallery_grid)
+
             for f in files:
                 self.gallery_grid.controls.append(self.build_tile(f))
 
         self.page.update()
+
 
     # Actions (Rename / Delete)
     def show_actions(self, file_path: Path):

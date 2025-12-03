@@ -68,5 +68,6 @@ class TemplatePage:
             appbar=appbar,
             drawer=drawer,
             controls=content,
-            floating_action_button=floating_action_button
+            floating_action_button=floating_action_button,
+            fullscreen_dialog=True,
         )
