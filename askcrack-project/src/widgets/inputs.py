@@ -8,7 +8,7 @@ class AppTextField(ft.TextField):
         hint_text: str | None = None,
         prefix_icon: ft.Icons | None = None,
         width: float | None = None,
-        border_color: ft.Colors | None = ft.Colors.BLUE_ACCENT_100,
+        border_color: ft.Colors | None = ft.Colors.SURFACE_TINT,
         border_radius: ft.BorderRadius | None = ft.border_radius.all(10),
         error_text: str | None = None,
         **kwargs
@@ -28,3 +28,22 @@ class AppTextField(ft.TextField):
     def clear_error(self):
         self.error_text = None
         self.page.update()
+
+class CustomDropdown(ft.Dropdown):
+    def __init__(
+        self,
+        label: str | None = None,
+        options: list[ft.dropdown.Option] | None = None,
+        width: float | None = None,
+        border_color: ft.Colors | None = ft.Colors.SURFACE_TINT,
+        border_radius: ft.BorderRadius | None = ft.border_radius.all(10),
+        **kwargs
+    ) -> None:
+        super().__init__(
+            label=label,
+            options=options,
+            width=width,
+            border_color=border_color,
+            border_radius=border_radius,
+            **kwargs
+        )

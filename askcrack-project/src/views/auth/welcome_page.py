@@ -1,6 +1,5 @@
 import flet as ft
-
-from .template import TemplatePage
+from views.template import TemplatePage
 from widgets.buttons import PrimaryButton, SecondaryButton
 
 class WelcomePage(TemplatePage):
@@ -8,20 +7,34 @@ class WelcomePage(TemplatePage):
         super().__init__(page)
 
     def build(self):
-        """Build the welcome page UI"""
-        content = [
-            ft.Stack(
-                expand=True,  # fills the screen
+        return self.layout([
+            ft.Column(
+                expand=True,
+                alignment=ft.MainAxisAlignment.SPACE_BETWEEN,
+                horizontal_alignment=ft.CrossAxisAlignment.CENTER,
                 controls=[
-                    # Centered title
+
+                    # Title
                     ft.Container(
-                        ft.Text("Cracktify", size=36, weight="bold"),
-                        alignment=ft.alignment.center
+                        alignment=ft.alignment.center,
+                        content=ft.Text(
+                            "Cracktify",
+                            size=36,
+                            weight="bold",
+                        ),
+                        height=self.page.window.height * 0.4,  # keeps it centered
                     ),
 
-                    # Buttons pinned to bottom
-                    ft.SafeArea(
-                        ft.Column(
+                    # Buttons
+                    ft.Container(
+                        padding=ft.padding.only(
+                            left=20,
+                            right=20,
+                            bottom=20,
+                        ),
+                        content=ft.Column(
+                            spacing=10,
+                            horizontal_alignment=ft.CrossAxisAlignment.CENTER,
                             controls=[
                                 PrimaryButton(
                                     text="Create an account",
@@ -36,20 +49,12 @@ class WelcomePage(TemplatePage):
                                 ft.Text(
                                     "By continuing, you agree to our Terms of Service and Privacy Policy.",
                                     size=10,
+                                    text_align=ft.TextAlign.CENTER,
                                 )
                             ],
-                            scroll=ft.ScrollMode.AUTO,
-                            spacing=10,
-                            horizontal_alignment=ft.CrossAxisAlignment.CENTER,
                         ),
-                        # padding=ft.padding.only(top=20, bottom=30),
-                        left=20,
-                        right=20,
-                        bottom=10
                     ),
                 ],
-
             )
         ]
-
-        return self.layout(content)
+    )

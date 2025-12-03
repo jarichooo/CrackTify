@@ -69,3 +69,29 @@ def validate_registration(
         is_valid = False
 
     return is_valid, errors
+
+def validate_login(email: str, password: str) -> tuple[bool, dict]:
+    """
+    Validates login fields.
+    Returns:
+        is_valid (bool): True if all validations pass
+        errors (dict): field-specific error messages
+    """
+    errors = {}
+    is_valid = True
+
+    # Validate email
+    if not email.strip():
+        errors["email"] = "Please enter your email."
+        is_valid = False
+    # Email format check
+    elif not re.match(r"[^@]+@[^@]+\.[^@]+", email):
+        errors["email"] = "Please enter a valid email address."
+        is_valid = False
+
+    # Validate password
+    if not password:
+        errors["password"] = "Please enter your password."
+        is_valid = False
+
+    return is_valid, errors

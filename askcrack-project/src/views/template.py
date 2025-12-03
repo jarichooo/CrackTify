@@ -4,7 +4,6 @@ from config import Config
 class TemplatePage:
     def __init__(self, page: ft.Page):
         self.page = page
-        self.is_light = True if self.page.theme_mode == ft.ThemeMode.LIGHT else False
         self.loading_overlay = ft.Container(
             visible=False,
             expand=True,
@@ -16,11 +15,38 @@ class TemplatePage:
                 # bgcolor=ft.Colors.WHITE,
                 border_radius=12,
                 alignment=ft.alignment.center,
-                content=ft.ProgressRing(),
+                content=ft.ProgressRing(color=ft.Colors.INVERSE_PRIMARY),
             ),
         )
 
         self.configure_page()
+        
+        if hasattr(self.page, "on_pop"):
+            self.page.on_pop = self.on_back
+
+    def on_back(self, e):
+        # 'e' exists only on mobile, ignore on desktop
+        handled = False
+
+        if self.search_active:
+            self.toggle_search(None)
+            handled = True
+
+        elif self.action_buttons.visible:
+            self.open_detect_menu(None)
+            handled = True
+
+        elif hasattr(self, "profile_overlay") and self.profile_overlay in self.page.controls:
+            self.close_profile(None)
+            handled = True
+
+        elif len(self.page.views) > 1:
+            self.page.go_back()
+            handled = True
+
+        if handled and hasattr(e, "prevent_default"):
+            e.prevent_default = True
+
 
     def configure_page(self):
         """Page/window configuration"""
@@ -28,6 +54,9 @@ class TemplatePage:
         self.page.theme_mode = ft.ThemeMode.SYSTEM
         self.page.padding = 0
         self.page.spacing = 0
+
+        self.page.platform = ft.PagePlatform.ANDROID
+        self.is_light = True if self.page.theme_mode == ft.ThemeMode.LIGHT else False
 
         self.page.window.width = Config.APP_WIDTH
         self.page.window.height = Config.APP_HEIGHT
@@ -66,5 +95,5 @@ class TemplatePage:
             appbar=appbar,
             drawer=drawer,
             controls=content,
-            floating_action_button=floating_action_button
+            floating_action_button=floating_action_button,
         )
