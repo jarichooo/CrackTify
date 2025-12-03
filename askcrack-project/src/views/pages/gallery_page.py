@@ -314,6 +314,9 @@ class ImageGallery:
         self.page.close(dlg)
         try:
             file_path.unlink()
+            # Clear cached files so load_images refreshes
+            self.cached_files = None
+            self.cached_thumbs.pop(file_path, None)  # remove thumbnail cache
             self.load_images()
         except Exception as e:
             print(e)
@@ -339,18 +342,25 @@ class ImageGallery:
 
     def do_rename(self, file_path: Path, dlg):
         """ Perform the renaming of the file. """
-        new_name = self.rename_field.value
-
-        if not new_name.strip():
+        new_name = self.rename_field.value.strip()
+        if not new_name:
             self.rename_field.error_text = "Filename cannot be empty."
             self.rename_field.update()
             return
 
         new_file = file_path.parent / (new_name + file_path.suffix)
-
         try:
             file_path.rename(new_file)
-            self.page.close(dlg)
+            # Update cache: remove old file, add new
+            if self.cached_files:
+                try:
+                    idx = self.cached_files.index(file_path)
+                    self.cached_files[idx] = new_file
+                except ValueError:
+                    # file not in cache yet
+                    self.cached_files.append(new_file)
+            self.cached_thumbs.pop(file_path, None)
             self.load_images()
+            self.page.close(dlg)
         except Exception as e:
             print(e)
