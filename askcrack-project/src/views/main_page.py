@@ -252,11 +252,14 @@ class MainPage(TemplatePage):
             self.current_view_instance = builder # Update current view instance
 
             self.show_content_page(title, lambda _: builder.build())
+            
+            # Lazy load if applicable
+            if hasattr(self.current_view_instance, "lazy_load"):
+                self.page.run_task(self.current_view_instance.lazy_load)
 
         # Close drawer after selection
         self.drawer.open = False
         self.page.update()
-
 
     # Search Toggle Logic 
     def toggle_search(self, e):

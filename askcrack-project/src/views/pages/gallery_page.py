@@ -1,3 +1,4 @@
+import asyncio
 from pathlib import Path
 from PIL import Image
 import flet as ft
@@ -18,8 +19,11 @@ class ImageGallery:
         self.page = page
         self.current_sort = "Date Descending"
         self.current_size = "Medium"
-        self.gallery_grid: ft.GridView | None = None
 
+        self.cached_files = None
+        self.cached_thumbs = {}
+
+        self.gallery_grid: ft.GridView | None = None
         self.ensure_folder()
 
     # Utilities
@@ -84,9 +88,12 @@ class ImageGallery:
             horizontal_alignment=ft.CrossAxisAlignment.CENTER,
         )
     
-
-        self.load_images()
         return [self.page_container]
+    
+    async def lazy_load(self):
+        """ Lazy load images after a short delay to improve UX. """
+        await asyncio.sleep(0.1)
+        self.load_images()
 
     # Sorting & Size Events
     def on_sort_change(self, e):
@@ -102,38 +109,49 @@ class ImageGallery:
 
     # Load & Display Images
     def load_images(self):
-        """ Load images from the folder and display them in the grid. """
-        files = [
-            f for f in self.IMAGES_FOLDER.iterdir()
-            if f.suffix.lower() in {".png", ".jpg", ".jpeg", ".bmp"}
-        ]
+        """Load image file list and thumbnails (cached)."""
 
-        # Sorting logic
-        match self.current_sort:
-            case "Date Descending":
-                files.sort(key=lambda x: x.stat().st_mtime, reverse=True)
-            case "Date Ascending":
-                files.sort(key=lambda x: x.stat().st_mtime)
-            case "Name A-Z":
-                files.sort(key=lambda x: x.name.lower())
-            case "Name Z-A":
-                files.sort(key=lambda x: x.name.lower(), reverse=True)
+        # Cache file listing
+        if self.cached_files is None:
+            self.cached_files = [
+                f for f in self.IMAGES_FOLDER.iterdir()
+                if f.suffix.lower() in {".png", ".jpg", ".jpeg", ".bmp"}
+            ]
 
+        # Apply sorting
+        files = sorted(self.cached_files, key=self.sort_key(), reverse=self.sort_reverse())
+
+        # Clear grid
         self.gallery_grid.controls.clear()
 
         if not files:
             self.gallery_grid.controls.append(ft.Text("No images found."))
         else:
             for f in files:
-                self.gallery_grid.controls.append(self.build_tile(f))
+                # Thumbnail caching (FAST)
+                if f not in self.cached_thumbs:
+                    self.cached_thumbs[f] = image_to_base64(f, (140, 140))
+
+                thumb = self.cached_thumbs[f]
+                self.gallery_grid.controls.append(self.build_tile_thumb(f, thumb))
 
         self.page.update()
 
-    # Image Tile
-    def build_tile(self, file_path: Path):
-        """ Build a tile for the image grid. """
-        thumb = image_to_base64(file_path, (140, 140))
-
+    def sort_key(self):
+        """ Return sorting key function based on current selection. """
+        return {
+            "Date Descending": lambda f: f.stat().st_mtime,
+            "Date Ascending": lambda f: f.stat().st_mtime,
+            "Name A-Z": lambda f: f.name.lower(),
+            "Name Z-A": lambda f: f.name.lower(),
+        }.get(self.current_sort, lambda f: f.stat().st_mtime)
+    
+    def sort_reverse(self):
+        """ Return whether sorting should be in reverse order. """
+        return self.current_sort in ("Date Descending", "Name Z-A")
+    
+    def build_tile_thumb(self, file_path: Path, thumb: str):
+        """ Build a tile for the image grid using cached thumbnail. """
         return ft.Container(
             border_radius=10,
             padding=10,
@@ -190,22 +208,51 @@ class ImageGallery:
         self.page.update()
 
     def filter_content(self, keyword: str):
-        files = [
-            f for f in self.IMAGES_FOLDER.iterdir()
-            if f.suffix.lower() in {".png", ".jpg", ".jpeg", ".bmp"}
-            and keyword.lower() in f.name.lower()
-        ]
+        """Filter images by keyword using cached files, without build_tile method."""
 
-        # Always clear the grid content
+        # Ensure cached files
+        if not hasattr(self, "cached_files"):
+            self.cached_files = [
+                f for f in self.IMAGES_FOLDER.iterdir()
+                if f.suffix.lower() in {".png", ".jpg", ".jpeg", ".bmp"}
+            ]
+
+        # Filter
+        filtered_files = [f for f in self.cached_files if keyword.lower() in f.name.lower()]
+
+        # Clear grid
         self.gallery_grid.controls.clear()
 
-        # Remove any existing "no result" container
+        # Remove existing "no result" container
         self.page_container.controls = [
-            c for c in self.page_container.controls if getattr(c, "is_no_result", False) != True
+            c for c in self.page_container.controls
+            if getattr(c, "is_no_result", False) != True
         ]
 
-        if not files:
-            # Only add no result container if gallery grid is not visible
+        if filtered_files:
+            # Ensure grid is visible
+            if self.gallery_grid not in self.page_container.controls:
+                self.page_container.controls.append(self.gallery_grid)
+
+            # Build tiles inline
+            for f in filtered_files:
+                thumb = image_to_base64(f, (140, 140))
+                tile = ft.Container(
+                    border_radius=10,
+                    padding=10,
+                    on_click=lambda e, fp=f: self.show_full(fp),
+                    on_long_press=lambda e, fp=f: self.show_actions(fp),
+                    content=ft.Column([
+                        ft.Image(src_base64=thumb, fit=ft.ImageFit.CONTAIN),
+                        ft.Text(f.name, size=12, overflow=ft.TextOverflow.ELLIPSIS),
+                    ])
+                )
+                self.gallery_grid.controls.append(tile)
+        else:
+            # Remove grid and show "no results"
+            if self.gallery_grid in self.page_container.controls:
+                self.page_container.controls.remove(self.gallery_grid)
+
             no_result = ft.Container(
                 alignment=ft.alignment.center,
                 expand=True,
@@ -219,26 +266,10 @@ class ImageGallery:
                     ],
                 ),
             )
-
-            # Mark it uniquely so we can detect/remove it later
             no_result.is_no_result = True
-
-            # Ensure grid is removed
-            if self.gallery_grid in self.page_container.controls:
-                self.page_container.controls.remove(self.gallery_grid)
-
             self.page_container.controls.append(no_result)
 
-        else:
-            # Ensure gallery grid is shown
-            if self.gallery_grid not in self.page_container.controls:
-                self.page_container.controls.append(self.gallery_grid)
-
-            for f in files:
-                self.gallery_grid.controls.append(self.build_tile(f))
-
         self.page.update()
-
 
     # Actions (Rename / Delete)
     def show_actions(self, file_path: Path):
@@ -262,7 +293,6 @@ class ImageGallery:
             )
         )
         self.page.open(sheet)
-
 
     def delete_dialog(self, file_path: Path, sheet):
         """ Show delete confirmation dialog. """
