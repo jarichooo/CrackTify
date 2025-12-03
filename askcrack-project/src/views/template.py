@@ -20,6 +20,33 @@ class TemplatePage:
         )
 
         self.configure_page()
+        
+        if hasattr(self.page, "on_pop"):
+            self.page.on_pop = self.on_back
+
+    def on_back(self, e):
+        # 'e' exists only on mobile, ignore on desktop
+        handled = False
+
+        if self.search_active:
+            self.toggle_search(None)
+            handled = True
+
+        elif self.action_buttons.visible:
+            self.open_detect_menu(None)
+            handled = True
+
+        elif hasattr(self, "profile_overlay") and self.profile_overlay in self.page.controls:
+            self.close_profile(None)
+            handled = True
+
+        elif len(self.page.views) > 1:
+            self.page.go_back()
+            handled = True
+
+        if handled and hasattr(e, "prevent_default"):
+            e.prevent_default = True
+
 
     def configure_page(self):
         """Page/window configuration"""
@@ -68,5 +95,5 @@ class TemplatePage:
             appbar=appbar,
             drawer=drawer,
             controls=content,
-            floating_action_button=floating_action_button
+            floating_action_button=floating_action_button,
         )
