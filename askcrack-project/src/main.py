@@ -9,8 +9,11 @@ from views import (
 
 def main(page: ft.Page):
     """Main function to run the app"""
-    page.title = "Cracktify"
-    page.platform = ft.PagePlatform.ANDROID
+    def login_check():
+        """Check for existing login token"""
+        token = page.client_storage.get("auth_token")
+        if token:
+            page.go("/home")
 
     # Routing
     def route_change(route):
@@ -44,6 +47,8 @@ def main(page: ft.Page):
             page.go(page.views[-1].route)
         else:
             page.window_close()  # or just ignore if first view
+
+    login_check() # Check for existing login on app start
 
     page.on_route_change = route_change
     page.on_view_pop = view_pop
