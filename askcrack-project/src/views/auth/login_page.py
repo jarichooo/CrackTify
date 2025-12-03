@@ -151,9 +151,11 @@ class LoginPage(TemplatePage):
             self.hide_loading()
 
             token = response.get("token")
+            user = response.get("user")
             
             # Save token to client storage
             await self.page.client_storage.set_async("auth_token", token)
+            await self.page.client_storage.set_async("user_info", user)
 
             self.page.go("/home")
 

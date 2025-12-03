@@ -38,7 +38,18 @@ def register_user_service(first_name: str, last_name: str, email: str, password:
 
     token = generate_jwt(new_user.id, new_user.email)
 
-    return {"success": True, "message": "User registered successfully", "token": token}
+    return {
+        "success": True, 
+        "message": "User registered successfully",
+        "token": token,
+        "user": {
+            "id": new_user.id,
+            "first_name": new_user.first_name,
+            "last_name": new_user.last_name,
+            "email": new_user.email,
+            "avatar_url": new_user.avatar_url
+        }
+    }
 
 def login_user_service(email: str, password: str, db):
     """Authenticate a user by email and password."""
@@ -53,4 +64,15 @@ def login_user_service(email: str, password: str, db):
     
     token = generate_jwt(user.id, user.email)
 
-    return {"success": True, "message": "Login successful", "token": token}
+    return {
+        "success": True, 
+        "message": "Login successful", 
+        "token": token,
+        "user": {
+            "id": user.id,
+            "first_name": user.first_name,
+            "last_name": user.last_name,
+            "email": user.email,
+            "avatar_url": user.avatar_url
+        }
+    }

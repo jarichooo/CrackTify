@@ -12,6 +12,8 @@ from .pages import (
     SettingsPage,
     HelpPage,
 )
+from widgets.inputs import AppTextField
+from widgets.buttons import PrimaryButton, SecondaryButton, CustomTextButton
 
 class MainPage(TemplatePage):
     # Map: index -> (title, page builder or instance)
@@ -29,9 +31,6 @@ class MainPage(TemplatePage):
         self.about_instance = AboutPage(page)
         self.help_instance = HelpPage(page)
 
-        # Set initial view
-        self.current_view_instance = self.home_instance
-
         self.search_active = False # Search bar state
 
         # Navigation map
@@ -46,6 +45,12 @@ class MainPage(TemplatePage):
             7: ("About", self.about_instance),
             8: ("Help", self.help_instance),
         }
+
+        # Set initial view
+        self.current_view_instance = self.home_instance
+        self.current_title = "Home"
+
+        self.user = self.page.client_storage.get("user_info")  # Load user data from client storage
 
     def build(self) -> ft.View:
         """Build the main page UI"""
@@ -94,7 +99,7 @@ class MainPage(TemplatePage):
         )
 
         # Normal title text
-        self.normal_title = ft.Text("Home", size=18, weight="bold")
+        self.normal_title = ft.Text(self.current_title, size=18, weight="bold")
 
         # Search bar for gallery
         self.search_bar = ft.SearchBar(
@@ -120,19 +125,39 @@ class MainPage(TemplatePage):
             on_click=self.toggle_search,
         )
 
-        self.profile_button = ft.IconButton(
-            icon=ft.Icons.PERSON,
-            tooltip="Profile",
-            on_click=lambda e: print("Go to profile")
+        # Profile button
+        self.profile_button = ft.Container(
+            content=ft.IconButton(
+                icon=ft.Icons.ACCOUNT_CIRCLE,
+                icon_size=28,
+                tooltip="Profile",
+                on_click=self.open_profile,
+            ),
+            padding=ft.padding.only(right=10),
+        )
+
+        # Close profile button
+        self.close_profile_button = ft.Container(
+            content=ft.IconButton(
+                icon=ft.Icons.CLOSE,
+                icon_size=28,
+                tooltip="Close Profile",
+                on_click=self.close_profile,
+            ),
+            padding=ft.padding.only(right=10),
+        )
+
+        # Drawer button
+        self.drawer_button = ft.IconButton(
+            icon=ft.Icons.MENU,
+            on_click=lambda e: self.page.open(self.drawer),
         )
 
         # App Bar
         self.appbar = ft.AppBar(
             toolbar_height=60,
-            leading=ft.IconButton(
-                icon=ft.Icons.MENU,
-                on_click=lambda e: self.page.open(self.drawer)
-            ),
+            leading=self.drawer_button,
+            automatically_imply_leading=False,
             title=self.title_container,
             center_title=False,
             actions=[
@@ -165,18 +190,13 @@ class MainPage(TemplatePage):
             spacing=10,
             visible=False,
             horizontal_alignment=ft.CrossAxisAlignment.END,
-
         )
-
-        # Animation for FABs
-        self.anim = ft.Animation(300, ft.AnimationCurve.EASE_IN_OUT_QUINT)
 
         # Main FAB
         self.detect_button = ft.FloatingActionButton(
             icon=ft.Icons.ADD,  
             text="New Detection",
             mini=True,
-            animate_size=self.anim,
             on_click=self.open_detect_menu,
         )
 
@@ -250,6 +270,7 @@ class MainPage(TemplatePage):
         if selected in self.navigation_map:
             title, builder = self.navigation_map[selected]
             self.current_view_instance = builder # Update current view instance
+            self.current_title = title
 
             self.show_content_page(title, lambda _: builder.build())
             
@@ -302,16 +323,6 @@ class MainPage(TemplatePage):
         # Reset AppBar actions
         self.appbar.actions = []
 
-        # Profile button
-        profile_btn = ft.Container(
-            content=ft.IconButton(
-                icon=ft.Icons.PERSON,
-                tooltip="Profile",
-                on_click=lambda e: print("Go to profile"),
-            ),
-            padding=ft.padding.only(right=10),
-        )
-
         searchable_views = ["Groups", "Gallery"]
 
         # Insert search only for Gallery
@@ -323,12 +334,271 @@ class MainPage(TemplatePage):
             self.title_container.controls.append(self.normal_title)
             self.search_button.icon = ft.Icons.SEARCH
 
-        self.appbar.actions.append(profile_btn)
+        self.appbar.actions.append(self.profile_button)
 
         # Set page content
         self.body_content.content.controls = content_builder(self.page)
         self.page.update()
 
+    def open_profile(self, e):
+        """Enter profile mode with editable fields and avatar upload"""
+
+        # Save current appbar state
+        self.temp_appbar_state = {
+            "leading": self.appbar.leading,
+            "title": self.appbar.title,
+            "actions": self.appbar.actions.copy()
+        }
+
+        # Update appbar for profile
+        self.appbar.leading = None  # remove drawer icon
+        self.appbar.title = ft.Container(
+            ft.Text("Profile", size=18, weight="bold"),
+            padding=ft.padding.only(left=10)
+        )
+        self.appbar.actions = [self.close_profile_button]
+
+        # Hide FAB
+        self.detect_button.visible = False
+        self.action_buttons.visible = False
+
+        # Load user info
+        profile_image_path = self.user.get("avatar") or "https://www.w3schools.com/howto/img_avatar.png"
+        user_first_name = self.user.get("first_name", "")
+        user_last_name = self.user.get("last_name", "")
+        full_name = ft.Text(f"{user_first_name} {user_last_name}", size=16, weight="bold")
+        user_email = self.user.get("email", "")
+
+        # FilePicker for avatar
+        avatar_picker = ft.FilePicker(on_result=self.on_avatar_picked)
+        self.page.overlay.append(avatar_picker)
+
+        avatar_control = ft.Stack(
+            controls=[
+                ft.CircleAvatar(foreground_image_src=profile_image_path, radius=50),
+                ft.Container(
+                    content=ft.Icon(ft.Icons.CAMERA_ALT, size=20, color="white"),
+                    width=30,
+                    height=30,
+                    bgcolor=ft.Colors.BLACK54,
+                    border_radius=20,
+                    alignment=ft.alignment.center,
+                    on_click=lambda e: avatar_picker.pick_files(
+                        allow_multiple=False,
+                        allowed_extensions=["png", "jpg", "jpeg"]
+                    )
+                )
+            ],
+            alignment=ft.alignment.bottom_right
+        )
+
+        # Editable Fields
+        self.first_name_input = AppTextField(
+            label="First Name",
+            border=ft.InputBorder.UNDERLINE,
+            value=user_first_name,
+            expand=1
+        )
+        self.last_name_input = AppTextField(
+            label="Last Name",
+            border=ft.InputBorder.UNDERLINE,
+            value=user_last_name,
+            expand=1
+        )
+
+        def allow_email_change(e):
+            self.email_input.read_only = False
+            self.email_input.focus()
+            self.page.update()
+
+        self.email_input = AppTextField(
+            label="Email",
+            border=ft.InputBorder.UNDERLINE,
+            value=user_email,
+            suffix_icon=ft.IconButton(icon=ft.Icons.EDIT, on_click=allow_email_change),
+            read_only=True,
+        )
+
+        change_pass_button = CustomTextButton(
+            text="Change Password",
+            on_tap=lambda e: print("Change Password clicked")
+        )
+
+        save_button = PrimaryButton(
+            text="Save Changes",
+            icon=ft.Icons.SAVE,
+            width=300,
+            height=45,
+            expand=True,
+            on_click=self.save_profile_changes
+        )
+
+        logout_button = SecondaryButton(
+            text="Logout",
+            icon=ft.Icons.LOGOUT,
+            width=300,
+            height=45,
+            style=ft.ButtonStyle(
+                bgcolor={
+                    ft.ControlState.DEFAULT: ft.Colors.RED_100,     # Soft light red
+                    ft.ControlState.HOVERED: ft.Colors.RED_200,     # Slightly deeper on hover
+                    ft.ControlState.PRESSED: ft.Colors.RED_300,     # A bit stronger when pressed
+                },
+                color=ft.Colors.RED_700,  # Text/icon stay strong red for contrast
+                icon_color=ft.Colors.RED_700,
+            ),
+            on_click=lambda e: print("Logout clicked"),
+        )
+
+        button_column = ft.Container(
+            expand=True,
+            content=ft.Column(
+                controls=[save_button, logout_button],
+                alignment=ft.MainAxisAlignment.SPACE_AROUND,
+                horizontal_alignment=ft.CrossAxisAlignment.CENTER,
+            )
+        )
+
+        panel_list = ft.ExpansionPanelList(
+            elevation=0,
+            divider_color=ft.Colors.TRANSPARENT,
+            controls=[
+                ft.ExpansionPanel(
+                    header=ft.Container(
+                        ft.Text("Account Information", weight="bold", size=16),
+                        alignment=ft.alignment.center_left,
+                    ),
+                    content=ft.Column(
+                        controls=[
+                            ft.Row(
+                                controls=[
+                                    self.first_name_input,
+                                    self.last_name_input,
+                                ],
+                                spacing=20,
+                            ),
+                            self.email_input,
+                        ],
+                        tight=True,
+                    ),
+                ),
+                ft.ExpansionPanel(
+                    header=ft.Container(
+                        ft.Text("Security", weight="bold", size=16),
+                        alignment=ft.alignment.center_left,
+                    ),
+                    content=ft.Column(
+                        controls=[
+                            change_pass_button,
+                            ft.Row([ft.Text("Two-factor Authentication (2FA)") ,
+                                    ft.Switch(value=False)] , alignment=ft.MainAxisAlignment.SPACE_BETWEEN),
+                            ft.ListTile(
+                                # leading=ft.Icon(ft.Icons.DEVICE_HUB),
+                                title=ft.Text("Active Sessions"),
+                                on_click=lambda e: print("Manage Active Sessions clicked")
+                            ),
+
+                        ],
+                        tight=True,
+                    ),
+                ),
+                ft.ExpansionPanel(
+                    header=ft.Container(ft.Text("Preferences", weight="bold", size=16),
+                        alignment=ft.alignment.center_left,
+                    ),
+                    content=ft.Column(
+                        controls=[
+                            ft.Dropdown(
+                                label="Theme",
+                                options=[ft.dropdown.Option("Light"), ft.dropdown.Option("Dark"), ft.dropdown.Option("System")]
+                            ),
+                            ft.Dropdown(
+                                label="Language",
+                                options=[ft.dropdown.Option("English"), ft.dropdown.Option("Filipino")]
+                            ),
+                            ft.Row([ft.Text("Notifications"), ft.Switch(value=True)])
+                        ],
+                        tight=True,
+                    ),
+                ),
+                ft.ExpansionPanel(
+                    header=ft.Container(
+                        ft.Text("Data and Privacy", weight="bold", size=16),
+                        alignment=ft.alignment.center_left,
+                    ),
+                    content=ft.Column(
+                        controls=[
+                            ft.TextButton("Clear Local Cache"),
+                            ft.TextButton("Manage Stored Images"),
+                            ft.TextButton("Delete Account", style=ft.ButtonStyle(color=ft.Colors.RED))
+                        ],
+                        tight=True,
+                    ),
+                ),
+
+            ]
+        )
+
+        list_view = ft.ListView(
+            expand=True,
+            controls=[
+                panel_list,
+                button_column,
+            ],
+            spacing=10,
+        )
+
+        # Update body
+        self.body_content.content.controls = [
+            avatar_control,
+            full_name,
+            ft.Divider(height=15, opacity=0), # spacer
+            list_view,
+            
+        ]
+
+        self.page.update()
+
+
+    def on_avatar_picked(self, e: ft.FilePickerResultEvent):
+        if not e.files:
+            return
+
+        avatar_path = e.files[0].path
+        self.user["avatar"] = avatar_path  # update user dictionary
+
+        # Update CircleAvatar
+        self.body_content.content.controls[0].controls[0].src = avatar_path
+        self.body_content.content.controls[0].controls[0].update()
+
+    def save_profile_changes(self, e):
+        self.user["first_name"] = self.first_name_input.value
+        self.user["last_name"] = self.last_name_input.value
+        self.user["email"] = self.email_input.value
+
+
+        # Save to client_storage or database
+        # await self.page.client_storage.set("user", self.user)  # if async
+
+        print("Profile updated:", self.user)
+
+    def close_profile(self, e):
+        """Exit profile mode"""
+        if hasattr(self, "temp_appbar_state"):
+            self.appbar.leading = self.temp_appbar_state["leading"]
+            self.appbar.title = self.temp_appbar_state["title"]
+            self.appbar.actions = self.temp_appbar_state["actions"]
+
+        # Restore FAB
+        self.detect_button.visible = True
+
+        # Restore previous content
+        self.body_content.content.controls = self.current_view_instance.build()
+        if hasattr(self.current_view_instance, "lazy_load"):
+            self.page.run_task(self.current_view_instance.lazy_load)
+
+        self.page.update()
+
     def show_detect(self, e):
         """Handle New Detection action"""
-        print("New Detection initiated")
+        ...

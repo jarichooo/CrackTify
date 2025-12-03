@@ -154,9 +154,11 @@ class OTPPage(TemplatePage):
             if reg_response.get("success"):
                 print(reg_response.get("message"))
                 token = reg_response.get("token")
+                user = reg_response.get("user")
 
                 # Save token to client storage
                 await self.page.client_storage.set_async("auth_token", token)
+                await self.page.client_storage.set_async("user_info", user)
 
                 self.page.run_task(self.clear_values)
                 self.page.go("/home")

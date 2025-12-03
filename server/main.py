@@ -20,3 +20,4 @@ Base.metadata.create_all(bind=engine)
 
 app.include_router(otp_routes.router, prefix="/otp", tags=["OTP"])
 app.include_router(auth_routes.router, prefix="/auth", tags=["Auth"])
+app.include_router(auth_routes.router, prefix="/profile", tags=["Profile"])

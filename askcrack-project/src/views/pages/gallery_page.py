@@ -5,6 +5,7 @@ import flet as ft
 from typing import List
 
 from utils.image_utils import image_to_base64
+from widgets.inputs import AppTextField, CustomDropdown
 
 class ImageGallery:
     IMAGES_FOLDER = Path(__file__).parent.parent.parent.parent / "storage" / "data" / "images" / "detected"
@@ -34,8 +35,7 @@ class ImageGallery:
     # Build UI
     def build(self) -> List[ft.Control]:
         """ Build the gallery page UI. """
-        sort_dropdown = ft.Dropdown(
-            scale=0.9,
+        sort_dropdown = CustomDropdown(
             label="Sort By",
             expand=1,
             value=self.current_sort,
@@ -48,8 +48,7 @@ class ImageGallery:
             on_change=self.on_sort_change
         )
 
-        size_dropdown = ft.Dropdown(
-            scale=0.9,
+        size_dropdown = CustomDropdown(
             label="View Size",
             expand=1,
             value=self.current_size,
@@ -262,7 +261,7 @@ class ImageGallery:
                     expand=True,
                     controls=[
                         ft.Icon(ft.Icons.SEARCH_OFF, size=100, color=ft.Colors.GREY),
-                        ft.Text("No images found.", size=20, color=ft.Colors.GREY),
+                        ft.Text("No image found.", size=20, color=ft.Colors.GREY),
                     ],
                 ),
             )
@@ -325,8 +324,10 @@ class ImageGallery:
         """ Show rename dialog. """
         self.page.close(sheet)
 
-        self.rename_field = ft.TextField(label="Filename", value=file_path.stem)
-
+        self.rename_field = AppTextField(
+            label="New Filename",
+            value=file_path.stem,
+        )
 
         dlg = ft.AlertDialog(
             modal=True,

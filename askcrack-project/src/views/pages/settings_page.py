@@ -12,5 +12,5 @@ class SettingsPage:
             ft.Text("Adjust your application settings here.", style="bodyMedium"),
         ]
         container = ft.Column(controls=self.content, alignment=ft.MainAxisAlignment.CENTER)
-        
+
         return [container]
