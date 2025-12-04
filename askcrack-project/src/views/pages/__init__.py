@@ -8,3 +8,4 @@ from .admin_dashboard_page import AdminDashboardPage
 from .settings_page import SettingsPage
 from .about_page import AboutPage
 from .help_page import HelpPage
+from .profile_page import ProfilePage

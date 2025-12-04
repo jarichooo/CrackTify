@@ -7,6 +7,7 @@ class HomePage:
         self.content: List[ft.Control] = []
 
     def build(self) -> List[ft.Control]:
+       
         self.content = [
             ft.Text("Welcome to the Home Page!", style="headlineMedium"),
             ft.Text("This is where the main content will go.", style="bodyMedium"),
