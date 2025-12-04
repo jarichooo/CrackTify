@@ -15,6 +15,6 @@ class User(Base):
     created_at = Column(DateTime, default=datetime.now(timezone.utc))
     updated_at = Column(DateTime, default=datetime.now(timezone.utc))
 
-    groups = relationship("Group", secondary="group_members", back_populates="members")
+    groups = relationship("GroupMember", back_populates="user")
     reports = relationship("Report", back_populates="user")
     images = relationship("Image", back_populates="user")
