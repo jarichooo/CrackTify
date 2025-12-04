@@ -2,15 +2,13 @@ import time
 import flet as ft
 from .template import TemplatePage
 from .pages import (
-    ProfilePage,
+    ProfilePage, #
     HomePage,
-    GroupsPage,
-    ImageGallery,
+    GroupsPage,#
+    ImageGallery, #
     DetectionHistoryPage,
     ReportsPage,
     AboutPage,
-    AdminDashboardPage,
-    SettingsPage,
     HelpPage,
 )
 from utils.toggle_theme import toggle_theme
@@ -29,8 +27,6 @@ class MainPage(TemplatePage):
         self.gallery_instance = ImageGallery(page)
         self.detection_history_instance = DetectionHistoryPage(page)
         self.reports_instance = ReportsPage(page)
-        self.admin_dashboard_instance = AdminDashboardPage(page)
-        self.settings_instance = SettingsPage(page)
         self.about_instance = AboutPage(page)
         self.help_instance = HelpPage(page)
 
@@ -39,14 +35,12 @@ class MainPage(TemplatePage):
         # Navigation map
         self.navigation_map = {
             0: ("Home", self.home_instance),
-            1: ("My Groups", self.groups_instance),
+            1: ("Groups", self.groups_instance),
             2: ("Gallery", self.gallery_instance),
             3: ("Detection History", self.detection_history_instance),
             4: ("Reports", self.reports_instance),
-            5: ("Admin Dashboard", self.admin_dashboard_instance),
-            6: ("Settings", self.settings_instance),
-            7: ("About", self.about_instance),
-            8: ("Help", self.help_instance),
+            5: ("About", self.about_instance),
+            6: ("Help", self.help_instance),
         }
 
         # Set initial view
@@ -91,11 +85,6 @@ class MainPage(TemplatePage):
                 ft.NavigationDrawerDestination(icon=ft.Icons.ASSESSMENT, label="Reports"),
                 ft.Divider(leading_indent=25, trailing_indent=25),
 
-                # Admin-only
-                ft.NavigationDrawerDestination(icon=ft.Icons.ADMIN_PANEL_SETTINGS, label="Admin Dashboard"),
-
-                ft.Divider(leading_indent=25, trailing_indent=25),
-                ft.NavigationDrawerDestination(icon=ft.Icons.SETTINGS, label="Settings"),
                 ft.NavigationDrawerDestination(icon=ft.Icons.INFO, label="About"),
                 ft.NavigationDrawerDestination(icon=ft.Icons.HELP, label="Help"),
             ]

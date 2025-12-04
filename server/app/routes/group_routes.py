@@ -28,7 +28,9 @@ def api_fetch_user_groups(user_id: int, db: Session = Depends(get_db)):
     """Endpoint to fetch groups a user is a member of."""
     return fetch_user_groups_service(user_id, db)
 
-@router.get("/groups")
-def api_fetch_groups(db: Session = Depends(get_db)):
+@router.post("/all")
+def api_fetch_groups(data: dict = Body(...), db: Session = Depends(get_db)):
     """Endpoint to fetch all groups."""
-    return fetch_groups_service(db)
+    user_id = data.get("user_id")
+
+    return fetch_groups_service(user_id, db)

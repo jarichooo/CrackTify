@@ -4,8 +4,6 @@ from .gallery_page import ImageGallery
 from .detection_history_page import DetectionHistoryPage
 from .reports_page import ReportsPage
 from .about_page import AboutPage
-from .admin_dashboard_page import AdminDashboardPage
-from .settings_page import SettingsPage
 from .about_page import AboutPage
 from .help_page import HelpPage
 from .profile_page import ProfilePage

@@ -3,9 +3,7 @@ from app.models.group import Group
 from app.models.group_member import GroupMember
 
 
-# ---------------------------------------------------------
 # CREATE GROUP
-# ---------------------------------------------------------
 def create_group_service(
     name: str,
     description: str | None,
@@ -38,11 +36,7 @@ def create_group_service(
 
     return fetch_user_groups_service(admin_id, db)
 
-
-
-# ---------------------------------------------------------
 # JOIN GROUP
-# ---------------------------------------------------------
 def join_group_service(user_id: int, group_id: int, db):
     """User joins a group."""
 
@@ -66,11 +60,7 @@ def join_group_service(user_id: int, group_id: int, db):
 
     return fetch_user_groups_service(user_id, db)
 
-
-
-# ---------------------------------------------------------
 # FETCH USER'S GROUPS
-# ---------------------------------------------------------
 def fetch_user_groups_service(user_id: int, db):
     """Fetch groups a user is a member of."""
     groups = (
@@ -104,11 +94,7 @@ def fetch_user_groups_service(user_id: int, db):
 
     return {"groups": result}
 
-
-
-# ---------------------------------------------------------
 # FETCH GROUPS USER IS NOT A MEMBER OF
-# ---------------------------------------------------------
 def fetch_groups_service(user_id: int, db):
     """Fetch groups the user is NOT a member of."""
 

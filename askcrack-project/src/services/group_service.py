@@ -6,9 +6,9 @@ async def fetch_user_groups(user_id: int) -> Dict[str, List[Any]]:
     """Fetches groups the user is a member of from the API."""
     return await get_request(f"/groups/user-groups/{user_id}")
 
-async def fetch_groups() -> Dict[str, List[Any]]:
+async def fetch_groups(user_id: int) -> Dict[str, List[Any]]:
     """Fetches a list of groups from the API."""
-    return await get_request("/groups/groups")
+    return await post_request("/groups/all", {"user_id": user_id})
 
 async def create_group(
     name: str,
