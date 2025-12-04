@@ -13,4 +13,4 @@ class Group(Base):
     admin_id = Column(Integer)
     created_at = Column(DateTime, default=datetime.now(timezone.utc))
 
-    members = relationship("User", secondary="group_members", back_populates="groups")
+    members = relationship("GroupMember", back_populates="group", cascade="all, delete-orphan")

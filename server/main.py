@@ -1,7 +1,7 @@
 from fastapi import FastAPI
 from fastapi.middleware.cors import CORSMiddleware
 from app.database.db import engine, Base
-from app.routes import otp_routes, auth_routes
+from app.routes import otp_routes, auth_routes, profile_routes, group_routes
 
 import app.models 
 
@@ -20,4 +20,5 @@ Base.metadata.create_all(bind=engine)
 
 app.include_router(otp_routes.router, prefix="/otp", tags=["OTP"])
 app.include_router(auth_routes.router, prefix="/auth", tags=["Auth"])
-app.include_router(auth_routes.router, prefix="/profile", tags=["Profile"])
+app.include_router(profile_routes.router, prefix="/profile", tags=["Profile"])
+app.include_router(group_routes.router, prefix="/groups", tags=["Groups"])

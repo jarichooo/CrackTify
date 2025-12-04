@@ -8,7 +8,6 @@ class Crack(Base):
 
     id = Column(Integer, primary_key=True)
     image_id = Column(Integer, ForeignKey("images.id"))
-    description = Column(String(255), nullable=True)
     severity = Column(String(50))
     detected_at = Column(DateTime, default=datetime.now(timezone.utc))
 
