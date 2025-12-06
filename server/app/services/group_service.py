@@ -127,3 +127,65 @@ def fetch_groups_service(user_id: int, db):
         })
 
     return {"groups": result}
+
+def fetch_group_info_service(group_id: int, db):
+    """Fetch detailed information about a specific group."""
+    g = db.query(Group).filter_by(id=group_id).first()
+
+    if not g:
+        return {"success": False, "message": "Group not found."}
+
+    group_info = {
+        "id": g.id,
+        "name": g.name,
+        "description": g.description,
+        "avatar_url": g.avatar_url,
+        "admin_id": g.admin_id,
+        "created_at": g.created_at.isoformat(),
+        "members": [
+            {
+                "user_id": member.user_id,
+                "first_name": member.user.first_name,
+                "last_name": member.user.last_name,
+                "joined_at": member.joined_at.isoformat()
+            }
+            for member in g.members
+        ]
+    }
+
+    return {"group": group_info}
+
+def edit_member_service(user_id: int, group_id: int, new_role: str, db):
+    """Edit a group member's role."""
+    member = db.query(GroupMember).filter_by(
+        user_id=user_id,
+        group_id=group_id
+    ).first()
+
+    if not member:
+        return {"success": False, "message": "Member not found in the group."}
+
+    member.role = new_role
+    db.commit()
+
+    return {"success": True, "message": "Member role updated successfully."}
+
+def remove_member_service(user_id: int, group_id: int, db):
+    """Remove a user from a group."""
+    member = db.query(GroupMember).filter_by(
+        user_id=user_id,
+        group_id=group_id
+    ).first()
+
+    if not member:
+        return {"success": False, "message": "Member not found in the group."}
+
+    db.delete(member)
+    db.commit()
+
+    if user_id == db.query(Group).filter_by(id=group_id).first().admin_id:
+        # If the admin leaves, delete the group
+        db.query(Group).filter_by(id=group_id).delete()
+        db.commit()
+
+    return {"success": True, "message": "Member removed from the group successfully."}

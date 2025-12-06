@@ -6,8 +6,11 @@ from pathlib import Path
 from services.group_service import (
     fetch_user_groups,
     fetch_groups,
+    fetch_group_info,
     create_group,
-    join_group
+    join_group,
+    edit_member,
+    remove_member
 )
 from widgets.inputs import AppTextField
 from utils.image_utils import image_to_base64
@@ -18,15 +21,17 @@ class GroupsPage:
         self.page = page
         self.user = self.page.client_storage.get("user_info")
         self.user_id = self.user.get("id") if self.user else None
-        self.selected_avatar_path: str | None = None  # store path now
+        self.selected_avatar_path: str | None = None
 
-        # Cache to speed up repeated views
+        # Cache
         self.cached_user_groups = []
         self.cached_joinable_groups = []
 
+        self.current_group_id: int | None = None
+
     def build(self) -> List[ft.Control]:
-        """ Build the Groups Page UI """
-        self.current_view = "my_groups"  # or "join_groups"
+        """Build the Groups Page UI"""
+        self.current_view = "my_groups"
 
         # Action buttons
         self.create_group_button = ft.ElevatedButton(
@@ -54,58 +59,61 @@ class GroupsPage:
             )
         )
 
-        # Container where views will change
+        # Navigation bar (hidden initially)
+        self.group_navbar = ft.NavigationBar(
+            bgcolor=ft.Colors.TRANSPARENT,
+            visible=False,
+            destinations=[
+                ft.NavigationBarDestination(icon=ft.Icons.GROUP, label="Members"),
+                ft.NavigationBarDestination(icon=ft.Icons.IMAGE, label="Images"),
+            ],
+            on_change=self._on_group_nav_change,
+        )
+
+        # Container for changing views
         self.content_container = ft.Column(spacing=5)
 
-        # ListView for the page, **scrollable**
+        # Scrollable ListView
         self.list_view = ft.ListView(
             controls=[self.content_container],
             spacing=10,
-            expand=True,           # allow to fill available space
+            expand=True,
         )
 
-        # Load user groups initially
+        # Load user groups
         self.page.run_task(self.load_user_groups)
 
-        return [self.action_buttons, ft.Container(expand=True, content=self.list_view)]
+        return [
+            self.action_buttons,
+            ft.Container(expand=True, content=self.list_view),
+            self.group_navbar 
+        ]
 
     async def refresh_groups(self):
-        """ Refresh both user groups and joinable groups """
         self.cached_user_groups = []
         self.cached_joinable_groups = []
-
         await self.load_user_groups()
 
     def filter_content(self, query: str):
-        """ Filter groups based on search query """
         query_lower = query.lower()
-
         if self.current_view == "join_groups":
-            # Filter joinable groups
-            filtered_joinable_groups = [
+            filtered_joinable = [
                 g for g in self.cached_joinable_groups.get("groups", [])
                 if query_lower in g["name"].lower() or query_lower in g.get("description", "").lower()
             ]
-            self._render_joinable_groups({"groups": filtered_joinable_groups})
+            self._render_joinable_groups_list({"groups": filtered_joinable})
             return
      
-        # Filter user groups
-        filtered_user_groups = [
+        filtered_user = [
             g for g in self.cached_user_groups.get("groups", [])
             if query_lower in g["name"].lower() or query_lower in g.get("description", "").lower()
         ]
-
-        # Clear current content
         self.content_container.controls.clear()
-        
-        # Render filtered user groups
-        self.create_group_tile(filtered_user_groups)
-
+        self._render_user_groups_list(filtered_user)
         self.page.update()
 
     def _render_user_groups_list(self, groups_data):
-        """ Render the list of user groups """
-        if not groups_data: # if empty
+        if not groups_data:
             self.content_container.controls.append(
                 ft.Column(
                     [ft.Text("No groups yet. Create or join one!", size=16, color=ft.Colors.GREY)],
@@ -117,11 +125,10 @@ class GroupsPage:
             self.page.update()
             return
 
-        for g in groups_data: # loop through groups
+        for g in groups_data:
             members_count = len(g.get("members", []))
             critical_count = g.get("critical_cracks", 0)
 
-            # Create ListTile for each user group
             tile = ft.ListTile(
                 title=ft.Text(g["name"], size=18, weight="bold"),
                 subtitle=ft.Row(
@@ -134,40 +141,43 @@ class GroupsPage:
                 trailing=ft.ElevatedButton(
                     "View",
                     width=80,
-                    on_click=lambda e, gid=g["id"]: self.view_group(gid)
-            ),
+                    on_click=lambda e, gid=g["id"]: self.view_group_detail(gid)
+                ),
                 content_padding=ft.padding.symmetric(vertical=10, horizontal=20),
                 shape=ft.RoundedRectangleBorder(radius=20),
                 bgcolor=ft.Colors.ON_INVERSE_SURFACE,
             )
 
             self.content_container.controls.append(tile)
-
         self.page.update()
 
-    def _render_joinable_groups_list(self, joinable_data):
-        """ Render the list of joinable groups """
-        self.content_container.controls = self.content_container.controls[:1]  # keep back button
+    def view_group_detail(self, group_id):
+        self.current_group_id = group_id
+        self.page.run_task(self.view_group)
 
-        for g in joinable_data.get("groups", []): # loop through groups
+    def _render_joinable_groups_list(self, joinable_data):
+        self.content_container.controls.clear()
+        back_button = ft.TextButton(
+            "← Back to My Groups",
+            on_click=lambda e: self.page.run_task(self.load_user_groups)
+        )
+        self.content_container.controls.append(back_button)
+
+        for g in joinable_data.get("groups", []):
             gid = g["id"]
 
-            def make_join_fn(group_id): # closure to capture group_id
-                async def join_fn():
-                    await self.join_group_action(group_id)
-                return join_fn
+            async def join_fn(group_id=gid):
+                await self.join_group_action(group_id)
 
-            join_handler = make_join_fn(gid) # create join handler
-            members_count = len(g.get("members", [])) # count members
+            members_count = len(g.get("members", []))
 
-            # Create ListTile for each joinable group
             tile = ft.ListTile(
                 title=ft.Text(g["name"], size=18, weight="bold"),
                 subtitle=ft.Text(f"👥 Members: {members_count}"),
                 trailing=ft.ElevatedButton(
                     "Join",
                     width=80,
-                    on_click=lambda e, f=join_handler: self.page.run_task(f)
+                    on_click=lambda e, f=join_fn: self.page.run_task(f)
                 ),
                 content_padding=ft.padding.symmetric(vertical=10, horizontal=20),
                 shape=ft.RoundedRectangleBorder(radius=20),
@@ -179,47 +189,40 @@ class GroupsPage:
         self.page.update()
 
     async def load_user_groups(self):
-        """ Load and display user's groups """
+        """Load and display the user's groups"""
         self.current_view = "my_groups"
         try:
             if not self.cached_user_groups:
-                self.cached_user_groups = await fetch_user_groups(self.user_id)
+                self.cached_user_groups = await fetch_user_groups(self.user_id) # Fetch group detail from API
 
             self.content_container.controls.clear()
-
-
-            self.content_container.controls.append(ft.TextButton("My Groups"))
-
+            self.content_container.controls.append(ft.TextButton("My Groups"))  # Placeholder for title 
             self._render_user_groups_list(self.cached_user_groups.get("groups", []))
-
             self.page.update()
         except Exception as ex:
             print("Error loading user groups:", ex)
 
     def show_join_groups_view(self, e=None):
-        """ Switch to joinable groups view """
+        """Show the view for joining new groups"""
         self.current_view = "join_groups"
         self.content_container.controls.clear()
-
         back_button = ft.TextButton(
             "← Back to My Groups",
             on_click=lambda e: self.page.run_task(self.load_user_groups)
         )
         self.content_container.controls.append(back_button)
-
-        # Always reload joinable groups to get fresh data
         self.page.run_task(self.load_joinable_groups)
 
     async def load_joinable_groups(self):
-        """ Load and display joinable groups """
+        """Load and display joinable groups"""
         try:
             self.cached_joinable_groups = await fetch_groups(self.user_id)
             self._render_joinable_groups_list(self.cached_joinable_groups)
-
         except Exception as ex:
             print("Error loading joinable groups:", ex)
 
     async def join_group_action(self, group_id):
+        """Join a group by ID"""
         try:
             await join_group(self.user_id, group_id)
             self.cached_user_groups = []
@@ -229,10 +232,10 @@ class GroupsPage:
             print("Error joining group:", ex)
 
     def show_create_group_dialog(self, e):
+        """Show dialog to create a new group"""
         file_picker = ft.FilePicker(on_result=self.on_avatar_picked)
         self.page.overlay.append(file_picker)
 
-        # Upload box
         self.upload_box = ft.Container(
             width=125,
             height=125,
@@ -271,15 +274,14 @@ class GroupsPage:
         self.page.open(self.dialog)
 
     def on_avatar_picked(self, e: ft.FilePickerResultEvent):
-        if not e.files:
-            return
+        """Handle avatar image selection"""
+        if not e.files: return
         file = e.files[0]
         if not file.path:
             print("Mobile: File path not available!")
             return
-
         self.selected_avatar_path = file.path
-        b64 = image_to_base64(file.path)  # use path now
+        b64 = image_to_base64(file.path)
         self.upload_box.content = ft.Image(
             src_base64=b64,
             width=125,
@@ -287,28 +289,150 @@ class GroupsPage:
             fit=ft.ImageFit.COVER,
             border_radius=12
         )
-
         self.page.update()
- 
+
     async def create_group_action(self):
-        """" Create a new group with provided details """
+        """Create a new group with provided details"""
         name = self.group_name_input.value
         desc = self.group_description_input.value
-
         if not name:
             print("Group name required")
             return
-
         avatar_b64 = image_to_base64(self.selected_avatar_path) if self.selected_avatar_path else ""
-
         await create_group(name=name, description=desc, avatar_url=avatar_b64, admin_id=self.user_id)
-
         self.page.close(self.dialog)
         self.cached_user_groups = []
         self.page.run_task(self.load_user_groups)
 
-    def view_group(self, group_id):
-        """ Navigate to the group detail page """
-        # self.page.client_storage.set("current_group_id", group_id)
-        # self.page.go("/group_detail")
-        print(f"View group {group_id} - navigation not implemented yet")
+    def _restore_group_list(self):
+        """Restore the view to the user's group list"""
+        self.action_buttons.visible = True
+        self.group_navbar.visible = False
+        self.page.run_task(self.load_user_groups)
+
+    async def view_group(self):
+        """View details of the current group"""
+        group = await fetch_group_info(self.current_group_id)
+        group_info = group.get("group", {})
+        members = group_info.get("members", [])
+        admin_id = group_info.get("admin_id")
+        current_user_is_admin = (self.user_id == admin_id)
+
+        # Hide top buttons, show navbar
+        self.action_buttons.visible = False
+        self.group_navbar.visible = True
+
+        def remove_member(e, member):
+            self.page.client_storage.set("member_to_remove", member.get("user_id"))
+            print(member.get("user_id"))
+            self.confirm_dialog = ft.AlertDialog(
+                modal=True,
+                shape=ft.RoundedRectangleBorder(radius=18),
+                inset_padding=ft.padding.all(20),
+                title=ft.Text("Confirm Removal", size=20, weight=ft.FontWeight.BOLD),
+                content=ft.Text("Are you sure you want to remove this member from the group?"),
+                actions=[
+                    ft.TextButton("Cancel", on_click=lambda e: self.page.close(self.confirm_dialog)),
+                    ft.TextButton("Remove", on_click=lambda e: self.page.run_task(self.remove_member_from_group))
+                ]
+            )
+            self.page.open(self.confirm_dialog)
+
+        async def leave_group_action(e):
+            """Leave the current group"""
+            self.confirm_dialog = ft.AlertDialog(
+                modal=True,
+                shape=ft.RoundedRectangleBorder(radius=18),
+                inset_padding=ft.padding.all(20),
+                title=ft.Text("Leave Group", size=20, weight=ft.FontWeight.BOLD),
+                content=ft.Text("Are you sure you want to leave this group?"),
+                actions=[
+                    ft.TextButton("Cancel", on_click=lambda e: self.page.close(self.confirm_dialog)),
+                    ft.TextButton(
+                        "Leave",
+                        on_click=lambda e: self.page.run_task(self.leave_group)
+                    ),
+                ]
+            )
+            self.page.open(self.confirm_dialog)
+
+        # Clear current content
+        self.content_container.controls.clear()
+
+        # Back button
+        self.content_container.controls.append(
+            ft.TextButton("← Back to My Groups", on_click=lambda e: self._restore_group_list())
+        )
+
+        # Group title with Leave Group button
+        self.content_container.controls.append(
+            ft.Row(
+                controls=[
+                    ft.Text(f"Group: {group_info['name']}", size=22, weight=ft.FontWeight.BOLD),
+                    ft.ElevatedButton("Leave Group", on_click=leave_group_action, bgcolor=ft.Colors.RED)
+                ],
+                alignment=ft.MainAxisAlignment.SPACE_BETWEEN,
+                vertical_alignment=ft.CrossAxisAlignment.CENTER,
+            )
+        )
+
+        # ListTiles for members
+        member_tiles = []
+
+        for member in members:
+            is_admin = (member.get("user_id") == admin_id)
+            role_text = "Admin" if is_admin else "Member"
+
+            trailing_menu = ft.IconButton(
+                icon=ft.Icons.REMOVE_CIRCLE,
+                icon_color=ft.Colors.RED,
+                visible=current_user_is_admin and not is_admin,
+                on_click=lambda e, m=member: remove_member(e, m),
+                tooltip="Remove Member"
+            )
+
+            tile = ft.ListTile(
+                title=ft.Text(f"{member.get('first_name', '-')} {member.get('last_name', '-')}", weight=ft.FontWeight.BOLD),
+                subtitle=ft.Text(role_text),
+                trailing=trailing_menu,
+                content_padding=ft.padding.symmetric(vertical=10, horizontal=16),
+                shape=ft.RoundedRectangleBorder(radius=12),
+                bgcolor=ft.Colors.ON_INVERSE_SURFACE
+            )
+            member_tiles.append(tile)
+
+        # Wrap in a scrollable column (vertical)
+        scrollable_members = ft.Column(
+            controls=member_tiles,
+            spacing=10,
+            expand=True
+        )
+
+        self.content_container.controls.append(scrollable_members)
+        self.page.update()
+
+    async def leave_group(self):
+        """Logic to leave the group"""
+        await remove_member(self.user_id, self.current_group_id)  # reuse remove_member API
+        self.page.close(self.confirm_dialog)
+        self.cached_user_groups = []
+
+        self._restore_group_list()
+
+
+    async def remove_member_from_group(self):
+        member_id = await self.page.client_storage.get_async("member_to_remove")
+        await remove_member(member_id, self.current_group_id)
+
+        self.page.close(self.confirm_dialog)
+        self.page.run_task(self.view_group)
+
+
+    def _on_group_nav_change(self, e):
+        idx = e.control.selected_index
+        if idx == 0:  # Members tab
+            self.page.run_task(self.view_group)
+        elif idx == 1:  # Images tab
+            self.content_container.controls.clear()
+            self.content_container.controls.append(ft.Text("Images page content here..."))
+            self.page.update()
