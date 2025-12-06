@@ -35,6 +35,10 @@ def main(page: ft.Page):
         elif page.route == "/home":
             page.views.append(MainPage(page).build())
 
+        elif page.route == "/logout":
+            page.client_storage.remove("auth_token")
+            page.go("/login")
+
         else:
             page.views.append(ft.View("/", controls=[ft.Text("Page not found")]))
         
