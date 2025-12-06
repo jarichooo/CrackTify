@@ -373,30 +373,52 @@ class MainPage(TemplatePage):
         self.page.overlay.append(file_picker)
         self.page.update()
         file_picker.pick_files(allow_multiple=False)
-    
+        
     def pick_file_result(self, e: ft.FilePickerResultEvent):
+        
         if e.files:
-            file_path = e.files[0].path
-            assets_dir = self.page.assets_path
-            model_path = os.path.join(assets_dir, "model.tflite")
+            try:
+                file_path = e.files[0].path
+                model_path = self.get_model_path()
+                assets_dir = os.path.dirname(model_path)
 
-            # Initialize classifier (loads model once)
-            classifier = CrackClassifier(model_path)
-
-            # Run prediction
-            prob = classifier.predict(file_path)
-            label = "Crack" if prob > 0.5 else "No Crack"
-
-            # Show result in a dialog
-            result_dialog = ft.AlertDialog(
-                title=ft.Text("Detection Result"),
-                content=ft.Column([
-                    ft.Text(f"File: {os.path.basename(file_path)}"),
-                    ft.Text(f"Prediction: {label}"),
-                    ft.Text(f"Probability: {prob:.4f}")
-                ]),
-                actions=[ft.TextButton("Close", on_click=lambda e: self.page.dialog.dismiss())]
-            )
-            self.page.dialog = result_dialog
-            result_dialog.open = True
-            self.page.update()
+                # load model
+                classifier = CrackClassifier(model_path)
+                prob = classifier.predict(file_path)
+                label = 1 if prob > 0.5 else 0
+                
+                print(f"Prediction: {label}, Probability: {prob}")
+                
+            except Exception as ex:
+                print(f"ERROR in pick_file_result: {ex}")
+                import traceback
+                traceback.print_exc()
+                
+                error_dialog = ft.AlertDialog(
+                    title=ft.Text("Error"),
+                    content=ft.Text(f"An error occurred: {str(ex)}"),
+                    actions=[ft.TextButton("Close", on_click=lambda _: self.page.close(error_dialog))]
+                )
+                self.page.dialog = error_dialog
+                error_dialog.open = True
+                self.page.update()
+        else:
+            print("No file selected")
+    
+    def get_model_path(self):
+        """Get model path that works in dev and ALL production builds (mobile + desktop)"""
+        import sys
+        
+        # Check if running as a packaged app
+        if getattr(sys, 'frozen', False):
+            # Running in a bundle (APK/IPA/EXE/app)
+            base_path = sys._MEIPASS
+            model_path = os.path.join(base_path, "assets", "crackAI.tflite")
+        else:
+            # Running in development mode
+            # assets is inside src folder
+            current_dir = os.path.dirname(os.path.abspath(__file__))  # src/views/
+            src_dir = os.path.dirname(current_dir)  # src/
+            model_path = os.path.join(src_dir, "assets", "crackAI.tflite")  # src/assets/
+        
+        return model_path
