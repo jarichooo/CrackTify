@@ -11,6 +11,28 @@ class ProfilePage:
 
         self.user = self.page.client_storage.get("user_info")  # Load user data from client storage
 
+        # --- THEME MODE RESTORE ---
+        saved_theme_mode = self.page.client_storage.get("theme_mode")
+        if saved_theme_mode == "light":
+            self.page.theme_mode = ft.ThemeMode.LIGHT
+        elif saved_theme_mode == "dark":
+            self.page.theme_mode = ft.ThemeMode.DARK
+        elif saved_theme_mode == "system":
+            self.page.theme_mode = ft.ThemeMode.SYSTEM
+
+        # --- THEME COLOR RESTORE ---
+        saved_theme_color = self.page.client_storage.get("theme_color")
+        if saved_theme_color:
+            color_map = {
+                "red": ft.Colors.RED,
+                "blue": ft.Colors.BLUE,
+                "green": ft.Colors.GREEN,
+                "yellow": ft.Colors.YELLOW,
+            }
+            chosen = color_map.get(saved_theme_color.lower(), ft.Colors.BLUE)
+            self.page.theme = ft.Theme(color_scheme_seed=chosen)
+        # ----------------------------
+
     def build(self) -> ft.Control:
         """Build the profile page UI"""
         self.profile_image_path = self.user.get("avatar_url") or "https://www.w3schools.com/howto/img_avatar.png"
@@ -85,11 +107,11 @@ class ProfilePage:
             height=45,
             style=ft.ButtonStyle(
                 bgcolor={
-                    ft.ControlState.DEFAULT: ft.Colors.RED_100,     # Soft light red
-                    ft.ControlState.HOVERED: ft.Colors.RED_200,     # Slightly deeper on hover
-                    ft.ControlState.PRESSED: ft.Colors.RED_300,     # A bit stronger when pressed
+                    ft.ControlState.DEFAULT: ft.Colors.RED_100,
+                    ft.ControlState.HOVERED: ft.Colors.RED_200,
+                    ft.ControlState.PRESSED: ft.Colors.RED_300,
                 },
-                color=ft.Colors.RED_700,  # Text/icon stay strong red for contrast
+                color=ft.Colors.RED_700,
                 icon_color=ft.Colors.RED_700,
             ),
             on_click=lambda e: self.page.go("/logout"),
@@ -104,6 +126,37 @@ class ProfilePage:
             )
         )
 
+        # --- THEME MODE HANDLER ---
+        def handle_theme_mode(e):
+            selected = e.control.text.lower()
+            if selected == "light":
+                mode = ft.ThemeMode.LIGHT
+                mode_str = "light"
+            elif selected == "dark":
+                mode = ft.ThemeMode.DARK
+                mode_str = "dark"
+            else:
+                mode = ft.ThemeMode.SYSTEM
+                mode_str = "system"
+
+            self.page.theme_mode = mode
+            self.page.client_storage.set("theme_mode", mode_str)
+            self.page.update()
+
+        # --- THEME COLOR HANDLER ---
+        def handle_theme_color(e):
+            color_name = e.control.text.lower()
+            color_map = {
+                "red": ft.Colors.RED,
+                "blue": ft.Colors.BLUE,
+                "green": ft.Colors.GREEN,
+                "yellow": ft.Colors.YELLOW,
+            }
+            chosen = color_map.get(color_name, ft.Colors.BLUE)
+            self.page.theme = ft.Theme(color_scheme_seed=chosen)
+            self.page.client_storage.set("theme_color", color_name)
+            self.page.update()
+
         panel_list = ft.ExpansionPanelList(
             elevation=0,
             divider_color=ft.Colors.TRANSPARENT,
@@ -116,10 +169,7 @@ class ProfilePage:
                     content=ft.Column(
                         controls=[
                             ft.Row(
-                                controls=[
-                                    self.first_name_input,
-                                    self.last_name_input,
-                                ],
+                                controls=[self.first_name_input, self.last_name_input],
                                 spacing=20,
                             ),
                             self.email_input,
@@ -147,7 +197,8 @@ class ProfilePage:
                     ),
                 ),
                 ft.ExpansionPanel(
-                    header=ft.Container(ft.Text("Preferences", weight="bold", size=16),
+                    header=ft.Container(
+                        ft.Text("Preferences", weight="bold", size=16),
                         alignment=ft.alignment.center_left,
                     ),
                     content=ft.Column(
@@ -157,22 +208,21 @@ class ProfilePage:
                                 trailing=ft.PopupMenuButton(
                                     icon=ft.Icons.ARROW_DROP_DOWN,
                                     items=[
-                                        ft.PopupMenuItem(text="Light"),
-                                        ft.PopupMenuItem(text="Dark"),
-                                        ft.PopupMenuItem(text="System Default"),
+                                        ft.PopupMenuItem(text="Light", on_click=handle_theme_mode),
+                                        ft.PopupMenuItem(text="Dark", on_click=handle_theme_mode),
+                                        ft.PopupMenuItem(text="System", on_click=handle_theme_mode),
                                     ],
                                 )
-                                        
                             ),
                             ft.ListTile(
                                 title=ft.Text("Theme Color"),
                                 trailing=ft.PopupMenuButton(
                                     icon=ft.Icons.ARROW_DROP_DOWN,
                                     items=[
-                                        ft.PopupMenuItem(text="Red"),
-                                        ft.PopupMenuItem(text="Blue"),
-                                        ft.PopupMenuItem(text="Green"),
-                                        ft.PopupMenuItem(text="Yellow"),
+                                        ft.PopupMenuItem(text="Red", on_click=handle_theme_color),
+                                        ft.PopupMenuItem(text="Blue", on_click=handle_theme_color),
+                                        ft.PopupMenuItem(text="Green", on_click=handle_theme_color),
+                                        ft.PopupMenuItem(text="Yellow", on_click=handle_theme_color),
                                     ],
                                 )
                             ),
@@ -217,7 +267,7 @@ class ProfilePage:
         return [
             self.avatar_control,
             ft.Text(self.full_name, size=20, weight="bold"),
-            ft.Divider(height=15, opacity=0), # spacer
+            ft.Divider(height=15, opacity=0),
             self.list_view,
         ]
 
@@ -229,7 +279,7 @@ class ProfilePage:
         avatar_base64 = image_to_base64(avatar_path)
         self.user["avatar"] = avatar_base64  # update user dictionary
 
-        # Update CircleAvatar
+        # Update CircleAvatar (left untouched)
         self.avatar_control
         self.body_content.content.controls[0].controls[0].src = avatar_path
         self.body_content.content.controls[0].controls[0].update()
@@ -238,7 +288,6 @@ class ProfilePage:
         self.user["first_name"] = self.first_name_input.value
         self.user["last_name"] = self.last_name_input.value
         self.user["email"] = self.email_input.value
-        
 
         # Save to client_storage or database
         self.page.client_storage.set("user", self.user)
