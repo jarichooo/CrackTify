@@ -4,10 +4,10 @@ import os
 from .template import TemplatePage
 from .pages import (
     ProfilePage, #
-    HomePage,
+    HomePage, # 
     GroupsPage,#
     ImageGallery, #
-    DetectionHistoryPage,
+    DetectionHistoryPage, #
     ReportsPage,
     AboutPage
 )
@@ -47,7 +47,6 @@ class MainPage(TemplatePage):
         self.current_title = "Home"
 
         self.user = self.page.client_storage.get("user_info")  # Load user data from client storage
-
 
     def build(self) -> ft.View:
         """Build the main page UI"""
@@ -92,7 +91,7 @@ class MainPage(TemplatePage):
         # Normal title text
         self.normal_title = ft.Text(self.current_title, size=18, weight="bold")
 
-        # Search bar for gallery
+        # Search bar for gallery and groups
         self.search_bar = ft.SearchBar(
             bar_hint_text="Search...",
             view_elevation=0,
@@ -223,27 +222,6 @@ class MainPage(TemplatePage):
             floating_action_button=self.fab_container,
         )
 
-    def on_drawer_change(self, e):
-        """Handle drawer navigation changes"""
-        selected = self.drawer.selected_index
-
-        # Navigate to selected page
-        if selected in self.navigation_map:
-            title, builder = self.navigation_map[selected]
-            self.current_view_instance = builder # Update current view instance
-            self.current_title = title
-
-            self.show_content_page(title, lambda _: builder.build())
-            
-            # Lazy load if applicable
-            if hasattr(self.current_view_instance, "lazy_load"):
-                self.page.run_task(self.current_view_instance.lazy_load)
-
-        # Close drawer after selection
-        self.drawer.open = False
-        self.page.update()
-
-    # Search Toggle Logic 
     def toggle_search(self, e):
         """Toggle search bar in AppBar for some pages."""
         self.search_active = not self.search_active
@@ -266,14 +244,32 @@ class MainPage(TemplatePage):
 
         self.page.update()
 
-    # Called whenever user types text in SearchBar
     def on_search(self, query: str):
         """Filter content based on search query."""
         time.sleep(1)  # Small delay to allow typing to stabilize
         self.current_view_instance.filter_content(query)
 
-    # Navigation helper
-    def show_content_page(self, title: str, content_builder: callable):
+    def on_drawer_change(self, e):
+        """Handle drawer navigation changes"""
+        selected = self.drawer.selected_index
+
+        # Navigate to selected page
+        if selected in self.navigation_map:
+            title, builder = self.navigation_map[selected]
+            self.current_view_instance = builder # Update current view instance
+            self.current_title = title
+
+            self.show_page_content(title, lambda _: builder.build())
+            
+            # Lazy load if applicable
+            if hasattr(self.current_view_instance, "lazy_load"):
+                self.page.run_task(self.current_view_instance.lazy_load)
+
+        # Close drawer after selection
+        self.drawer.open = False
+        self.page.update()
+
+    def show_page_content(self, title: str, content_builder: callable):
         self.normal_title.value = title
 
         # Reset title container
@@ -285,6 +281,7 @@ class MainPage(TemplatePage):
         self.appbar.actions = []
 
         searchable_views = ["Groups", "Gallery"]
+        hide_fab_views = ["Detection History", "Groups"]
 
         # Insert search only for Gallery
         if title in searchable_views:
@@ -294,6 +291,11 @@ class MainPage(TemplatePage):
             self.title_container.controls.clear()
             self.title_container.controls.append(self.normal_title)
             self.search_button.icon = ft.Icons.SEARCH
+
+        if title in hide_fab_views:
+            self.detect_button.visible = False
+        else:
+            self.detect_button.visible = True
 
         self.appbar.actions.append(self.profile_button)
 

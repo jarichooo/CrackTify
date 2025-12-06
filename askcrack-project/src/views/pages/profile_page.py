@@ -92,7 +92,7 @@ class ProfilePage:
                 color=ft.Colors.RED_700,  # Text/icon stay strong red for contrast
                 icon_color=ft.Colors.RED_700,
             ),
-            on_click=lambda e: print("Logout clicked"),
+            on_click=lambda e: self.page.go("/logout"),
         )
 
         button_column = ft.Container(
