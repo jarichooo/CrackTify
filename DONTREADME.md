@@ -36,6 +36,7 @@ Make sure you have installed:
 # Step 2: Configure Backend `.env`
 Copy the example file by running:
 ```bash
+cd server
 copy .env.example .env
 ```
 
