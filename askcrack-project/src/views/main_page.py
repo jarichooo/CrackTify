@@ -157,15 +157,15 @@ class MainPage(TemplatePage):
         # Floating action buttons for detection
         self.action_buttons = ft.Column(
             [
-                ft.ElevatedButton(
-                    icon=ft.Icons.CAMERA_ALT,
-                    text="Live Detection",
-                    style=ft.ButtonStyle(
-                        shape=ft.StadiumBorder(),
-                        padding=ft.padding.all(15),
-                    ),
-                    on_click=lambda e: print("Camera Detection")
-                ),
+                # ft.ElevatedButton(
+                #     icon=ft.Icons.CAMERA_ALT,
+                #     text="Live Detection",
+                #     style=ft.ButtonStyle(
+                #         shape=ft.StadiumBorder(),
+                #         padding=ft.padding.all(15),
+                #     ),
+                #     on_click=lambda e: print("Camera Detection")
+                # ),
                 ft.ElevatedButton(
                     icon=ft.Icons.IMAGE,
                     text="Upload Image",
