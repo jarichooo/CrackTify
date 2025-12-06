@@ -45,7 +45,7 @@ class CrackClassifier:
         probability = float(output[0][0])  # assuming sigmoid output
 
         return probability
-        
+            
     def analyze_and_save(self, image_path: str, confidence_threshold: float = 0.5) -> str:
         prob = self.predict(image_path)
         if prob <= confidence_threshold:
@@ -56,37 +56,50 @@ class CrackClassifier:
         if img is None:
             raise RuntimeError("Failed to load image")
 
-        # Convert to grayscale
         gray = cv2.cvtColor(img, cv2.COLOR_BGR2GRAY)
 
-        # Simple adaptive threshold (this is the magic)
-        # Works amazingly well on concrete/road cracks
+        # Adaptive threshold — magic for cracks
         binary = cv2.adaptiveThreshold(
             gray, 255, cv2.ADAPTIVE_THRESH_GAUSSIAN_C,
             cv2.THRESH_BINARY_INV, 99, 15
         )
 
-        # Optional: small cleanup
+        # Clean up
         kernel = cv2.getStructuringElement(cv2.MORPH_RECT, (3,3))
         binary = cv2.morphologyEx(binary, cv2.MORPH_CLOSE, kernel, iterations=2)
 
         # Find contours
         contours, _ = cv2.findContours(binary, cv2.RETR_EXTERNAL, cv2.CHAIN_APPROX_SIMPLE)
 
-        # Draw green boxes
+        # Create output copy
         output = img.copy()
+
+        # Filter and draw actual contours (not boxes!)
+        valid_contours = []
         crack_count = 0
         for cnt in contours:
             area = cv2.contourArea(cnt)
-            if area > 200:  # Filter small noise
-                x, y, w, h = cv2.boundingRect(cnt)
-                # Optional: filter very thin or very wide blobs
-                aspect = w / h if h > 0 else 0
-                if aspect > 0.1:
-                    cv2.rectangle(output, (x, y), (x + w, y + h), (0, 255, 0), 4)
+            if area > 200:  # ignore dust
+                # Optional: filter very short or round blobs
+                if cv2.arcLength(cnt, False) > 30:  # minimum length
+                    valid_contours.append(cnt)
                     crack_count += 1
 
-        # Save in same folder
+        # Draw beautiful green outlines (thickness = 4)
+        cv2.drawContours(
+            image=output,
+            contours=valid_contours,
+            contourIdx=-1,        # -1 = draw all
+            color=(0, 0, 255),    # BGR green
+            thickness=4
+        )
+
+        # Optional: also draw bounding boxes in lighter green (very professional look)
+        for cnt in valid_contours:
+            x, y, w, h = cv2.boundingRect(cnt)
+            cv2.rectangle(output, (x, y), (x + w, y + h), (100, 255, 100), 2)  # light green
+
+        # Save result
         dir_name = os.path.dirname(image_path)
         name, ext = os.path.splitext(os.path.basename(image_path))
         save_path = os.path.join(dir_name, f"{name}_crack_detected{ext}")
