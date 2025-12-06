@@ -46,6 +46,7 @@ class MainPage(TemplatePage):
 
         self.user = self.page.client_storage.get("user_info")  # Load user data from client storage
 
+
     def build(self) -> ft.View:
         """Build the main page UI"""
 
@@ -83,7 +84,6 @@ class MainPage(TemplatePage):
                 ft.Divider(leading_indent=25, trailing_indent=25),
 
                 ft.NavigationDrawerDestination(icon=ft.Icons.INFO, label="About"),
-                ft.NavigationDrawerDestination(icon=ft.Icons.HELP, label="Help"),
             ]
         )
 
@@ -148,6 +148,7 @@ class MainPage(TemplatePage):
             leading=self.drawer_button,
             automatically_imply_leading=False,
             title=self.title_container,
+            force_material_transparency=True,
             center_title=False,
             actions=[
                 self.profile_button
