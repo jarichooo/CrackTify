@@ -1,5 +1,6 @@
 import time
 import flet as ft
+import os
 from .template import TemplatePage
 from .pages import (
     ProfilePage, #
@@ -13,6 +14,7 @@ from .pages import (
 from utils.toggle_theme import toggle_theme
 from widgets.inputs import AppTextField
 from widgets.buttons import PrimaryButton, SecondaryButton, CustomTextButton
+from utils.detect_image import CrackClassifier
 
 class MainPage(TemplatePage):
     """Main application page after login, with navigation and content areas."""
@@ -174,7 +176,7 @@ class MainPage(TemplatePage):
                         shape=ft.StadiumBorder(),
                         padding=ft.padding.all(15),
                     ),
-                    on_click=lambda e: print("Image Detection")
+                    on_click=self.show_detect
                 ),
             ],
             spacing=10,
@@ -364,5 +366,35 @@ class MainPage(TemplatePage):
         self.page.update()
 
     def show_detect(self, e):
-        """Handle New Detection action"""
-        ...
+        """Handle New Detection """
+        file_picker = ft.FilePicker(on_result=self.pick_file_result)
+        self.page.overlay.append(file_picker)
+        self.page.update()
+        file_picker.pick_files(allow_multiple=False)
+    
+    def pick_file_result(self, e: ft.FilePickerResultEvent):
+        if e.files:
+            file_path = e.files[0].path
+            assets_dir = self.page.assets_path
+            model_path = os.path.join(assets_dir, "model.tflite")
+
+            # Initialize classifier (loads model once)
+            classifier = CrackClassifier(model_path)
+
+            # Run prediction
+            prob = classifier.predict(file_path)
+            label = "Crack" if prob > 0.5 else "No Crack"
+
+            # Show result in a dialog
+            result_dialog = ft.AlertDialog(
+                title=ft.Text("Detection Result"),
+                content=ft.Column([
+                    ft.Text(f"File: {os.path.basename(file_path)}"),
+                    ft.Text(f"Prediction: {label}"),
+                    ft.Text(f"Probability: {prob:.4f}")
+                ]),
+                actions=[ft.TextButton("Close", on_click=lambda e: self.page.dialog.dismiss())]
+            )
+            self.page.dialog = result_dialog
+            result_dialog.open = True
+            self.page.update()
