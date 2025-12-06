@@ -388,6 +388,16 @@ class MainPage(TemplatePage):
                 label = 1 if prob > 0.5 else 0
                 
                 print(f"Prediction: {label}, Probability: {prob}")
+
+                if prob > 0.5:
+                    saved_path = classifier.analyze_and_save(file_path, confidence_threshold=0.5)
+                    if saved_path:
+                        print(f"Crack analysis complete! Saved to: {saved_path}")
+            
+                    else:
+                        print("Analysis ran but no save path returned (should not happen)")
+                else:
+                    print("No crack detected. Skipping OpenCV analysis.")
                 
             except Exception as ex:
                 print(f"ERROR in pick_file_result: {ex}")
