@@ -44,20 +44,12 @@ def validate_registration(
             errors["password"] = "Password must be at least 8 characters long."
             is_valid = False
 
-        elif not re.search(r"[a-z]", password):
-            errors["password"] = "Password must contain at least one lowercase letter."
-            is_valid = False
-
         elif not re.search(r"[A-Z]", password):
             errors["password"] = "Password must contain at least one uppercase letter."
             is_valid = False
 
         elif not re.search(r"[0-9]", password):
             errors["password"] = "Password must contain at least one number."
-            is_valid = False
-
-        elif not re.search(r"[^a-zA-Z0-9]", password):
-            errors["password"] = "Password must contain at least one symbol."
             is_valid = False
 
     # Validate confirm password
