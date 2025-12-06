@@ -9,8 +9,7 @@ class HomePage:
     def build(self) -> List[ft.Control]:
        
         self.content = [
-            ft.Text("Welcome to the Home Page!", style="headlineMedium"),
-            ft.Text("This is where the main content will go.", style="bodyMedium"),
+            ft.Text()
         ]
         container = ft.Column(controls=self.content, alignment=ft.MainAxisAlignment.CENTER)
         

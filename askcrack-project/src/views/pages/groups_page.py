@@ -93,7 +93,12 @@ class GroupsPage:
         self.content_container.controls.clear()
         
         # Render filtered user groups
-        for g in filtered_user_groups:
+        self.create_group_tile(filtered_user_groups)
+
+        self.page.update()
+
+    def create_group_tile(self, group_list):
+        for g in group_list:
             members_count = len(g.get("members", []))
             last_activity = g["members"][-1]["joined_at"] if members_count > 0 else "N/A"
 
@@ -113,8 +118,6 @@ class GroupsPage:
             )
             self.content_container.controls.append(tile)
 
-        self.page.update()
-
     # REFRESH GROUPS
     async def refresh_groups(self):
         self.cached_user_groups = []
@@ -131,25 +134,7 @@ class GroupsPage:
 
             self.content_container.controls.clear()
 
-            for g in self.cached_user_groups.get("groups", []):
-                members_count = len(g.get("members", []))
-                last_activity = g["members"][-1]["joined_at"] if members_count > 0 else "N/A"
-
-                tile = ft.Container(
-                    padding=15,
-                    bgcolor=ft.Colors.ON_INVERSE_SURFACE,
-                    margin=ft.margin.only(bottom=10),
-                    border_radius=12,
-                    shadow=ft.BoxShadow(blur_radius=8, color=ft.Colors.BLACK12),
-                    content=ft.Column([
-                        ft.Text(g["name"], size=18, weight="bold"),
-                        ft.Row([
-                            ft.Text(f"Members: {members_count}"),
-                            # ft.Text(f"Last Activity: {last_activity}")
-                        ], alignment=ft.MainAxisAlignment.SPACE_BETWEEN)
-                    ])
-                )
-                self.content_container.controls.append(tile)
+            self.create_group_tile(self.cached_user_groups.get("groups", []))
 
             self.page.update()
         except Exception as ex:

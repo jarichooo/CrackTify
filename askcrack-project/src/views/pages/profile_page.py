@@ -2,6 +2,8 @@ import flet as ft
 
 from widgets.inputs import AppTextField
 from widgets.buttons import PrimaryButton, SecondaryButton, CustomTextButton
+from services.profile_service import update_profile
+from utils.image_utils import image_to_base64
 
 class ProfilePage:
     def __init__(self, page: ft.Page):
@@ -11,9 +13,9 @@ class ProfilePage:
 
     def build(self) -> ft.Control:
         """Build the profile page UI"""
-        self.profile_image_path = self.user.get("avatar") or "https://www.w3schools.com/howto/img_avatar.png"
-        self.user_first_name = self.user.get("first_name", "")
-        self.user_last_name = self.user.get("last_name", "")
+        self.profile_image_path = self.user.get("avatar_url") or "https://www.w3schools.com/howto/img_avatar.png"
+        self.user_first_name = self.user.get("first_name")
+        self.user_last_name = self.user.get("last_name")
         self.full_name = f"{self.user_first_name} {self.user_last_name}"
         self.user_email = self.user.get("email", "")
 
@@ -224,9 +226,11 @@ class ProfilePage:
             return
 
         avatar_path = e.files[0].path
-        self.user["avatar"] = avatar_path  # update user dictionary
+        avatar_base64 = image_to_base64(avatar_path)
+        self.user["avatar"] = avatar_base64  # update user dictionary
 
         # Update CircleAvatar
+        self.avatar_control
         self.body_content.content.controls[0].controls[0].src = avatar_path
         self.body_content.content.controls[0].controls[0].update()
 
@@ -234,9 +238,9 @@ class ProfilePage:
         self.user["first_name"] = self.first_name_input.value
         self.user["last_name"] = self.last_name_input.value
         self.user["email"] = self.email_input.value
-
+        
 
         # Save to client_storage or database
-        # await self.page.client_storage.set("user", self.user)  # if async
+        self.page.client_storage.set("user", self.user)
 
         print("Profile updated:", self.user)

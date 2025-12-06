@@ -8,8 +8,7 @@ from .pages import (
     ImageGallery, #
     DetectionHistoryPage,
     ReportsPage,
-    AboutPage,
-    HelpPage,
+    AboutPage
 )
 from utils.toggle_theme import toggle_theme
 from widgets.inputs import AppTextField
@@ -28,7 +27,6 @@ class MainPage(TemplatePage):
         self.detection_history_instance = DetectionHistoryPage(page)
         self.reports_instance = ReportsPage(page)
         self.about_instance = AboutPage(page)
-        self.help_instance = HelpPage(page)
 
         self.search_active = False # Search bar state
 
@@ -40,7 +38,6 @@ class MainPage(TemplatePage):
             3: ("Detection History", self.detection_history_instance),
             4: ("Reports", self.reports_instance),
             5: ("About", self.about_instance),
-            6: ("Help", self.help_instance),
         }
 
         # Set initial view

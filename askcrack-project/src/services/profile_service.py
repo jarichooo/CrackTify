@@ -6,6 +6,10 @@ from .api_client import get_request,  post_request
 # Base API URL
 api_url = Config.API_BASE_URL
 
+async def get_avatar_url(user_id: int) -> Dict[str, str]:
+    return await get_request(f"/profile/avatar/{user_id}")
+
+
 async def get_profile(auth_token: str) -> Dict[str, Any]:
     """
     Fetch user profile using the provided auth token.

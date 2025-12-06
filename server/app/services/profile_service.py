@@ -17,6 +17,9 @@ def get_profile(user_id: int) -> User:
         "avatar_url": avatar_url
     }
 
+def get_profile_avatar(user_id: int):
+    ...
+
 def update_profile(user_id: int, profile_data: dict) -> User:
     """Update user profile with provided data"""
     user = User.query.get(user_id)

@@ -12,6 +12,10 @@ def api_get_profile(data: dict = Body(...), db: Session = Depends(get_db)):
     
     return get_profile(auth_token, db)
 
+@router.get("/avatar/{user_id}")
+def api_get_avatar_url(user_id):
+    return 
+
 @router.post("/profile/update")
 def api_update_profile(data: dict = Body(...), db: Session = Depends(get_db)):
     # Placeholder implementation for updating user profile
