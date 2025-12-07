@@ -1,6 +1,5 @@
 import flet as ft
 from typing import List
-from widgets.banner_ad import BannerAd
 
 class AboutPage:
     def __init__(self, page: ft.Page):
@@ -104,13 +103,10 @@ class AboutPage:
             spacing=5
         )
 
-        # Banner Ad
-        banner_ad = BannerAd(self.page, title="Support Us!", message="Help us improve CrackTify", button_text="Donate Now")
-
         # Combine all sections
         container = ft.Column(
-            # In Order: App Info, Banner Ad, Academic, Repository, Developers, Contact
-            controls=self.content + [banner_ad, academic_fulfillment, repository_section, developers, contact_section],
+            # In Order: App Info, Academic, Repository, Developers, Contact
+            controls=self.content + [academic_fulfillment, repository_section, developers, contact_section],
             alignment=ft.MainAxisAlignment.CENTER,
             horizontal_alignment=ft.CrossAxisAlignment.CENTER,
             spacing=15
