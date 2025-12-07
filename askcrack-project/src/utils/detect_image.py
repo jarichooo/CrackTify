@@ -2,6 +2,9 @@ import tensorflow as tf
 import numpy as np
 from PIL import Image
 import os
+import cv2
+import sys
+from datetime import datetime
 
 class CrackClassifier:
     def __init__(self, model_path: str):
@@ -44,3 +47,59 @@ class CrackClassifier:
         probability = float(output[0][0])  # assuming sigmoid output
 
         return probability
+            
+    def analyze_and_save(self, image_path: str, confidence_threshold: float = 0.5) -> str:
+        prob = self.predict(image_path)
+        if prob <= confidence_threshold:
+            return None
+
+        # Load and process image (same as before)
+        img = cv2.imread(image_path)
+        if img is None:
+            raise RuntimeError("Failed to load image")
+
+        gray = cv2.cvtColor(img, cv2.COLOR_BGR2GRAY)
+        binary = cv2.adaptiveThreshold(
+            gray, 255, cv2.ADAPTIVE_THRESH_GAUSSIAN_C,
+            cv2.THRESH_BINARY_INV, 99, 15
+        )
+        kernel = cv2.getStructuringElement(cv2.MORPH_RECT, (3,3))
+        binary = cv2.morphologyEx(binary, cv2.MORPH_CLOSE, kernel, iterations=2)
+        contours, _ = cv2.findContours(binary, cv2.RETR_EXTERNAL, cv2.CHAIN_APPROX_SIMPLE)
+
+        output = img.copy()
+        valid_contours = [cnt for cnt in contours if cv2.contourArea(cnt) > 200]
+
+        # Draw crack outlines + light boxes
+        cv2.drawContours(output, valid_contours, -1, (0, 0, 255), 2)
+        for cnt in valid_contours:
+            x, y, w, h = cv2.boundingRect(cnt)
+            cv2.rectangle(output, (x, y), (x + w, y + h), (100, 255, 100), 2)
+
+        # Get the correct path to your storage/ folder
+        if getattr(sys, 'frozen', False):
+            # Running as packaged app (Android APK or desktop exe)
+            base_path = sys._MEIPASS
+            storage_path = os.path.join(base_path, "storage")
+        else:
+            # Development mode
+            current_dir = os.path.dirname(os.path.abspath(__file__))  # utils/detect_image.py
+            src_dir = os.path.dirname(os.path.dirname(current_dir))  # src/
+            storage_path = os.path.join(src_dir, "storage")
+
+        # Create storage folder if it doesn't exist
+        os.makedirs(storage_path, exist_ok=True)
+
+        # Generate filename with timestamp
+        timestamp = datetime.now().strftime("%Y%m%d_%H%M%S")
+        original_name = os.path.splitext(os.path.basename(image_path))[0]
+        save_filename = f"{original_name}_crack_{timestamp}.jpg"
+        save_path = os.path.join(storage_path, save_filename)
+
+        # Save the image
+        success = cv2.imwrite(save_path, output)
+        if not success:
+            raise RuntimeError(f"Failed to save to {save_path}")
+
+        print(f"Crack image saved to storage/: {save_filename}")
+        return save_path
