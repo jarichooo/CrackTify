@@ -1,5 +1,5 @@
 from datetime import datetime, timezone
-from sqlalchemy import Column, Integer, ForeignKey, String, DateTime
+from sqlalchemy import Column, Integer, String, ForeignKey, DateTime, Text, Boolean
 from sqlalchemy.orm import relationship
 from app.database.db import Base
 
@@ -7,8 +7,12 @@ class Crack(Base):
     __tablename__ = "cracks"
 
     id = Column(Integer, primary_key=True)
-    image_id = Column(Integer, ForeignKey("images.id"))
+    user_id = Column(Integer, ForeignKey("users.id"))
+    group_id = Column(Integer, ForeignKey("groups.id"), nullable=True)
+    image_base64 = Column(Text, nullable=False)
     severity = Column(String(50))
+    visibility = Column(Boolean, default=False)
     detected_at = Column(DateTime, default=datetime.now(timezone.utc))
 
-    image = relationship("Image", back_populates="cracks")
+    user = relationship("User", back_populates="cracks")
+    group = relationship("Group", back_populates="cracks")

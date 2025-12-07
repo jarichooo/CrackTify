@@ -6,16 +6,14 @@ from app.models.group_member import GroupMember
 # CREATE GROUP
 def create_group_service(
     name: str,
-    description: str | None,
-    avatar_url: str | None,
+    pin: int,
     admin_id: int,
     db
 ):
     """Create a group and add admin as member."""
     new_group = Group(
         name=name,
-        description=description,
-        avatar_url=avatar_url,
+        pin=pin,
         admin_id=admin_id,
         created_at=datetime.now(timezone.utc)
     )
@@ -76,8 +74,7 @@ def fetch_user_groups_service(user_id: int, db):
         result.append({
             "id": g.id,
             "name": g.name,
-            "description": g.description,
-            "avatar_url": g.avatar_url,
+            "pin": g.pin,
             "admin_id": g.admin_id,
             "created_at": g.created_at.isoformat(),
 
@@ -110,8 +107,7 @@ def fetch_groups_service(user_id: int, db):
         result.append({
             "id": g.id,
             "name": g.name,
-            "description": g.description,
-            "avatar_url": g.avatar_url,
+            "pin": g.pin,
             "admin_id": g.admin_id,
             "created_at": g.created_at.isoformat(),
 
@@ -138,8 +134,7 @@ def fetch_group_info_service(group_id: int, db):
     group_info = {
         "id": g.id,
         "name": g.name,
-        "description": g.description,
-        "avatar_url": g.avatar_url,
+        "pin": g.pin,
         "admin_id": g.admin_id,
         "created_at": g.created_at.isoformat(),
         "members": [

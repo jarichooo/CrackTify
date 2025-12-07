@@ -5,12 +5,6 @@ from pathlib import Path
 from services.activity_service import fetch_recent_activity_service
 from utils.image_utils import base64_to_image
 
-
-# Fetch recent activity (wrapper for actual API)
-async def fetch_recent_activity(user_id):
-    return await fetch_recent_activity_service(user_id)
-
-
 class HomePage:
     def __init__(self, page: ft.Page):
         self.page = page
@@ -33,16 +27,14 @@ class HomePage:
 
         # Stats
         self.stats = {
-            "detections": 0,
-            "reports": 0
+            "stat_1": 0,
+            "stat_2": 0
         }
 
         self.grid: ft.GridView | None = None
         self.activity_list: ft.ListView | None = None
 
-    # -------------------------------
     # MAIN BUILD
-    # -------------------------------
     def build(self) -> List[ft.Control]:
 
         # HEADER CARD
@@ -101,16 +93,14 @@ class HomePage:
                 controls=[
                     header_card,
                     ft.Text("Overview", size=18, weight="bold"),
-                    ft.Container(content=self.grid, height=180),
+                    ft.Container(content=self.grid, height=160),
                     ft.Text("Recent Activity", size=18, weight="bold"),
                     ft.Container(content=self.activity_list, height=300)
                 ]
             )
         ]
 
-    # -------------------------------
     # TILE COMPONENT
-    # -------------------------------
     def info_tile(self, title: str, value: int, icon, color=ft.Colors.SECONDARY_CONTAINER):
         return ft.Container(
             padding=12,
@@ -134,9 +124,7 @@ class HomePage:
             )
         )
 
-    # -------------------------------
     # LOAD STAT CARDS
-    # -------------------------------
     def load_tiles(self):
         if not self.grid:
             return
@@ -144,29 +132,35 @@ class HomePage:
         self.grid.controls.clear()
 
         self.grid.controls.append(
-            self.info_tile("Detections", self.stats["detections"], ft.Icons.SEARCH)
+            self.info_tile("stat_1", self.stats["stat_1"], ft.Icons.SEARCH)
         )
 
         self.grid.controls.append(
-            self.info_tile("Reports", self.stats["reports"], ft.Icons.DESCRIPTION)
+            self.info_tile("stat_2", self.stats["stat_2"], ft.Icons.DESCRIPTION)
         )
 
-    # -------------------------------
     # ASYNC LOAD STATS
-    # -------------------------------
     async def load_stats(self):
         # Replace with real API later
-        self.stats["detections"] = 14
-        self.stats["reports"] = 5
+        self.stats["stat_1"] = 14
+        self.stats["stat_2"] = 5
 
         self.load_tiles()
         self.page.update()
 
+        # Fetch recent activity (wrapper for actual API)
+    
+    @classmethod
+    async def fetch_recent_activity(cls, user_id):
+        """Fetch recent activity (wrapper for actual API)"""
+        return await fetch_recent_activity_service(user_id)
+    
     # ASYNC LOAD RECENT ACTIVITY
     async def load_recent_activity(self):
-        activities = await fetch_recent_activity(self.user.get("id"))
         
-        if not activities:
+        activities = await self.fetch_recent_activity(self.user.get("id"))
+        
+        if not activities.get("activities"):
             # No activities returned; clear list and show placeholder
             if self.activity_list:
                 self.activity_list.controls.clear()
@@ -216,4 +210,5 @@ class HomePage:
                 self.activity_list.controls.append(item)
 
             self.page.update()
+
 

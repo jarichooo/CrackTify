@@ -16,15 +16,13 @@ async def fetch_group_info(group_id: int) -> Dict[str, Any]:
 
 async def create_group(
     name: str,
-    description: str | None,
-    avatar_url: str | None,
+    pin: int,
     admin_id: int
 ) -> Dict[str, List[Any]]:
     """Creates a new group via the API."""
     data = {
         "name": name,
-        "description": description,
-        "avatar_url": avatar_url,
+        "pin": pin,
         "admin_id": admin_id
     }
     return await post_request("/groups/create-group", data)

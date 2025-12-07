@@ -12,4 +12,4 @@ class GroupMember(Base):
     joined_at = Column(DateTime, default=datetime.now(timezone.utc))
 
     group = relationship("Group", back_populates="members")
-    user = relationship("User", back_populates="groups")
+    user = relationship("User", back_populates="group_memberships")
