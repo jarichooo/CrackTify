@@ -13,3 +13,7 @@ class Group(Base):
     created_at = Column(DateTime, default=datetime.now(timezone.utc))
 
     members = relationship("GroupMember", back_populates="group", cascade="all, delete-orphan")
+
+    users = relationship("User", secondary="group_members")
+
+    cracks = relationship("Crack", back_populates="group")

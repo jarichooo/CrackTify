@@ -9,11 +9,10 @@ router = APIRouter()
 def api_create_group(data: dict = Body(...), db: Session = Depends(get_db)):
     """Endpoint to create a new group."""
     name = data.get("name")
-    description = data.get("description", None)
-    avatar_url = data.get("avatar_url", None)
+    pin = data.get("pin")
     admin_id = data.get("admin_id")
     
-    return create_group_service(name, description, avatar_url, admin_id, db)
+    return create_group_service(name, pin, admin_id, db)
 
 @router.post("/join-group")
 def api_join_group(data: dict = Body(...), db: Session = Depends(get_db)):

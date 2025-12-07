@@ -50,6 +50,7 @@ class MainPage(TemplatePage):
 
     def build(self) -> ft.View:
         """Build the main page UI"""
+        # self.page.client_storage.clear()
 
         # Toggle theme button
         self.toggle_theme_button = ft.IconButton(

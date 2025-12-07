@@ -1,3 +1,4 @@
+import build
 import flet as ft
 import os
 import shutil
@@ -36,6 +37,8 @@ class ProfilePage:
             }
             chosen = color_map.get(saved_theme_color.lower(), ft.Colors.BLUE)
             self.page.theme = ft.Theme(color_scheme_seed=chosen)
+
+            self.new_email = None  # To store new email during change process
         # ----------------------------
 
     def build(self) -> ft.Control:
@@ -310,6 +313,13 @@ class ProfilePage:
     def send_otp_for_email_change(self, e):
         """Send OTP to the new email before showing verification dialog"""
         self.new_email = self.email_input.value.strip()
+
+        if self.new_email == self.user_email.strip():
+            self.email_input.suffix_icon = ft.IconButton(icon=ft.Icons.EDIT, on_click=self.allow_email_change)
+            self.email_input.read_only = True
+            self.page.update()
+            return
+        
         if not self.new_email:
             self.email_input.error_text = "Email cannot be empty"
             self.page.update()
@@ -319,7 +329,7 @@ class ProfilePage:
         self.page.run_task(self._send_otp_task)
 
     async def _send_otp_task(self):
-        self.email_input.suffix_icon = ft.ProgressRing(width=7, height=7)
+        self.email_input.suffix_icon = ft.Container(ft.ProgressRing(width=8, height=8))
         self.email_input.update()
         first_name = self.first_name_input.value
         response = await send_otp(self.new_email, first_name)
@@ -360,17 +370,17 @@ class ProfilePage:
     async def verify_email_change(self):
         """Verify OTP and update email if correct"""
         entered_otp = self.otp_input.value.strip()
-        new_email = self.email_input.value.strip()
+        self.new_email = self.email_input.value.strip()
         
         if not entered_otp:
             self.otp_input.error_text = "OTP cannot be empty"
             self.page.update()
             return
 
-        response = await verify_otp(new_email, entered_otp)
+        response = await verify_otp(self.new_email, entered_otp)
         if response.get("success"):
             # OTP verified, update email
-            self.user["email"] = new_email
+            self.user["email"] = self.new_email
             self.email_input.read_only = True
             self.email_input.suffix_icon = ft.IconButton(icon=ft.Icons.EDIT, on_click=self.allow_email_change)
             self.page.close(self.verify_email_dialog)
@@ -406,17 +416,20 @@ class ProfilePage:
     def save_profile_changes(self, e):
         self.user["first_name"] = self.first_name_input.value
         self.user["last_name"] = self.last_name_input.value
-        self.user["email"] = self.email_input.value
+        self.user["email"] = self.new_email if self.new_email else self.user_email.value
 
         # Save to client_storage or database
-        self.page.client_storage.set("user", self.user)
+        self.page.client_storage.set("user_info", self.user)
         self.page.run_task(self._update_profile_task)
 
         print("Profile updated:", self.user)
 
     async def _update_profile_task(self):
         response = await update_profile(self.user)
+
         if response.get("success"):
             print("Profile successfully updated on server.")
+            self.build()
+            self.page.update()
         else:
             print("Failed to update profile on server.")

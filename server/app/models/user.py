@@ -15,5 +15,10 @@ class User(Base):
     created_at = Column(DateTime, default=datetime.now(timezone.utc))
     updated_at = Column(DateTime, default=datetime.now(timezone.utc))
 
-    groups = relationship("GroupMember", back_populates="user")
-    images = relationship("Image", back_populates="user")
+    # Link to group memberships
+    group_memberships = relationship("GroupMember", back_populates="user")
+
+    # Shortcut to access actual Group objects
+    groups = relationship("Group", secondary="group_members")
+    
+    cracks = relationship("Crack", back_populates="user")

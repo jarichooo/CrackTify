@@ -12,8 +12,9 @@ from services.group_service import (
     edit_member,
     remove_member
 )
+from services.crack_service import fetch_cracks_service, delete_crack_service
 from widgets.inputs import AppTextField
-from utils.image_utils import image_to_base64
+from utils.image_utils import image_to_base64, base64_to_image
 
 
 class GroupsPage:
@@ -165,20 +166,30 @@ class GroupsPage:
 
         for g in joinable_data.get("groups", []):
             gid = g["id"]
-
-            async def join_fn(group_id=gid):
-                await self.join_group_action(group_id)
-
             members_count = len(g.get("members", []))
+
+            def join_with_pin(e, group_id=gid):
+                pin_input = AppTextField(label="Enter PIN", password=True)
+                join_dialog = ft.AlertDialog(
+                    modal=True,
+                    shape=ft.RoundedRectangleBorder(radius=18),
+                    inset_padding=ft.padding.all(20),
+                    title=ft.Text(f"Join Group: {g['name']}", weight=ft.FontWeight.BOLD),
+                    content=pin_input,
+                    actions=[
+                        ft.TextButton("Cancel", on_click=lambda e: self.page.close(join_dialog)),
+                        ft.TextButton(
+                            "Join",
+                            on_click=lambda e: self.page.run_task(self.join_group_with_pin(group_id, pin_input.value))
+                        )
+                    ]
+                )
+                self.page.open(join_dialog)
 
             tile = ft.ListTile(
                 title=ft.Text(g["name"], size=18, weight="bold"),
                 subtitle=ft.Text(f"👥 Members: {members_count}"),
-                trailing=ft.ElevatedButton(
-                    "Join",
-                    width=80,
-                    on_click=lambda e, f=join_fn: self.page.run_task(f)
-                ),
+                trailing=ft.ElevatedButton("Join", width=80, on_click=join_with_pin),
                 content_padding=ft.padding.symmetric(vertical=10, horizontal=20),
                 shape=ft.RoundedRectangleBorder(radius=20),
                 bgcolor=ft.Colors.ON_INVERSE_SURFACE,
@@ -187,6 +198,19 @@ class GroupsPage:
             self.content_container.controls.append(tile)
 
         self.page.update()
+
+    async def join_group_with_pin(self, group_id, pin):
+        """Join a group using PIN"""
+        if not pin:
+            print("PIN is required")
+            return
+        try:
+            await join_group(self.user_id, group_id, pin=pin)
+            self.cached_user_groups = []
+            self.cached_joinable_groups = []
+            self.page.run_task(self.load_user_groups)
+        except Exception as ex:
+            print("Error joining group:", ex)
 
     async def load_user_groups(self):
         """Load and display the user's groups"""
@@ -232,39 +256,27 @@ class GroupsPage:
             print("Error joining group:", ex)
 
     def show_create_group_dialog(self, e):
-        """Show dialog to create a new group"""
-        file_picker = ft.FilePicker(on_result=self.on_avatar_picked)
-        self.page.overlay.append(file_picker)
-
-        self.upload_box = ft.Container(
-            width=125,
-            height=125,
-            bgcolor=ft.Colors.SECONDARY_CONTAINER,
-            border_radius=12,
-            alignment=ft.alignment.center,
-            content=ft.Icon(ft.Icons.UPLOAD_FILE, size=50),
-            on_click=lambda e: file_picker.pick_files(
-                allow_multiple=False,
-                allowed_extensions=["png", "jpg", "jpeg"]
-            )
+        """Show dialog to create a new group with Name and PIN only"""
+        self.group_name_input = AppTextField(
+            label="Group Name",
+            on_change=lambda e: self.group_name_input.clear_error()
         )
-
-        self.group_name_input = AppTextField(label="Group Name")
-        self.group_description_input = AppTextField(label="Description", multiline=True, max_lines=3)
+        self.group_pin_input = AppTextField(
+            label="PIN", 
+            password=True,
+            keyboard_type=ft.KeyboardType.NUMBER, 
+            on_change=lambda e: self.group_pin_input.clear_error()
+        ) 
 
         self.dialog = ft.AlertDialog(
             modal=True,
             shape=ft.RoundedRectangleBorder(radius=18),
             inset_padding=ft.padding.all(20),
             title=ft.Text("Create New Group", size=20, weight=ft.FontWeight.BOLD),
-            content=ft.Container(
-                width=360,
-                height=140,
-                content=ft.Row(
-                    spacing=12,
-                    vertical_alignment=ft.CrossAxisAlignment.START,
-                    controls=[self.upload_box, ft.Column([self.group_name_input, self.group_description_input], spacing=10, expand=True)]
-                )
+            content=ft.Column(
+                spacing=10,
+                height=150,
+                controls=[self.group_name_input, self.group_pin_input]
             ),
             actions=[
                 ft.TextButton("Cancel", on_click=lambda e: self.page.close(self.dialog)),
@@ -273,33 +285,22 @@ class GroupsPage:
         )
         self.page.open(self.dialog)
 
-    def on_avatar_picked(self, e: ft.FilePickerResultEvent):
-        """Handle avatar image selection"""
-        if not e.files: return
-        file = e.files[0]
-        if not file.path:
-            print("Mobile: File path not available!")
-            return
-        self.selected_avatar_path = file.path
-        b64 = image_to_base64(file.path)
-        self.upload_box.content = ft.Image(
-            src_base64=b64,
-            width=125,
-            height=125,
-            fit=ft.ImageFit.COVER,
-            border_radius=12
-        )
-        self.page.update()
-
     async def create_group_action(self):
-        """Create a new group with provided details"""
+        """Create a new group using name and pin"""
         name = self.group_name_input.value
-        desc = self.group_description_input.value
+        pin = self.group_pin_input.value
+
         if not name:
-            print("Group name required")
+            self.group_name_input.error_text = "Group name is required"
+            self.page.update()
             return
-        avatar_b64 = image_to_base64(self.selected_avatar_path) if self.selected_avatar_path else ""
-        await create_group(name=name, description=desc, avatar_url=avatar_b64, admin_id=self.user_id)
+        
+        if not pin:
+            self.group_pin_input.error_text = "PIN is required"
+            self.page.update()
+            return
+
+        await create_group(name=name, pin=pin, admin_id=self.user_id)
         self.page.close(self.dialog)
         self.cached_user_groups = []
         self.page.run_task(self.load_user_groups)
@@ -419,20 +420,113 @@ class GroupsPage:
 
         self._restore_group_list()
 
-
     async def remove_member_from_group(self):
+        """Remove a member from the current group"""
         member_id = await self.page.client_storage.get_async("member_to_remove")
         await remove_member(member_id, self.current_group_id)
 
         self.page.close(self.confirm_dialog)
         self.page.run_task(self.view_group)
 
-
     def _on_group_nav_change(self, e):
+        """Handle navigation bar tab changes"""
         idx = e.control.selected_index
         if idx == 0:  # Members tab
             self.page.run_task(self.view_group)
         elif idx == 1:  # Images tab
             self.content_container.controls.clear()
-            self.content_container.controls.append(ft.Text("Images page content here..."))
+            self.page.run_task(self.view_group_images)
+
             self.page.update()
+
+    async def view_group_images(self):
+        """View crack images for the current group."""
+
+        response = await fetch_cracks_service(self.current_group_id)
+        cracks = response.get("cracks") if response else []
+
+        self.content_container.controls.clear()
+
+        if not cracks:
+            self.content_container.controls.append(
+                ft.Container(
+                    content=ft.Text("No cracks detected yet.", size=20),
+                    alignment=ft.alignment.center,
+                    expand=True
+                )
+            )
+            self.page.update()
+            return
+
+        grid_items = []
+
+        for crack in cracks:
+            img_base64 = crack.get("image_base64")
+            severity = crack.get("severity", "Unknown")
+            crack_id = crack.get("id")
+            uploader_id = crack.get("user_id")
+
+            image_control = ft.Image(
+                src_base64=img_base64,
+                width=140,
+                height=140,
+                fit=ft.ImageFit.COVER,
+                border_radius=ft.border_radius.all(12),
+            )
+
+            can_delete = (self.user_id == uploader_id or self.user_id == self.current_group_admin)
+
+            delete_btn = ft.IconButton(
+                icon=ft.Icons.DELETE,
+                icon_color=ft.Colors.RED,
+                visible=can_delete,
+                tooltip="Delete crack",
+                on_click=lambda e, cid=crack_id: self._prepare_delete_crack(cid)
+            )
+
+            tile = ft.Container(
+                bgcolor=ft.Colors.with_opacity(0.05, ft.Colors.SURFACE),
+                padding=10,
+                border_radius=12,
+                content=ft.Column(
+                    controls=[
+                        image_control,
+                        ft.Text(f"Severity: {severity}", weight=ft.FontWeight.BOLD),
+                        delete_btn
+                    ],
+                    spacing=6,
+                    horizontal_alignment=ft.CrossAxisAlignment.CENTER
+                )
+            )
+
+            grid_items.append(tile)
+
+        grid = ft.GridView(
+            expand=True,
+            runs_count=3,
+            max_extent=200,
+            spacing=10,
+            run_spacing=10,
+            controls=grid_items
+        )
+
+        self.content_container.controls.append(grid)
+        self.page.update()
+
+    def _prepare_delete_crack(self, crack_id):
+        self.page.client_storage.set("crack_to_delete", crack_id)
+        self.page.run_task(self.delete_crack_action)
+
+    async def delete_crack_action(self):
+        crack_id = await self.page.client_storage.get_async("crack_to_delete")
+        if not crack_id:
+            return
+
+        response = delete_crack_service(crack_id, self.user_id, db=None)
+
+        if response.get("success"):
+            print("Crack deleted:", crack_id)
+        else:
+            print("Delete failed:", response.get("message"))
+
+        await self.view_group_images()
