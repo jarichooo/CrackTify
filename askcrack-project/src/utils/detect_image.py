@@ -3,6 +3,8 @@ import numpy as np
 from PIL import Image
 import os
 import cv2
+import sys
+from datetime import datetime
 
 class CrackClassifier:
     def __init__(self, model_path: str):
@@ -51,58 +53,53 @@ class CrackClassifier:
         if prob <= confidence_threshold:
             return None
 
-        # Load image
+        # Load and process image (same as before)
         img = cv2.imread(image_path)
         if img is None:
             raise RuntimeError("Failed to load image")
 
         gray = cv2.cvtColor(img, cv2.COLOR_BGR2GRAY)
-
-        # Adaptive threshold — magic for cracks
         binary = cv2.adaptiveThreshold(
             gray, 255, cv2.ADAPTIVE_THRESH_GAUSSIAN_C,
             cv2.THRESH_BINARY_INV, 99, 15
         )
-
-        # Clean up
         kernel = cv2.getStructuringElement(cv2.MORPH_RECT, (3,3))
         binary = cv2.morphologyEx(binary, cv2.MORPH_CLOSE, kernel, iterations=2)
-
-        # Find contours
         contours, _ = cv2.findContours(binary, cv2.RETR_EXTERNAL, cv2.CHAIN_APPROX_SIMPLE)
 
-        # Create output copy
         output = img.copy()
+        valid_contours = [cnt for cnt in contours if cv2.contourArea(cnt) > 200]
 
-        # Filter and draw actual contours (not boxes!)
-        valid_contours = []
-        crack_count = 0
-        for cnt in contours:
-            area = cv2.contourArea(cnt)
-            if area > 200:  # ignore dust
-                # Optional: filter very short or round blobs
-                if cv2.arcLength(cnt, False) > 30:  # minimum length
-                    valid_contours.append(cnt)
-                    crack_count += 1
-
-        # Draw beautiful green outlines (thickness = 4)
-        cv2.drawContours(
-            image=output,
-            contours=valid_contours,
-            contourIdx=-1,        # -1 = draw all
-            color=(0, 0, 255),    # BGR green
-            thickness=4
-        )
-
-        # Optional: also draw bounding boxes in lighter green (very professional look)
+        # Draw crack outlines + light boxes
+        cv2.drawContours(output, valid_contours, -1, (0, 0, 255), 2)
         for cnt in valid_contours:
             x, y, w, h = cv2.boundingRect(cnt)
-            cv2.rectangle(output, (x, y), (x + w, y + h), (100, 255, 100), 2)  # light green
+            cv2.rectangle(output, (x, y), (x + w, y + h), (100, 255, 100), 2)
 
-        # Save result
-        dir_name = os.path.dirname(image_path)
-        name, ext = os.path.splitext(os.path.basename(image_path))
-        save_path = os.path.join(dir_name, f"{name}_crack_detected{ext}")
-        cv2.imwrite(save_path, output)
+        # Get the correct path to your storage/ folder
+        if getattr(sys, 'frozen', False):
+            # Running as packaged app (Android APK or desktop exe)
+            base_path = sys._MEIPASS
+            storage_path = os.path.join(base_path, "storage")
+        else:
+            # Development mode
+            current_dir = os.path.dirname(os.path.abspath(__file__))  # utils/detect_image.py
+            src_dir = os.path.dirname(os.path.dirname(current_dir))  # src/
+            storage_path = os.path.join(src_dir, "storage")
 
+        # Create storage folder if it doesn't exist
+        os.makedirs(storage_path, exist_ok=True)
+
+        # Generate filename with timestamp
+        timestamp = datetime.now().strftime("%Y%m%d_%H%M%S")
+        original_name = os.path.splitext(os.path.basename(image_path))[0]
+        save_filename = f"{original_name}_crack_{timestamp}.jpg"
+        save_path = os.path.join(storage_path, save_filename)
+
+        # Save the image
+        success = cv2.imwrite(save_path, output)
+        if not success:
+            raise RuntimeError(f"Failed to save to {save_path}")
+
+        print(f"Crack image saved to storage/: {save_filename}")
         return save_path
