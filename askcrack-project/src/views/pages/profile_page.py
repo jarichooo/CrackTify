@@ -7,6 +7,7 @@ from pathlib import Path
 
 from widgets.inputs import AppTextField
 from widgets.buttons import PrimaryButton, SecondaryButton, CustomTextButton
+from widgets.banner_ad import BannerAd
 from services.profile_service import update_profile
 from services.otp_service import send_otp, verify_otp
 from utils.image_utils import image_to_base64, base64_to_image
@@ -282,11 +283,15 @@ class ProfilePage:
             spacing=10,
         )
 
+        # Banner Ad
+        banner_ad = BannerAd(self.page, title="Premium Features!", message="Unlock advanced profile customization", button_text="Go Premium")
+
         # Update body
         return [
             self.avatar_control,
             ft.Text(self.full_name, size=20, weight="bold"),
             ft.Divider(height=15, opacity=0),
+            banner_ad,
             self.list_view,
         ]
     
