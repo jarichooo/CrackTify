@@ -12,7 +12,7 @@ def api_get_avatar_url(user_id):
     return 
 
 @router.post("/update/{user_id}")
-def api_update_profile(data: Dict[str, Any] = Body(...), db: Session = Depends(get_db)):
+def api_update_profile(data: dict = Body(...), db: Session = Depends(get_db)):
     user_id = data.get("id")
     profile_data = data.get("profile_data", {})
 
