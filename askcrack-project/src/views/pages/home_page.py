@@ -4,7 +4,6 @@ from pathlib import Path
 
 from services.activity_service import fetch_recent_activity_service
 from utils.image_utils import base64_to_image
-from widgets.banner_ad import BannerAd
 
 class HomePage:
     def __init__(self, page: ft.Page):
@@ -87,16 +86,12 @@ class HomePage:
         self.page.run_task(self.load_recent_activity)
         self.page.run_task(self.load_stats)
 
-        # Banner Ad
-        banner_ad = BannerAd(self.page, title="Crack Detection Pro!", message="Upgrade to premium for advanced crack analysis", button_text="Upgrade Now")
-
         # MAIN PAGE LAYOUT
         return [
             ft.Column(
                 spacing=20,
                 controls=[
                     header_card,
-                    banner_ad,
                     ft.Text("Overview", size=18, weight="bold"),
                     ft.Container(content=self.grid, height=160),
                     ft.Text("Recent Activity", size=18, weight="bold"),
