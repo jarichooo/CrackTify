@@ -1,9 +1,14 @@
 import flet as ft
+import os
+import shutil
+from datetime import datetime
+from pathlib import Path
 
 from widgets.inputs import AppTextField
 from widgets.buttons import PrimaryButton, SecondaryButton, CustomTextButton
 from services.profile_service import update_profile
-from utils.image_utils import image_to_base64
+from services.otp_service import send_otp, verify_otp
+from utils.image_utils import image_to_base64, base64_to_image
 
 class ProfilePage:
     def __init__(self, page: ft.Page):
@@ -35,7 +40,8 @@ class ProfilePage:
 
     def build(self) -> ft.Control:
         """Build the profile page UI"""
-        self.profile_image_path = self.user.get("avatar_url") or "https://www.w3schools.com/howto/img_avatar.png"
+        self.profile_image_base64 = self.user.get("avatar_base64")
+        self.profile_image_path = base64_to_image(self.profile_image_base64, f"{self.user.get('id')}.png") if self.profile_image_base64 else None
         self.user_first_name = self.user.get("first_name")
         self.user_last_name = self.user.get("last_name")
         self.full_name = f"{self.user_first_name} {self.user_last_name}"
@@ -45,9 +51,15 @@ class ProfilePage:
         avatar_picker = ft.FilePicker(on_result=self.on_avatar_picked)
         self.page.overlay.append(avatar_picker)
 
+        self.avatar_image = ft.CircleAvatar(
+            foreground_image_src=self.profile_image_path, 
+            background_image_src="https://www.w3schools.com/howto/img_avatar.png",
+            radius=50
+        )
+
         self.avatar_control = ft.Stack(
             controls=[
-                ft.CircleAvatar(foreground_image_src=self.profile_image_path, radius=50),
+                self.avatar_image,  # store reference for updating
                 ft.Container(
                     content=ft.Icon(ft.Icons.CAMERA_ALT, size=20, color="white"),
                     width=30,
@@ -64,6 +76,7 @@ class ProfilePage:
             alignment=ft.alignment.bottom_right
         )
 
+
         # Editable Fields
         self.first_name_input = AppTextField(
             label="First Name",
@@ -78,19 +91,22 @@ class ProfilePage:
             expand=1
         )
 
-        def allow_email_change(e):
-            self.email_input.read_only = False
-            self.email_input.focus()
-            self.page.update()
-
         self.email_input = AppTextField(
             label="Email",
             border=ft.InputBorder.UNDERLINE,
             value=self.user_email,
-            suffix_icon=ft.IconButton(icon=ft.Icons.EDIT, on_click=allow_email_change),
+            suffix_icon=ft.IconButton(icon=ft.Icons.EDIT, on_click=self.allow_email_change),
             read_only=True,
         )
 
+        self.otp_input = AppTextField(
+            label="One-Time PIN",
+            hint_text="XXXXXX",
+            keyboard_type=ft.KeyboardType.NUMBER,
+            max_length=6,
+            on_change= lambda e: self.otp_input.clear_error()
+        )
+        
         save_button = PrimaryButton(
             text="Save Changes",
             icon=ft.Icons.SAVE,
@@ -270,19 +286,122 @@ class ProfilePage:
             ft.Divider(height=15, opacity=0),
             self.list_view,
         ]
+    
+    def allow_email_change(self, e):
+        """Enable email input for editing and send OTP"""
+        self.email_input.read_only = False
+        self.email_input.focus()
+        
+        # Create new OTP input for each attempt
+        self.otp_input = AppTextField(
+            label="One-Time PIN",
+            hint_text="XXXXXX",
+            keyboard_type=ft.KeyboardType.NUMBER,
+            max_length=6,
+            on_change=lambda e: self.otp_input.clear_error()
+        )
+
+        self.email_input.suffix_icon = ft.IconButton(
+            icon=ft.Icons.CHECK,
+            on_click=self.send_otp_for_email_change
+        )
+        self.page.update()
+
+    def send_otp_for_email_change(self, e):
+        """Send OTP to the new email before showing verification dialog"""
+        self.new_email = self.email_input.value.strip()
+        if not self.new_email:
+            self.email_input.error_text = "Email cannot be empty"
+            self.page.update()
+            return
+
+        # Send OTP asynchronously
+        self.page.run_task(self._send_otp_task)
+
+    async def _send_otp_task(self):
+        self.email_input.suffix_icon = ft.ProgressRing(width=7, height=7)
+        self.email_input.update()
+        first_name = self.first_name_input.value
+        response = await send_otp(self.new_email, first_name)
+        if response.get("success"):
+            # Show OTP dialog after OTP sent
+            self.show_otp_dialog()
+        else:
+            self.email_input.error_text = "Failed to send OTP. Try again."
+            self.page.update()
+
+    def show_otp_dialog(self):
+        """Open OTP verification dialog"""
+        self.verify_email_dialog = ft.AlertDialog(
+            title=ft.Text("Confirm Email Change"),
+            inset_padding=ft.padding.all(20),
+            content=ft.Container(
+                ft.Column(
+                    height=150, 
+                    controls=[
+                        ft.Text("A 6-digit verification code has been sent to your new email. Enter it below:"),
+                        self.otp_input
+                    ],
+                )
+            ),
+            actions=[
+                ft.TextButton("Cancel", on_click=lambda e: self.update_suffix_icon_on_cancel()),
+                ft.TextButton("Verify", on_click=lambda e: self.page.run_task(self.verify_email_change))
+            ]
+        )
+        self.page.open(self.verify_email_dialog)
+
+    def update_suffix_icon_on_cancel(self):
+        """Reset email input suffix icon on OTP dialog cancel"""
+        self.email_input.suffix_icon = ft.IconButton(icon=ft.Icons.CHECK, on_click=self.allow_email_change)
+        self.page.close(self.verify_email_dialog)
+        self.page.update()
+
+    async def verify_email_change(self):
+        """Verify OTP and update email if correct"""
+        entered_otp = self.otp_input.value.strip()
+        new_email = self.email_input.value.strip()
+        
+        if not entered_otp:
+            self.otp_input.error_text = "OTP cannot be empty"
+            self.page.update()
+            return
+
+        response = await verify_otp(new_email, entered_otp)
+        if response.get("success"):
+            # OTP verified, update email
+            self.user["email"] = new_email
+            self.email_input.read_only = True
+            self.email_input.suffix_icon = ft.IconButton(icon=ft.Icons.EDIT, on_click=self.allow_email_change)
+            self.page.close(self.verify_email_dialog)
+            self.page.update()
+            print("Email updated successfully.")
+        else:
+            self.otp_input.error_text = "Invalid OTP. Please try again."
+            self.page.update()
 
     def on_avatar_picked(self, e: ft.FilePickerResultEvent):
         if not e.files:
             return
 
         avatar_path = e.files[0].path
-        avatar_base64 = image_to_base64(avatar_path)
-        self.user["avatar"] = avatar_base64  # update user dictionary
 
-        # Update CircleAvatar (left untouched)
-        self.avatar_control
-        self.body_content.content.controls[0].controls[0].src = avatar_path
-        self.body_content.content.controls[0].controls[0].update()
+        # Create assets folder if not exists
+        assets_dir = Path(__file__).parent.parent.parent.parent / "src" / "assets" / "avatars"
+        os.makedirs(assets_dir, exist_ok=True)
+
+        # Save file with unique name
+        ext = os.path.splitext(avatar_path)[1]
+        filename = f"user_{self.user.get('id', 'unknown')}{ext}"  # you can add timestamp if you want
+        dest_path = assets_dir / filename
+        shutil.copy2(avatar_path, dest_path)
+
+        # Update CircleAvatar
+        # TODO: Fix image not updating issue
+        self.avatar_image.foreground_image_src = dest_path
+        self.page.update()
+
+        print(f"Avatar saved to assets: {dest_path}")
 
     def save_profile_changes(self, e):
         self.user["first_name"] = self.first_name_input.value
@@ -291,5 +410,13 @@ class ProfilePage:
 
         # Save to client_storage or database
         self.page.client_storage.set("user", self.user)
+        self.page.run_task(self._update_profile_task)
 
         print("Profile updated:", self.user)
+
+    async def _update_profile_task(self):
+        response = await update_profile(self.user)
+        if response.get("success"):
+            print("Profile successfully updated on server.")
+        else:
+            print("Failed to update profile on server.")

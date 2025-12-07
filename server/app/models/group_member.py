@@ -11,6 +11,5 @@ class GroupMember(Base):
     user_id = Column(Integer, ForeignKey("users.id"))
     joined_at = Column(DateTime, default=datetime.now(timezone.utc))
 
-
     group = relationship("Group", back_populates="members")
     user = relationship("User", back_populates="groups")

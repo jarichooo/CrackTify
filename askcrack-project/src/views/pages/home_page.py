@@ -1,25 +1,37 @@
 import flet as ft
 from typing import List
+from pathlib import Path
 
-# Dummy function for fetching recent activity
+from services.activity_service import fetch_recent_activity_service
+from utils.image_utils import base64_to_image
+
+
+# Fetch recent activity (wrapper for actual API)
 async def fetch_recent_activity(user_id):
-    # Replace with real API call
-    return [
-        {"title": "Crack detected", "group": "Group A", "severity": "Critical", "time": "Today"},
-        {"title": "Image uploaded", "group": "Group B", "severity": "Moderate", "time": "Yesterday"},
-        {"title": "Report generated", "group": "Group C", "severity": "Low", "time": "2 days ago"},
-        {"title": "Crack detected", "group": "Group D", "severity": "Moderate", "time": "Today"},
-        {"title": "Report generated", "group": "Group E", "severity": "Low", "time": "Yesterday"},
-    ]
+    return await fetch_recent_activity_service(user_id)
+
 
 class HomePage:
     def __init__(self, page: ft.Page):
         self.page = page
-        self.user = self.page.client_storage.get("user_info")
-        self.user_name = self.user.get("fullname", "User")
-        self.avatar = self.user.get("avatar", None)
+        self.user = self.page.client_storage.get("user_info") or {}
 
-        # Only Detections and Reports
+        self.user_id = self.user.get("id")
+        self.first_name = self.user.get("first_name", "User")
+        avatar_base64 = self.user.get("avatar_base64")
+
+        # Make sure path exists
+        avatar_dir = Path(__file__).parent.parent.parent.parent / "storage" / "images" / "avatars"
+        avatar_dir.mkdir(parents=True, exist_ok=True)
+
+        avatar_path = avatar_dir / f"user_{self.user_id}_avatar.png"
+
+        # Save avatar to disk
+        self.avatar_path = None
+        if avatar_base64:
+            self.avatar_path = base64_to_image(avatar_base64, avatar_path)
+
+        # Stats
         self.stats = {
             "detections": 0,
             "reports": 0
@@ -28,10 +40,14 @@ class HomePage:
         self.grid: ft.GridView | None = None
         self.activity_list: ft.ListView | None = None
 
+    # -------------------------------
+    # MAIN BUILD
+    # -------------------------------
     def build(self) -> List[ft.Control]:
-        # HEADER
+
+        # HEADER CARD
         header_card = ft.Container(
-            padding=ft.padding.all(20),
+            padding=20,
             bgcolor=ft.Colors.PRIMARY_CONTAINER,
             border_radius=20,
             shadow=ft.BoxShadow(blur_radius=1, color=ft.Colors.BLACK12),
@@ -40,16 +56,18 @@ class HomePage:
                 vertical_alignment=ft.CrossAxisAlignment.CENTER,
                 controls=[
                     ft.Column(
-                        spacing=6,
+                        spacing=5,
                         controls=[
-                            ft.Text(f"Welcome back, {self.user_name}!", size=18, weight="bold"),
-                            ft.Text("Here’s a summary of your activity.", size=14, color=ft.Colors.BLUE_GREY)
+                            ft.Text(f"Welcome back, {self.first_name}!", size=18, weight="bold"),
+                            ft.Text("Here’s a summary of your activity.",
+                                    size=14,
+                                    color=ft.Colors.BLUE_GREY)
                         ]
                     ),
                     ft.CircleAvatar(
                         radius=28,
-                        foreground_image_src=self.avatar if self.avatar else None,
-                        bgcolor=ft.Colors.BLUE_200
+                        foreground_image_src=str(self.avatar_path) if self.avatar_path else None,
+                        bgcolor=ft.Colors.BLUE_200,
                     )
                 ]
             )
@@ -57,53 +75,48 @@ class HomePage:
 
         # QUICK STATS GRID
         self.grid = ft.GridView(
-            expand=False,           # don't expand vertically
-            runs_count=1,           # single row
-            max_extent=160,         # smaller cards
+            expand=False,
+            runs_count=2,         # 2 columns look better
+            max_extent=160,
             spacing=12,
             run_spacing=12,
         )
         self.load_tiles()
 
-        # RECENT ACTIVITY
+        # RECENT ACTIVITY LIST
         self.activity_list = ft.ListView(
             expand=True,
             spacing=10,
-            padding=ft.padding.all(0),
+            padding=0,
         )
 
-        # Async fetch recent activity
+        # Load async data
         self.page.run_task(self.load_recent_activity)
         self.page.run_task(self.load_stats)
 
-        # MAIN LAYOUT
+        # MAIN PAGE LAYOUT
         return [
             ft.Column(
                 spacing=20,
                 controls=[
                     header_card,
                     ft.Text("Overview", size=18, weight="bold"),
-                    ft.Container(
-                        content=self.grid,
-                        height=130  # fixed height for the grid
-                    ),
+                    ft.Container(content=self.grid, height=180),
                     ft.Text("Recent Activity", size=18, weight="bold"),
-                    ft.Container(
-                        content=self.activity_list,
-                        height=280  # limit height and allow vertical scrolling
-                    )
+                    ft.Container(content=self.activity_list, height=300)
                 ]
             )
         ]
 
+    # -------------------------------
     # TILE COMPONENT
+    # -------------------------------
     def info_tile(self, title: str, value: int, icon, color=ft.Colors.SECONDARY_CONTAINER):
         return ft.Container(
-            width=140,
             padding=12,
             border_radius=16,
-            shadow=ft.BoxShadow(blur_radius=1, color=ft.Colors.BLACK12),
             bgcolor=color,
+            shadow=ft.BoxShadow(blur_radius=1, color=ft.Colors.BLACK12),
             content=ft.Column(
                 alignment=ft.MainAxisAlignment.CENTER,
                 horizontal_alignment=ft.CrossAxisAlignment.CENTER,
@@ -115,48 +128,92 @@ class HomePage:
                         shape=ft.BoxShape.CIRCLE,
                         content=ft.Icon(icon, size=24, color=ft.Colors.BLUE)
                     ),
-                    ft.Text(title, size=13, weight="bold", text_align="center"),
+                    ft.Text(title, size=13, weight="bold"),
                     ft.Text(str(value), size=14, weight="w900")
                 ]
             )
         )
 
-    # LOAD TILES
+    # -------------------------------
+    # LOAD STAT CARDS
+    # -------------------------------
     def load_tiles(self):
         if not self.grid:
             return
-        self.grid.controls.clear()
-        self.grid.controls.append(self.info_tile("Detections", self.stats["detections"], ft.Icons.SEARCH))
-        self.grid.controls.append(self.info_tile("Reports", self.stats["reports"], ft.Icons.DESCRIPTION))
 
+        self.grid.controls.clear()
+
+        self.grid.controls.append(
+            self.info_tile("Detections", self.stats["detections"], ft.Icons.SEARCH)
+        )
+
+        self.grid.controls.append(
+            self.info_tile("Reports", self.stats["reports"], ft.Icons.DESCRIPTION)
+        )
+
+    # -------------------------------
     # ASYNC LOAD STATS
+    # -------------------------------
     async def load_stats(self):
-        # Replace with real API calls
+        # Replace with real API later
         self.stats["detections"] = 14
-        self.stats["reports"] = 7
+        self.stats["reports"] = 5
+
         self.load_tiles()
         self.page.update()
 
     # ASYNC LOAD RECENT ACTIVITY
     async def load_recent_activity(self):
         activities = await fetch_recent_activity(self.user.get("id"))
-        self.activity_list.controls.clear()
-        for act in activities:
-            severity_color = ft.Colors.RED if act["severity"] == "Critical" else (
-                ft.Colors.ORANGE if act["severity"] == "Moderate" else ft.Colors.GREEN
-            )
-            item = ft.Container(
-                padding=15,
-                bgcolor=ft.Colors.SECONDARY_CONTAINER,
-                border_radius=12,
-                shadow=ft.BoxShadow(blur_radius=5, color=ft.Colors.BLACK12),
-                content=ft.Column([
-                    ft.Text(f"{act['title']} in {act['group']}", size=14, weight="bold"),
-                    ft.Row([
-                        ft.Text(f"Severity: {act['severity']}", color=severity_color),
-                        ft.Text(f"Time: {act['time']}", color=ft.Colors.BLUE_GREY)
-                    ], alignment=ft.MainAxisAlignment.SPACE_BETWEEN)
-                ])
-            )
-            self.activity_list.controls.append(item)
-        self.page.update()
+        
+        if not activities:
+            # No activities returned; clear list and show placeholder
+            if self.activity_list:
+                self.activity_list.controls.clear()
+                self.activity_list.controls.append(
+                    ft.Text("No recent activity available.", color=ft.Colors.BLUE_GREY)
+                )
+                self.page.update()
+            return
+
+        # Ensure activities is a list
+        if isinstance(activities, str):
+            import json
+            try:
+                activities = json.loads(activities)
+            except Exception:
+                activities = []
+
+        if not isinstance(activities, list):
+            activities = []
+
+        # Clear existing controls
+        if self.activity_list:
+            self.activity_list.controls.clear()
+
+            for act in activities:
+                # Only process dict items
+                if not isinstance(act, dict):
+                    continue
+
+                severity_color = ft.Colors.RED if act.get("severity") == "Critical" else (
+                    ft.Colors.ORANGE if act.get("severity") == "Moderate" else ft.Colors.GREEN
+                )
+
+                item = ft.Container(
+                    padding=15,
+                    bgcolor=ft.Colors.SECONDARY_CONTAINER,
+                    border_radius=12,
+                    shadow=ft.BoxShadow(blur_radius=5, color=ft.Colors.BLACK12),
+                    content=ft.Column([
+                        ft.Text(f"{act.get('title', 'No title')} in {act.get('group', 'Unknown')}", size=14, weight="bold"),
+                        ft.Row([
+                            ft.Text(f"Severity: {act.get('severity', '-')}", color=severity_color),
+                            ft.Text(f"Time: {act.get('time', '-')}", color=ft.Colors.BLUE_GREY)
+                        ], alignment=ft.MainAxisAlignment.SPACE_BETWEEN)
+                    ])
+                )
+                self.activity_list.controls.append(item)
+
+            self.page.update()
+

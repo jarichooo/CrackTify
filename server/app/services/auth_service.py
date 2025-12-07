@@ -47,7 +47,7 @@ def register_user_service(first_name: str, last_name: str, email: str, password:
             "first_name": new_user.first_name,
             "last_name": new_user.last_name,
             "email": new_user.email,
-            "avatar_url": new_user.avatar_url
+            "avatar_base64": new_user.avatar_base64
         }
     }
 
@@ -73,6 +73,6 @@ def login_user_service(email: str, password: str, db):
             "first_name": user.first_name,
             "last_name": user.last_name,
             "email": user.email,
-            "avatar_url": user.avatar_url
+            "avatar_base64": user.avatar_base64
         }
     }

@@ -20,15 +20,17 @@ def get_profile(user_id: int) -> User:
 def get_profile_avatar(user_id: int):
     ...
 
-def update_profile(user_id: int, profile_data: dict) -> User:
+def update_profile(user_id: int, profile_data: dict, db) -> User:
     """Update user profile with provided data"""
-    user = User.query.get(user_id)
+    user = db.query(User).filter(User.id == user_id).first()
+    if not user:
+        return {"success": False, "error": "User not found"}
 
-    user.first_name = profile_data.get("first_name", user.first_name)
-    user.last_name = profile_data.get("last_name", user.last_name)
-    user.email = profile_data.get("email", user.email)
-    user.avatar_url = profile_data.get("avatar_url", user.avatar_url)
+    for key, value in profile_data.items():
+        if hasattr(user, key):
+            setattr(user, key, value)
 
-    user.save()
+    db.commit()
+    db.refresh(user)
 
-    return user
+    return {"success": True, "message": "Profile updated successfully"}

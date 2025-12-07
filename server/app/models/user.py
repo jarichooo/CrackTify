@@ -1,5 +1,5 @@
 from datetime import datetime, timezone
-from sqlalchemy import Column, Integer, String, DateTime
+from sqlalchemy import Column, Integer, String, DateTime, Text
 from sqlalchemy.orm import relationship
 from app.database.db import Base
 
@@ -11,10 +11,9 @@ class User(Base):
     last_name = Column(String(255), nullable=False)
     email = Column(String(255), unique=True, nullable=False)
     password_hash = Column(String(255), nullable=False)
-    avatar_url = Column(String(255))
+    avatar_base64 = Column(Text, nullable=True)
     created_at = Column(DateTime, default=datetime.now(timezone.utc))
     updated_at = Column(DateTime, default=datetime.now(timezone.utc))
 
     groups = relationship("GroupMember", back_populates="user")
-    reports = relationship("Report", back_populates="user")
     images = relationship("Image", back_populates="user")

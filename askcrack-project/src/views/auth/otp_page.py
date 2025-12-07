@@ -163,13 +163,14 @@ class OTPPage(TemplatePage):
                 self.page.run_task(self.clear_values)
                 self.page.go("/home")
             else:
-                self.page.open(ErrorDialog(
+                registration_failed_dialog = ErrorDialog(
                     title=ft.Text("Registration Failed"),
-                    content=ft.Text("An error occurred during registration. Please try again."),
+                    content=ft.Text(reg_response.get("message") or "An error occurred during registration."),
                     actions=[
-                        ft.TextButton("OK", on_click=lambda e: self.page.close())
+                        ft.TextButton("OK", on_click=lambda e: self.page.close(registration_failed_dialog))
                     ]
-                ))
+                )
+                self.page.open(registration_failed_dialog)
 
         else:
             print(response.get("message"))
