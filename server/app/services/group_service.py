@@ -35,7 +35,7 @@ def create_group_service(
     return fetch_user_groups_service(admin_id, db)
 
 # JOIN GROUP
-def join_group_service(user_id: int, group_id: int, db):
+def join_group_service(user_id: int, group_id: int, pin: int, db):
     """User joins a group."""
 
     # Check if already member
@@ -46,6 +46,14 @@ def join_group_service(user_id: int, group_id: int, db):
 
     if existing:
         return {"success": False, "message": "User already a member of the group."}
+
+    # Verify PIN
+    group = db.query(Group).filter_by(id=group_id).first()
+    if not group:
+        return {"success": False, "message": "Group not found."}
+    
+    if group.pin != pin:
+        return {"success": False, "message": "Cannot join group: Incorrect PIN."}
 
     new_member = GroupMember(
         user_id=user_id,
@@ -89,7 +97,7 @@ def fetch_user_groups_service(user_id: int, db):
             ]
         })
 
-    return {"groups": result}
+    return {"success": True, "groups": result}
 
 # FETCH GROUPS USER IS NOT A MEMBER OF
 def fetch_groups_service(user_id: int, db):
@@ -122,7 +130,7 @@ def fetch_groups_service(user_id: int, db):
             ]
         })
 
-    return {"groups": result}
+    return {"success": True, "groups": result}
 
 def fetch_group_info_service(group_id: int, db):
     """Fetch detailed information about a specific group."""
@@ -148,7 +156,7 @@ def fetch_group_info_service(group_id: int, db):
         ]
     }
 
-    return {"group": group_info}
+    return {"success": True, "group": group_info}
 
 def edit_member_service(user_id: int, group_id: int, new_role: str, db):
     """Edit a group member's role."""

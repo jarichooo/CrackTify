@@ -7,7 +7,7 @@ import os # Helps manage file paths better
 # 1. Load the TFLite model
 # --------------------------------------------------------------
 # IMPORTANT: Adjust these paths for your Android App's asset management later
-model_path = r"D:\\CSPC_LIFE\\3RD YEAR\\FIRST_SEMESTER\\Application Delopment and Emerging Technologies\\AskCrack\\dataset_and_model\\mobilenet_wall_crack_detection.tflite"
+model_path = r"C:/Users/Admin/School/Coding Course/Application Development And Emerging Technologies/CCCS_106/final_project/AskCrack/dataset_and_model/mobilenet_wall_crack_detection.tflite"
 
 interpreter = tf.lite.Interpreter(model_path=model_path)
 interpreter.allocate_tensors()
@@ -57,7 +57,7 @@ def preprocess_image_pillow(image_path, target_size=(128, 128)):
 # --------------------------------------------------------------
 # 3. Test on your image
 # --------------------------------------------------------------
-test_image_path = r"D:\\CSPC_LIFE\\3RD YEAR\\FIRST_SEMESTER\\Application Delopment and Emerging Technologies\\AskCrack\\dataset_and_model\\negative.jpg"
+test_image_path = r"C:/Users/Admin/Downloads/download (1).jpg"
 
 # Preprocess
 # Use the new pillow function:
@@ -73,7 +73,7 @@ interpreter.invoke()
 output = interpreter.get_tensor(output_details[0]['index'])
 probability = float(output[0][0])   # sigmoid output
 
-print(f"\nPrediction probability: {probability:.4f}")
+print(f"/nPrediction probability: {probability:.4f}")
 if probability > 0.5:
     print("Crack detected (Positive)")
 else:

@@ -94,6 +94,7 @@ class GroupsPage:
         self.cached_user_groups = []
         self.cached_joinable_groups = []
         await self.load_user_groups()
+        print("Groups refreshed.")
 
     def filter_content(self, query: str):
         query_lower = query.lower()
@@ -102,7 +103,7 @@ class GroupsPage:
                 g for g in self.cached_joinable_groups.get("groups", [])
                 if query_lower in g["name"].lower() or query_lower in g.get("description", "").lower()
             ]
-            self._render_joinable_groups_list({"groups": filtered_joinable})
+            self._render_joinable_groups_list({"groups": filtered_joinable}, search_mode=True)
             return
      
         filtered_user = [
@@ -110,17 +111,38 @@ class GroupsPage:
             if query_lower in g["name"].lower() or query_lower in g.get("description", "").lower()
         ]
         self.content_container.controls.clear()
-        self._render_user_groups_list(filtered_user)
+        self.content_container.controls.append(ft.TextButton("My Groups"))
+        self._render_user_groups_list(filtered_user, search_mode=True)
         self.page.update()
 
-    def _render_user_groups_list(self, groups_data):
-        if not groups_data:
+    def _render_user_groups_list(self, groups_data, search_mode=False):
+        """Render the list of user's groups"""
+        if not groups_data and not search_mode:
             self.content_container.controls.append(
                 ft.Column(
                     [ft.Text("No groups yet. Create or join one!", size=16, color=ft.Colors.GREY)],
                     alignment=ft.MainAxisAlignment.CENTER,
                     horizontal_alignment=ft.CrossAxisAlignment.CENTER,
                     expand=True
+                )
+            )
+            self.page.update()
+            return
+        
+        if not groups_data and search_mode:
+            self.content_container.controls.append(
+                ft.Container(
+                    alignment=ft.alignment.center,
+                    expand=True,
+                    content=ft.Column(
+                        alignment=ft.MainAxisAlignment.CENTER,
+                        horizontal_alignment=ft.CrossAxisAlignment.CENTER,
+                        expand=True,
+                        controls=[
+                            ft.Icon(ft.Icons.SEARCH_OFF, size=100, color=ft.Colors.GREY),
+                            ft.Text("No group found.", size=20, color=ft.Colors.GREY),
+                        ],
+                    ),
                 )
             )
             self.page.update()
@@ -156,7 +178,7 @@ class GroupsPage:
         self.current_group_id = group_id
         self.page.run_task(self.view_group)
 
-    def _render_joinable_groups_list(self, joinable_data):
+    def _render_joinable_groups_list(self, joinable_data, search_mode=False):
         self.content_container.controls.clear()
         back_button = ft.TextButton(
             "← Back to My Groups",
@@ -164,27 +186,61 @@ class GroupsPage:
         )
         self.content_container.controls.append(back_button)
 
+        if not joinable_data.get("groups") and not search_mode:
+            self.content_container.controls.append(
+                ft.Column(
+                    [ft.Text("No joinable groups available.", size=16, color=ft.Colors.GREY)],
+                    alignment=ft.MainAxisAlignment.CENTER,
+                    horizontal_alignment=ft.CrossAxisAlignment.CENTER,
+                    expand=True
+                )
+            )
+            self.page.update()
+            return
+        
+        if not joinable_data.get("groups") and search_mode:
+            self.content_container.controls.append(
+                ft.Container(
+                    alignment=ft.alignment.center,
+                    expand=True,
+                    content=ft.Column(
+                        alignment=ft.MainAxisAlignment.CENTER,
+                        horizontal_alignment=ft.CrossAxisAlignment.CENTER,
+                        expand=True,
+                        controls=[
+                            ft.Icon(ft.Icons.SEARCH_OFF, size=100, color=ft.Colors.GREY),
+                            ft.Text("No groups found.", size=20, color=ft.Colors.GREY),
+                        ],
+                    ),
+            )
+            )
+            self.page.update()
+            return
+
         for g in joinable_data.get("groups", []):
             gid = g["id"]
             members_count = len(g.get("members", []))
 
             def join_with_pin(e, group_id=gid):
-                pin_input = AppTextField(label="Enter PIN", password=True)
-                join_dialog = ft.AlertDialog(
+                self.pin_input = AppTextField(label="Enter PIN", password=True, keyboard_type=ft.KeyboardType.NUMBER, on_change=lambda e: self.pin_input.clear_error())
+                
+                self.join_dialog = ft.AlertDialog(
                     modal=True,
                     shape=ft.RoundedRectangleBorder(radius=18),
                     inset_padding=ft.padding.all(20),
-                    title=ft.Text(f"Join Group: {g['name']}", weight=ft.FontWeight.BOLD),
-                    content=pin_input,
+                    title=ft.Text(g['name'], size=18, weight=ft.FontWeight.BOLD),
+                    content=self.pin_input,
                     actions=[
-                        ft.TextButton("Cancel", on_click=lambda e: self.page.close(join_dialog)),
+                        ft.TextButton("Cancel", on_click=lambda e: self.page.close(self.join_dialog)),
                         ft.TextButton(
                             "Join",
-                            on_click=lambda e: self.page.run_task(self.join_group_with_pin(group_id, pin_input.value))
+                            on_click=self.get_joining_pin,
+                            data={"group_id": group_id, "pin_input": self.pin_input}
+
                         )
                     ]
                 )
-                self.page.open(join_dialog)
+                self.page.open(self.join_dialog)
 
             tile = ft.ListTile(
                 title=ft.Text(g["name"], size=18, weight="bold"),
@@ -199,18 +255,36 @@ class GroupsPage:
 
         self.page.update()
 
-    async def join_group_with_pin(self, group_id, pin):
-        """Join a group using PIN"""
-        if not pin:
-            print("PIN is required")
-            return
+    def get_joining_pin(self, e):
+        """Join a group using PIN from dialog input"""
+        # self.page.close(e.control.page.dialog)
+        data = e.control.data
+
+        self.joining_group_id = data.get("group_id")
+        self.joining_pin = data.get("pin_input").value
+
+        self.page.run_task(self.run_join_group)
+
+    async def run_join_group(self):
+        """Join a group by ID"""
         try:
-            await join_group(self.user_id, group_id, pin=pin)
+            resp = await join_group(self.user_id, self.joining_group_id, self.joining_pin)
+            if not resp.get("success"):
+                self.pin_input.error_text = resp.get("message")
+                self.pin_input.update()
+                return
+            
+            self.page.close(self.join_dialog)
             self.cached_user_groups = []
             self.cached_joinable_groups = []
-            self.page.run_task(self.load_user_groups)
+
+            self.current_view = "my_groups"
+            self.current_group_id = self.joining_group_id
+            self.page.run_task(self.view_group)
+            
         except Exception as ex:
             print("Error joining group:", ex)
+
 
     async def load_user_groups(self):
         """Load and display the user's groups"""
@@ -369,8 +443,8 @@ class GroupsPage:
         self.content_container.controls.append(
             ft.Row(
                 controls=[
-                    ft.Text(f"Group: {group_info['name']}", size=22, weight=ft.FontWeight.BOLD),
-                    ft.ElevatedButton("Leave Group", on_click=leave_group_action, bgcolor=ft.Colors.RED)
+                    ft.Text(group_info['name'], size=22, weight=ft.FontWeight.BOLD),
+                    ft.ElevatedButton("Leave Group", color=ft.Colors.WHITE, on_click=leave_group_action, bgcolor=ft.Colors.RED)
                 ],
                 alignment=ft.MainAxisAlignment.SPACE_BETWEEN,
                 vertical_alignment=ft.CrossAxisAlignment.CENTER,
@@ -385,7 +459,7 @@ class GroupsPage:
             role_text = "Admin" if is_admin else "Member"
 
             trailing_menu = ft.IconButton(
-                icon=ft.Icons.REMOVE_CIRCLE,
+                icon=ft.Icons.PERSON_REMOVE,
                 icon_color=ft.Colors.RED,
                 visible=current_user_is_admin and not is_admin,
                 on_click=lambda e, m=member: remove_member(e, m),
