@@ -85,7 +85,7 @@ class CrackClassifier:
             # Development mode
             current_dir = os.path.dirname(os.path.abspath(__file__))  # utils/detect_image.py
             src_dir = os.path.dirname(os.path.dirname(current_dir))  # src/
-            storage_path = os.path.join(src_dir, "storage")
+            storage_path = os.path.join(src_dir, "storage\data\images\detected")
 
         # Create storage folder if it doesn't exist
         os.makedirs(storage_path, exist_ok=True)
