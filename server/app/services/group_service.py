@@ -174,7 +174,7 @@ def edit_member_service(user_id: int, group_id: int, new_role: str, db):
     return {"success": True, "message": "Member role updated successfully."}
 
 def remove_member_service(user_id: int, group_id: int, db):
-    """Remove a user from a group."""
+    """Remove a user from a group. if admin, pass the membership to the most oldest member or delete the group if no members left."""
     member = db.query(GroupMember).filter_by(
         user_id=user_id,
         group_id=group_id
@@ -187,8 +187,20 @@ def remove_member_service(user_id: int, group_id: int, db):
     db.commit()
 
     if user_id == db.query(Group).filter_by(id=group_id).first().admin_id:
-        # If the admin leaves, delete the group
-        db.query(Group).filter_by(id=group_id).delete()
-        db.commit()
+        # User is admin, find the oldest member to transfer admin rights
+        oldest_member = (
+            db.query(GroupMember)
+            .filter(GroupMember.group_id == group_id, GroupMember.user_id != user_id)
+            .order_by(GroupMember.joined_at.asc())
+            .first()
+        )
+        group = db.query(Group).filter_by(id=group_id).first()
+        if oldest_member:
+            group.admin_id = oldest_member.user_id
+            db.commit()
+        else:
+            # No other members, delete the group
+            db.delete(group)
+            db.commit()
 
     return {"success": True, "message": "Member removed from the group successfully."}

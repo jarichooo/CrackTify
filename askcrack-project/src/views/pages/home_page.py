@@ -8,22 +8,6 @@ from utils.image_utils import base64_to_image
 class HomePage:
     def __init__(self, page: ft.Page):
         self.page = page
-        self.user = self.page.client_storage.get("user_info") or {}
-
-        self.user_id = self.user.get("id")
-        self.first_name = self.user.get("first_name", "User")
-        avatar_base64 = self.user.get("avatar_base64")
-
-        # Make sure path exists
-        avatar_dir = Path(__file__).parent.parent.parent.parent / "storage" / "images" / "avatars"
-        avatar_dir.mkdir(parents=True, exist_ok=True)
-
-        avatar_path = avatar_dir / f"user_{self.user_id}_avatar.png"
-
-        # Save avatar to disk
-        self.avatar_path = None
-        if avatar_base64:
-            self.avatar_path = base64_to_image(avatar_base64, avatar_path)
 
         # Stats
         self.stats = {
@@ -36,6 +20,11 @@ class HomePage:
 
     # MAIN BUILD
     def build(self) -> List[ft.Control]:
+        self.user = self.page.client_storage.get("user_info")
+
+        self.user_id = self.user.get("id")
+        self.first_name = self.user.get("first_name", "User")
+        self.avatar_base64 = self.user.get("avatar_base64")
 
         # HEADER CARD
         header_card = ft.Container(
@@ -56,10 +45,15 @@ class HomePage:
                                     color=ft.Colors.BLUE_GREY)
                         ]
                     ),
-                    ft.CircleAvatar(
-                        radius=28,
-                        foreground_image_src=str(self.avatar_path) if self.avatar_path else None,
-                        bgcolor=ft.Colors.BLUE_200,
+                    ft.Container(
+                        width=50,
+                        height=50,
+                        border_radius=50,  # half of width/height for perfect circle-like round image
+                        clip_behavior=ft.ClipBehavior.HARD_EDGE,
+                        content=ft.Image(
+                            src_base64=self.avatar_base64,
+                            fit=ft.ImageFit.COVER,
+                        )
                     )
                 ]
             )
@@ -150,8 +144,7 @@ class HomePage:
 
         # Fetch recent activity (wrapper for actual API)
     
-    @classmethod
-    async def fetch_recent_activity(cls, user_id):
+    async def fetch_recent_activity(self, user_id):
         """Fetch recent activity (wrapper for actual API)"""
         return await fetch_recent_activity_service(user_id)
     

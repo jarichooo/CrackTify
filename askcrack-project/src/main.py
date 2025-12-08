@@ -35,6 +35,7 @@ def main(page: ft.Page):
 
         elif page.route == "/logout":
             page.client_storage.remove("auth_token")
+            page.client_storage.remove("user_info")
             page.go("/login")
 
         else:
