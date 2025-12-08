@@ -1,7 +1,8 @@
 from ast import Dict
+import io
 from typing import Any
 from fastapi import APIRouter, Depends, Body
-from fastapi.responses import FileResponse
+from fastapi.responses import FileResponse, StreamingResponse
 from sqlalchemy.orm import Session
 from app.database.db import get_db
 from app.services.profile_service import update_profile, verify_user_password, download_data, delete_account
@@ -24,19 +25,27 @@ def api_verify_user_password(data: dict = Body(...), db: Session = Depends(get_d
 
 @router.get("/download_data/{user_id}")
 def api_download_data(user_id: int, db: Session = Depends(get_db)):
-    download_response = download_data(user_id, db)
-    if not download_response["success"]:
-        return download_response
+    # download_response = download_data(user_id, db)
+    # if not download_response["success"]:
+    #     return download_response
     
-    with open(f"user_{user_id}_data.pdf", "rb") as pdf_file:
-        pdf_content = pdf_file.read()
+    # with open(f"user_{user_id}_data.pdf", "rb") as pdf_file:
+    #     pdf_content = pdf_file.read()
 
-    return FileResponse(
-        path=f"user_{user_id}_data.pdf",
+    # return FileResponse(
+    #     path=f"user_{user_id}_data.pdf",
+    #     filename=f"user_{user_id}_data.pdf",
+    #     media_type="application/pdf",
+    #     headers={
+    #         "Content-Disposition": f"attachment; filename=user_{user_id}_data.pdf"
+    #     }
+    # )
+    pdf_bytes = download_data(user_id, db)
+    
+    return StreamingResponse(
+        io.BytesIO(pdf_bytes),
         media_type="application/pdf",
-        headers={
-            "Content-Disposition": f"attachment; filename=user_{user_id}_data.pdf"
-        }
+        headers={"Content-Disposition": f"attachment; filename=user_{user_id}.pdf"}
     )
 
 @router.post("/delete_account/{user_id}")

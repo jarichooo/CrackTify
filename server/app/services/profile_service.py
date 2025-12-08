@@ -60,8 +60,10 @@ def download_data(user_id: int, db):
         },
         output_path=generated_pdf_path
     )
+    with open(generated_pdf_path, "rb") as pdf_file:
+        pdf_content = pdf_file.read()
 
-    return {"success": True}
+    return pdf_content
 
 def delete_account(user_id: int, password: str, db):
     """Delete user account, removeing them from all groups; if admin, pass the membership to the most oldest member after verifying the password"""
