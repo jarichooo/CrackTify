@@ -55,16 +55,19 @@ class TemplatePage:
         self.page.padding = 0
         self.page.spacing = 0
 
-        self.page.platform = ft.PagePlatform.ANDROID
+        # self.page.platform = ft.PagePlatform.ANDROID
         self.is_light = True if self.page.theme_mode == ft.ThemeMode.LIGHT else False
 
-        self.page.window.width = Config.APP_WIDTH
-        self.page.window.height = Config.APP_HEIGHT
+        # self.page.window.width = Config.APP_WIDTH
+        # self.page.window.height = Config.APP_HEIGHT
+
+        # self.page.window.full_screen = True
 
         self.page.vertical_alignment = ft.CrossAxisAlignment.START
         self.page.horizontal_alignment = ft.MainAxisAlignment.CENTER
 
         self.page.overlay.append(self.loading_overlay)
+        self.page.window.maximized = True
 
     def dynamic_width(self, width_ratio=0.9):
         """Return width based on page size for responsive controls"""

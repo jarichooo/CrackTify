@@ -12,9 +12,8 @@ from .pages import (
     AboutPage
 )
 from utils.toggle_theme import toggle_theme
-from widgets.inputs import AppTextField
-from widgets.buttons import PrimaryButton, SecondaryButton, CustomTextButton
 from utils.detect_image import CrackClassifier
+from services.crack_service import add_crack_service
 
 class MainPage(TemplatePage):
     """Main application page after login, with navigation and content areas."""

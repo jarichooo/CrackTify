@@ -1,3 +1,4 @@
+from pathlib import Path
 import flet as ft
 from views.template import TemplatePage
 from widgets.buttons import PrimaryButton, SecondaryButton
@@ -5,6 +6,9 @@ from widgets.buttons import PrimaryButton, SecondaryButton
 class WelcomePage(TemplatePage):
     def __init__(self, page: ft.Page):
         super().__init__(page)
+
+        # self.image_path = Path(__file__).parent.parent.parent.parent / "src" / "assets" / "icon.png"
+        # print(self.image_path)
 
     def build(self):
         return self.layout([
@@ -22,8 +26,21 @@ class WelcomePage(TemplatePage):
                             size=36,
                             weight="bold",
                         ),
-                        height=self.page.window.height * 0.4,  # keeps it centered
+                        height=450,
                     ),
+
+                    # # Image (Logo)
+                    # ft.Container(
+                    #     width=400,
+                    #     height=200,
+                    #     border_radius=16,
+                    #     alignment=ft.alignment.center,
+                    #     content=ft.Image(
+                    #         error_content=ft.Text("Image not found"),
+                    #         src=str(self.image_path),
+                    #         fit=ft.ImageFit.CONTAIN,
+                    #     )
+                    # ),
 
                     # Buttons
                     ft.Container(
@@ -38,12 +55,12 @@ class WelcomePage(TemplatePage):
                             controls=[
                                 PrimaryButton(
                                     text="Create an account",
-                                    width=self.dynamic_width(),
+                                    width=500,
                                     on_click=lambda _: self.page.go("/register")
                                 ),
                                 SecondaryButton(
                                     text="Login",
-                                    width=self.dynamic_width(),
+                                    width=500,
                                     on_click=lambda _: self.page.go("/login")
                                 ),
                                 ft.Text(

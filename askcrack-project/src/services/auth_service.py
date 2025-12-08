@@ -28,3 +28,12 @@ async def login_user(email: str, password: str) -> Dict[str, Any]:
             "password": password
         }
     )
+
+async def forgot_password(email: str, new_password: str) -> Dict[str, Any]:
+    return await post_request(
+        "/auth/forgot-password",
+        {
+            "email": email,
+            "new_password": new_password
+        }
+    )

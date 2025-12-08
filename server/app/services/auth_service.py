@@ -80,3 +80,20 @@ def login_user_service(email: str, password: str, db):
             "avatar_base64": user.avatar_base64
         }
     }
+
+def forgot_password_service(email: str, new_password: str, db):
+    """Reset user's password."""
+    # Find user by email
+    user = db.query(User).filter(User.email == email).first()
+    if not user:
+        return {"success": False, "message": "Email not found"}
+
+    # Hash the new password
+    hashed_password = hash_password(new_password)
+
+    # Update user's password
+    user.password_hash = hashed_password
+    user.updated_at = datetime.now(timezone.utc)
+    db.commit()
+
+    return {"success": True, "message": "Password reset successfully"}

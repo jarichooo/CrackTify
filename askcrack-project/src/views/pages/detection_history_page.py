@@ -1,6 +1,7 @@
 import flet as ft
-import base64
 from typing import List
+
+from services.crack_service import *
 
 
 class DetectionHistoryPage:

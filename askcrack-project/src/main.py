@@ -4,6 +4,7 @@ from views.auth.login_page import LoginPage
 from views.auth.register_page import RegisterPage
 from views.auth.otp_page import OTPPage
 from views.auth.welcome_page import WelcomePage
+from views.auth.new_password_page import ForgotPasswordPage
 
 def main(page: ft.Page):
     """Main function to run the app"""
@@ -23,6 +24,9 @@ def main(page: ft.Page):
 
         elif page.route == "/login":
             page.views.append(LoginPage(page).build())
+
+        elif page.route == "/change-password":
+            page.views.append(ForgotPasswordPage(page).build())
 
         elif page.route == "/register":
             page.views.append(RegisterPage(page).build())
@@ -60,4 +64,4 @@ def main(page: ft.Page):
     page.go(page.route)
 
 if __name__ == "__main__":
-    ft.app(target=main)
+    ft.app(target=main, assets_dir="assets")
