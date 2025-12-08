@@ -1,3 +1,3 @@
-# Data Model (ERD / JSON Schema)
+# Data Model (ERD Schema)
 
-![Schema ERD](crackapp_schema.png)
+![Schema ERD](docs_ss/crackapp_schema.png)

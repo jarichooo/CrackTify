@@ -38,6 +38,7 @@ git clone https://github.com/jarichooo/CrackTify
 3. No need to create tables manually — FastAPI will automatically create them.
 
 ---
+
 #### Backend .env 
 4. Go to **command prompt**, Proceed inside the folder's directory, then go to server folder:
 ```bash
@@ -49,3 +50,59 @@ copy .env.example .env
 ```
 Make sure your credentials match XAMPP, and your email and [app password](https://myaccount.google.com/apppasswords) are correct.
 
+```bash
+# You can copy this
+# Database config
+DB_HOST="localhost"
+DB_USER="root"
+DB_PORT="3306"
+DB_PASSWORD=""
+DB_NAME="crackapp"
+
+# Email config
+EMAIL_SENDER="cracktify.noreply@gmail.com"
+EMAIL_PASSWORD="hhce aqsk anba lwsm"
+
+APP_ENV=development
+APP_PORT=8000
+APP_HOST=0.0.0.0
+SECRET_KEY=your_secret_key_here
+
+JWT_SECRET_KEY="FgfsUDiuhopQ1xX9W0AJDOJffsO0Q2IC0Q9E"
+```
+
+---
+
+#### Running the Backend Server
+Open a terminal and go to the backend folder:
+
+```bash
+cd server
+uvicorn main:app --reload --port 8000
+```
+Your FastAPI will run at
+```bash
+http://127.0.0.1:8000
+```
+
+---
+
+#### Configure API URL in Frontend
+Navigate to your Flet app directory `askcrack-project/`. Create a `.env` file, then add this in:
+```bash
+API_BASE_URL = "http://127.0.0.1:8000"
+```
+
+---
+
+#### Run the Flet Frontend
+Open a new terminal, then run:
+
+```bash
+cd askcrack-project
+flet run # flet run --android if you want to run it on Flet mobile
+```
+
+---
+
+## Running the Application
