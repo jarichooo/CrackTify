@@ -374,7 +374,7 @@ class MainPage(TemplatePage):
         self.page.overlay.append(file_picker)
         self.page.update()
         file_picker.pick_files(allow_multiple=False)
-        
+            
     def pick_file_result(self, e: ft.FilePickerResultEvent):
         
         if e.files:
@@ -394,11 +394,35 @@ class MainPage(TemplatePage):
                     saved_path = classifier.analyze_and_save(file_path, confidence_threshold=0.5)
                     if saved_path:
                         print(f"Crack analysis complete! Saved to: {saved_path}")
-            
+                        
+                        # Refresh gallery
+                        self.gallery_instance.cached_files = None
+                        self.gallery_instance.cached_thumbs.clear()
+                        
+                        # If gallery is currently visible, reload it
+                        if self.current_view_instance == self.gallery_instance:
+                            self.gallery_instance.load_images()
+                        
+                        # Show success message
+                        self.page.snack_bar = ft.SnackBar(
+                            content=ft.Text("✓ Crack detected and saved to gallery!"),
+                            bgcolor=ft.Colors.GREEN,
+                        )
+                        self.page.snack_bar.open = True
+                        self.page.update()
+                
                     else:
                         print("Analysis ran but no save path returned (should not happen)")
                 else:
                     print("No crack detected. Skipping OpenCV analysis.")
+                    
+                    # Optional: Show "no crack" message
+                    self.page.snack_bar = ft.SnackBar(
+                        content=ft.Text("No crack detected in this image."),
+                        bgcolor=ft.Colors.ORANGE,
+                    )
+                    self.page.snack_bar.open = True
+                    self.page.update()
                 
             except Exception as ex:
                 print(f"ERROR in pick_file_result: {ex}")
