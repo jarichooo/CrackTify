@@ -219,16 +219,17 @@ class GroupsPage:
 
         for g in joinable_data.get("groups", []):
             gid = g["id"]
+            group_name = g["name"]
             members_count = len(g.get("members", []))
 
-            def join_with_pin(e, group_id=gid):
+            def join_with_pin(e, group_id=gid, group_name=group_name):
                 self.pin_input = AppTextField(label="Enter PIN", password=True, keyboard_type=ft.KeyboardType.NUMBER, on_change=lambda e: self.pin_input.clear_error())
                 
                 self.join_dialog = ft.AlertDialog(
                     modal=True,
                     shape=ft.RoundedRectangleBorder(radius=18),
                     inset_padding=ft.padding.all(20),
-                    title=ft.Text(g['name'], size=18, weight=ft.FontWeight.BOLD),
+                    title=ft.Text(group_name, size=18, weight=ft.FontWeight.BOLD),
                     content=self.pin_input,
                     actions=[
                         ft.TextButton("Cancel", on_click=lambda e: self.page.close(self.join_dialog)),
@@ -285,7 +286,6 @@ class GroupsPage:
         except Exception as ex:
             print("Error joining group:", ex)
 
-
     async def load_user_groups(self):
         """Load and display the user's groups"""
         self.current_view = "my_groups"
@@ -318,16 +318,6 @@ class GroupsPage:
             self._render_joinable_groups_list(self.cached_joinable_groups)
         except Exception as ex:
             print("Error loading joinable groups:", ex)
-
-    async def join_group_action(self, group_id):
-        """Join a group by ID"""
-        try:
-            await join_group(self.user_id, group_id)
-            self.cached_user_groups = []
-            self.cached_joinable_groups = []
-            self.page.run_task(self.load_user_groups)
-        except Exception as ex:
-            print("Error joining group:", ex)
 
     def show_create_group_dialog(self, e):
         """Show dialog to create a new group with Name and PIN only"""
