@@ -19,8 +19,9 @@ def api_join_group(data: dict = Body(...), db: Session = Depends(get_db)):
     """Endpoint for a user to join a group."""
     user_id = data.get("user_id")
     group_id = data.get("group_id")
+    pin = data.get("pin")
     
-    return join_group_service(user_id, group_id, db)
+    return join_group_service(user_id, group_id, pin, db)
 
 @router.get("/group-info/{group_id}")
 def api_fetch_group_info(group_id: int, db: Session = Depends(get_db)):

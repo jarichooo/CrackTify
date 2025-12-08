@@ -1,11 +1,9 @@
 import flet as ft
-from views import (
-    WelcomePage,
-    LoginPage,
-    RegisterPage,
-    OTPPage,
-    MainPage
-)
+from views.main_page import MainPage
+from views.auth.login_page import LoginPage
+from views.auth.register_page import RegisterPage
+from views.auth.otp_page import OTPPage
+from views.auth.welcome_page import WelcomePage
 
 def main(page: ft.Page):
     """Main function to run the app"""

@@ -27,11 +27,12 @@ async def create_group(
     }
     return await post_request("/groups/create-group", data)
 
-async def join_group(user_id: int, group_id: int) -> Dict[str, Any]:
+async def join_group(user_id: int, group_id: int, pin: int) -> Dict[str, Any]:
     """Adds a user to a group via the API."""
     data = {
         "user_id": user_id,
-        "group_id": group_id
+        "group_id": group_id,
+        "pin": pin
     }
     return await post_request("/groups/join-group", data)
 
