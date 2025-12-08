@@ -57,7 +57,7 @@ class CrackClassifier:
         img = cv2.imread(image_path)
         if img is None:
             raise RuntimeError("Failed to load image")
-
+        
         gray = cv2.cvtColor(img, cv2.COLOR_BGR2GRAY)
         binary = cv2.adaptiveThreshold(
             gray, 255, cv2.ADAPTIVE_THRESH_GAUSSIAN_C,
