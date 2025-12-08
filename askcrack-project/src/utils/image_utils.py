@@ -37,3 +37,14 @@ def base64_to_image(base64_str: str, output_path: Path) -> str:
         f.write(image_bytes)
 
     return output_path
+
+
+if __name__ == "__main__":
+    # Test the functions
+    test_image_path = "C:/Users/Admin/Downloads/346569.png"
+    base64_str = image_to_base64(test_image_path)
+    print(base64_str)
+
+    # output_image_path = Path("output_image.png")
+    # saved_path = base64_to_image(base64_str, output_image_path)
+    # print("Image saved to:", saved_path)

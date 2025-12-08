@@ -23,3 +23,5 @@ class Config:
 
     # JWT Settings
     JWT_SECRET_KEY = os.getenv("JWT_SECRET_KEY", "secretjwtkey")
+
+    DEFAULT_BASE64_AVATAR = os.getenv("DEFAULT_BASE64_AVATAR", "")

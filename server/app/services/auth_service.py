@@ -2,6 +2,9 @@ from datetime import datetime, timezone, timedelta
 from app.models.user import User
 from app.utils.password import hash_password, verify_password
 from app.utils.token_generator import generate_jwt
+from config import Config
+
+default_avatar_base64 = Config.DEFAULT_BASE64_AVATAR
 
 def check_email_unique_service(email: str, db):
     """Check if the email is already registered."""
@@ -29,6 +32,7 @@ def register_user_service(first_name: str, last_name: str, email: str, password:
         last_name=last_name,
         email=email,
         password_hash=hashed_password,
+        avatar_base64=default_avatar_base64,
         created_at=datetime.now(timezone.utc),
         updated_at=datetime.now(timezone.utc)
     )
