@@ -31,6 +31,8 @@ class MainPage(TemplatePage):
         self.about_instance = AboutPage(page)
 
         self.search_active = False # Search bar state
+        self.detection_history_instance = DetectionHistoryPage(page)
+        self.page.history_page = self.detection_history_instance
 
         # Navigation map
         self.navigation_map = {
@@ -398,6 +400,9 @@ class MainPage(TemplatePage):
                         # Refresh gallery
                         self.gallery_instance.cached_files = None
                         self.gallery_instance.cached_thumbs.clear()
+
+                        # refresh history
+                        self.page.history_page.refresh()
                         
                         # If gallery is currently visible, reload it
                         if self.current_view_instance == self.gallery_instance:
