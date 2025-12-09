@@ -52,10 +52,43 @@ class CrackClassifier:
             
     def analyze_and_save(self, image_path: str, confidence_threshold: float = 0.5) -> str:
         prob = self.predict(image_path)
-        if prob <= confidence_threshold:
-            return None
+        
+        # Get the correct path to your storage/ folder FIRST
+        if getattr(sys, 'frozen', False):
+            # Running as packaged app (Android APK or desktop exe)
+            base_path = sys._MEIPASS
+            storage_path = os.path.join(base_path, "storage")
+        else:
+            # Development mode
+            current_dir = os.path.dirname(os.path.abspath(__file__))  # utils/detect_image.py
+            src_dir = os.path.dirname(os.path.dirname(current_dir))  # src/
+            storage_path = os.path.join(src_dir, "storage", "data", "images", "detected")  # ✅ Fixed path separators
 
-        # Load and process image (same as before)
+        # Create storage folder if it doesn't exist
+        os.makedirs(storage_path, exist_ok=True)
+
+        # Generate filename with timestamp
+        timestamp = datetime.now().strftime("%Y%m%d_%H%M%S")
+        original_name = os.path.splitext(os.path.basename(image_path))[0]
+        
+        # ✅ CRACK NOT DETECTED - Save original image
+        if prob <= confidence_threshold:
+            save_filename = f"{original_name}_no_{timestamp}.jpg"
+            save_path = os.path.join(storage_path, save_filename)
+            
+            # Just copy the original image (no processing needed)
+            img = cv2.imread(image_path)
+            if img is None:
+                raise RuntimeError("Failed to load image")
+            
+            success = cv2.imwrite(save_path, img)
+            if not success:
+                raise RuntimeError(f"Failed to save to {save_path}")
+            
+            print(f"No crack image saved to storage/: {save_filename}")
+            return save_path
+
+        # ✅ CRACK DETECTED - Process and save with outlines
         img = cv2.imread(image_path)
         if img is None:
             raise RuntimeError("Failed to load image")
@@ -78,23 +111,6 @@ class CrackClassifier:
             x, y, w, h = cv2.boundingRect(cnt)
             cv2.rectangle(output, (x, y), (x + w, y + h), (100, 255, 100), 2)
 
-        # Get the correct path to your storage/ folder
-        if getattr(sys, 'frozen', False):
-            # Running as packaged app (Android APK or desktop exe)
-            base_path = sys._MEIPASS
-            storage_path = os.path.join(base_path, "storage")
-        else:
-            # Development mode
-            current_dir = os.path.dirname(os.path.abspath(__file__))  # utils/detect_image.py
-            src_dir = os.path.dirname(os.path.dirname(current_dir))  # src/
-            storage_path = os.path.join(src_dir, "storage\data\images\detected")
-
-        # Create storage folder if it doesn't exist
-        os.makedirs(storage_path, exist_ok=True)
-
-        # Generate filename with timestamp
-        timestamp = datetime.now().strftime("%Y%m%d_%H%M%S")
-        original_name = os.path.splitext(os.path.basename(image_path))[0]
         save_filename = f"{original_name}_crack_{timestamp}.jpg"
         save_path = os.path.join(storage_path, save_filename)
 

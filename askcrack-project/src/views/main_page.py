@@ -12,9 +12,9 @@ from .pages import (
     AboutPage
 )
 from utils.toggle_theme import toggle_theme
+from widgets.inputs import AppTextField
+from widgets.buttons import PrimaryButton, SecondaryButton, CustomTextButton
 from utils.detect_image import CrackClassifier
-from utils.image_utils import image_to_base64
-from services.crack_service import add_crack_service
 
 class MainPage(TemplatePage):
     """Main application page after login, with navigation and content areas."""
@@ -375,62 +375,65 @@ class MainPage(TemplatePage):
         file_picker = ft.FilePicker(on_result=self.pick_file_result)
         self.page.overlay.append(file_picker)
         self.page.update()
-        file_picker.pick_files(allow_multiple=False)
+        file_picker.pick_files(allow_multiple=True)
             
     def pick_file_result(self, e: ft.FilePickerResultEvent):
         
         if e.files:
             try:
-                file_path = e.files[0].path
-                self.crack_base64 = image_to_base64(file_path)
+                # Process multiple files
+                total_files = len(e.files)
+                crack_count = 0
+                no_crack_count = 0
+                
+                print(f"Processing {total_files} image(s)...")
+                
                 model_path = self.get_model_path()
-                assets_dir = os.path.dirname(model_path)
-                # load model
                 classifier = CrackClassifier(model_path)
-                self.prob = classifier.predict(file_path)
-                label = 1 if self.prob > 0.5 else 0
                 
-                print(f"Prediction: {label}, Probability: {self.prob}")
-                
-                if self.prob > 0.5:
-                    saved_path = classifier.analyze_and_save(file_path, confidence_threshold=0.5)
-                    self.last_saved_path = saved_path
-                    self.page.run_task(self.add_crack)
-                    if saved_path:
-                        # Refresh gallery
-                        self.gallery_instance.cached_files = None
-                        self.gallery_instance.cached_thumbs.clear()
-
-                        # refresh history
-                        # self.page.history_page.refresh()
-                        
-                        # If gallery is currently visible, reload it
-                        if self.current_view_instance == self.gallery_instance:
-                            self.gallery_instance.load_images()
-                        
-                        # Show success message
-                        self.page.snack_bar = ft.SnackBar(
-                            content=ft.Text("✓ Crack detected and saved to gallery!"),
-                            bgcolor=ft.Colors.GREEN,
-                        )
-                        self.page.snack_bar.open = True
-                        self.page.update()
-                
-                    else:
-                        print("Analysis ran but no save path returned (should not happen)")
-                else:
-                    print("No crack detected. Skipping OpenCV analysis.")
+                # Process each file
+                for idx, file in enumerate(e.files, 1):
+                    file_path = file.path
+                    print(f"\n[{idx}/{total_files}] Processing: {os.path.basename(file_path)}")
                     
-                    # Optional: Show "no crack" message
-                    self.page.snack_bar = ft.SnackBar(
-                        content=ft.Text("No crack detected in this image."),
-                        bgcolor=ft.Colors.ORANGE,
-                    )
-                    self.page.snack_bar.open = True
-                    self.page.update()
+                    prob = classifier.predict(file_path)
+                    print(f"Prediction probability: {prob}")
+                    
+                    # Save image (crack or no crack)
+                    saved_path = classifier.analyze_and_save(file_path, confidence_threshold=0.5)
+                    
+                    if saved_path:
+                        print(f"Saved to: {saved_path}")
+                        
+                        if prob > 0.5:
+                            crack_count += 1
+                            print("🔴 Crack detected!")
+                        else:
+                            no_crack_count += 1
+                            print("🟢 No crack detected.")
+                
+                # Refresh gallery and history once after all files processed
+                self.gallery_instance.refresh()
+                self.detection_history_instance.refresh()
+                
+                # Show summary message
+                summary = []
+                if crack_count > 0:
+                    summary.append(f"{crack_count} crack(s)")
+                if no_crack_count > 0:
+                    summary.append(f"{no_crack_count} no crack(s)")
+                
+                message = f"✓ Processed {total_files} image(s): {', '.join(summary)}"
+                
+                self.page.snack_bar = ft.SnackBar(
+                    content=ft.Text(message),
+                    bgcolor=ft.Colors.GREEN if crack_count > 0 else ft.Colors.BLUE,
+                )
+                self.page.snack_bar.open = True
+                self.page.update()
                 
             except Exception as ex:
-                print(f"ERROR in pick_file_result: {ex}")
+                print(f"❌ ERROR in pick_file_result: {ex}")
                 import traceback
                 traceback.print_exc()
                 
@@ -443,24 +446,7 @@ class MainPage(TemplatePage):
                 error_dialog.open = True
                 self.page.update()
         else:
-            print("No file selected")
-
-    async def add_crack(self):
-        resp = await add_crack_service(
-            user_id=self.user.get("id"),
-            image_base64=self.crack_base64,
-            probability=self.prob,
-            severity="Critical" if self.prob > 0.8 else "Moderate" if self.prob > 0.5 else "Low"
-        )
-
-        dialog = ft.AlertDialog(
-            title=ft.Text("Add Crack Result"),
-            content=ft.Text(resp.get("message", "No response message.")),
-            actions=[ft.TextButton("Close", on_click=lambda _: self.page.close(dialog))]
-        )
-
-        self.page.open(dialog)
-
+            print("⚠️ No file selected")
 
     def get_model_path(self):
         """Get model path that works in dev and ALL production builds (mobile + desktop)"""

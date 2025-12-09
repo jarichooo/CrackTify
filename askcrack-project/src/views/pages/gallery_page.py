@@ -3,6 +3,7 @@ from pathlib import Path
 from PIL import Image
 import flet as ft
 from typing import List
+import os
 
 from utils.image_utils import image_to_base64
 from widgets.inputs import AppTextField, CustomDropdown
@@ -27,6 +28,10 @@ class ImageGallery:
         self.gallery_grid: ft.GridView | None = None
         self.ensure_folder()
 
+    def what_platform(self):
+        is_android = os.path.exists("/system/build.prop")
+        return 'Android' if is_android else 'Desktop'
+    
         self.user_id = self.page.client_storage.get("user").get("id")
 
     # Utilities
@@ -118,6 +123,9 @@ class ImageGallery:
                 f for f in self.IMAGES_FOLDER.iterdir()
                 if f.suffix.lower() in {".png", ".jpg", ".jpeg", ".bmp"}
             ]
+        
+        # ✅ Filter out files that no longer exist (in case they were deleted)
+        self.cached_files = [f for f in self.cached_files if f.exists()]
 
         # Apply sorting
         files = sorted(self.cached_files, key=self.sort_key(), reverse=self.sort_reverse())
@@ -309,19 +317,22 @@ class ImageGallery:
 
         self.page.open(dlg)
 
-    def delete_image(self, file_path: Path, dlg, sheet):
-        """ Perform the deletion of the file. """
+    def delete_image(self, file_path: Path, dlg, sheet=None, history_page=None):
         self.page.close(sheet)
         self.page.close(dlg)
         try:
             file_path.unlink()
-            # Clear cached files so load_images refreshes
             self.cached_files = None
-            self.cached_thumbs.pop(file_path, None)  # remove thumbnail cache
-
+            self.cached_thumbs.pop(file_path, None)
             self.load_images()
+            
+            # Refresh history page if provided
+            if history_page:
+                history_page.refresh()
+                
         except Exception as e:
             print(e)
+
 
     def rename_dialog(self, file_path: Path, sheet):
         """ Show rename dialog. """
@@ -368,3 +379,9 @@ class ImageGallery:
             self.page.close(dlg)
         except Exception as e:
             print(e)
+    
+    def refresh(self):
+        """Refresh detection history - clear cache and reload"""
+        self.cached_files = None
+        self.cached_thumbs.clear()
+        self.load_images()
