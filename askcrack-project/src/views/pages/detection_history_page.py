@@ -6,6 +6,8 @@ from typing import List
 import os
 from datetime import datetime
 
+from services.crack_service import *
+
 from utils.image_utils import image_to_base64
 from widgets.inputs import AppTextField, CustomDropdown
 

@@ -99,6 +99,7 @@ class CustomTextButton(ft.GestureDetector):
         weight: str = "bold",
         mouse_cursor: ft.MouseCursor = ft.MouseCursor.CLICK,
         on_tap: OptionalControlEventCallable | None = None,
+        disabled: bool = False,
         **kwargs
     ) -> None:
         super().__init__(
@@ -108,6 +109,7 @@ class CustomTextButton(ft.GestureDetector):
                 color=color,
                 weight=weight
             ),
+            disabled=disabled,
             mouse_cursor=mouse_cursor,
             on_tap=on_tap,
             **kwargs

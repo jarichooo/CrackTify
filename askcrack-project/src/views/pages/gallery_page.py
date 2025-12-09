@@ -32,6 +32,8 @@ class ImageGallery:
         is_android = os.path.exists("/system/build.prop")
         return 'Android' if is_android else 'Desktop'
     
+        self.user_id = self.page.client_storage.get("user").get("id")
+
     # Utilities
     def ensure_folder(self):
         if not self.IMAGES_FOLDER.exists():

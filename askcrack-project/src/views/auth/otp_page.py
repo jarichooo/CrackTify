@@ -1,4 +1,5 @@
 import flet as ft
+import asyncio
 
 from views.template import TemplatePage
 from widgets.buttons import (
@@ -48,7 +49,10 @@ class OTPPage(TemplatePage):
             max_length=6,
             on_change= lambda e: self.otp_input.clear_error()
         )
-
+        self.resend_otp_button = CustomTextButton(
+            text="Resend OTP",
+            on_tap=lambda e: self.page.run_task(self.resend_otp)
+        )
         # Submit button
         self.submit_button = PrimaryButton(
             text="Submit",
@@ -57,19 +61,17 @@ class OTPPage(TemplatePage):
         )
 
         # Resend OTP row
-        self.resend_otp = ft.Row(
+        self.resend_otp_row = ft.Row(
             controls=[
                 ft.Text("Didn't receive the code?", size=14),
-                CustomTextButton(
-                    text="Resend OTP",
-                    on_tap=self.on_resend
-                )
+                self.resend_otp_button
             ],
             spacing=5,
             alignment=ft.MainAxisAlignment.CENTER
         )
 
         main_container = ft.Container(
+            width=500,
             content= ft.ListView(
                 expand=True,
                 padding=20,
@@ -88,10 +90,10 @@ class OTPPage(TemplatePage):
                     ft.Divider(opacity=0),
                     self.otp_input,
                     self.submit_button,
-                    self.resend_otp
+                    self.resend_otp_row
                 ]
             ),
-            padding=ft.padding.only(top=50, bottom=50),
+            padding=ft.padding.only(top=50, bottom=0),
             alignment=ft.alignment.center,
             border_radius=30,
             bgcolor=ft.Colors.ON_INVERSE_SURFACE,
@@ -101,7 +103,10 @@ class OTPPage(TemplatePage):
         content = [
             ft.Column(
                 expand=True,
+                alignment=ft.MainAxisAlignment.SPACE_BETWEEN,
+                horizontal_alignment=ft.CrossAxisAlignment.CENTER,
                 controls=[
+                    ft.Container(),
                     main_container
                 ]
             )
@@ -190,5 +195,18 @@ class OTPPage(TemplatePage):
         except Exception as e:
             print(f"Error clearing client storage: {e}")
 
-    def on_resend(self, e):
-        ...
+    async def resend_otp(self):
+        """Resend the OTP to the user's email"""
+        self.resend_otp_button.disabled = True
+        self.show_loading()
+        response = await send_otp(self.saved_email, self.saved_first_name, resend=True)
+
+        if response.get("success"):
+            self.hide_loading()
+            dialog = ft.AlertDialog(
+                content=ft.Text("A new OTP has been sent to your email address."),
+                actions=[
+                    ft.TextButton("OK", on_click=lambda e: self.page.close(dialog))
+                ]
+            )
+            self.page.open(dialog)

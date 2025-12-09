@@ -36,6 +36,7 @@ async def update_password(user_id: int, new_password: str) -> Dict[str, Any]:
         }
     )
 
+
 async def delete_account(user_id: int, password: str) -> Dict[str, Any]:
     return await post_request(
         f"/profile/delete_account/{user_id}",

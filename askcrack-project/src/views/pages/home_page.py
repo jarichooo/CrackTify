@@ -11,8 +11,8 @@ class HomePage:
 
         # Stats
         self.stats = {
-            "stat_1": 0,
-            "stat_2": 0
+            "Detected Cracks": 0,
+            "Critical Cracks": 0,
         }
 
         self.grid: ft.GridView | None = None
@@ -126,18 +126,18 @@ class HomePage:
         self.grid.controls.clear()
 
         self.grid.controls.append(
-            self.info_tile("stat_1", self.stats["stat_1"], ft.Icons.SEARCH)
+            self.info_tile("Detected Cracks", self.stats["Detected Cracks"], ft.Icons.SEARCH)
         )
 
         self.grid.controls.append(
-            self.info_tile("stat_2", self.stats["stat_2"], ft.Icons.DESCRIPTION)
+            self.info_tile("Critical Cracks", self.stats["Critical Cracks"], ft.Icons.DESCRIPTION)
         )
 
     # ASYNC LOAD STATS
     async def load_stats(self):
         # Replace with real API later
-        self.stats["stat_1"] = 14
-        self.stats["stat_2"] = 5
+        self.stats["Detected Cracks"] = 14
+        self.stats["Critical Cracks"] = 5
 
         self.load_tiles()
         self.page.update()
