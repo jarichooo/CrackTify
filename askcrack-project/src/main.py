@@ -7,12 +7,12 @@ from views.auth.welcome_page import WelcomePage
 from views.auth.new_password_page import ForgotPasswordPage
 
 def main(page: ft.Page):
-    """Main function to run the app"""
-    def login_check():
-        """Check for existing login token"""
-        token = page.client_storage.get("auth_token")
-        if token:
-            page.go("/home")
+    # """Main function to run the app"""
+    # def login_check():
+    #     """Check for existing login token"""
+    #     token = page.client_storage.get("auth_token")
+    #     if token:
+    #         page.go("/home")
 
     # Routing
     def route_change(route):
@@ -55,7 +55,7 @@ def main(page: ft.Page):
         else:
             page.window_close()  # or just ignore if first view
 
-    login_check() # Check for existing login on app start
+    # login_check() # Check for existing login on app start
 
     page.on_route_change = route_change
     page.on_view_pop = view_pop
