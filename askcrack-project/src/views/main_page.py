@@ -375,94 +375,79 @@ class MainPage(TemplatePage):
         file_picker = ft.FilePicker(on_result=self.pick_file_result)
         self.page.overlay.append(file_picker)
         self.page.update()
-        file_picker.pick_files(allow_multiple=False)
+        file_picker.pick_files(allow_multiple=True)
             
     def pick_file_result(self, e: ft.FilePickerResultEvent):
-    
-            if e.files:
-                try:
-                    file_path = e.files[0].path
-                    model_path = self.get_model_path()
-
-                    # load model
-                    classifier = CrackClassifier(model_path)
-                    self.prob = classifier.predict(file_path)
+        
+        if e.files:
+            try:
+                # ✅ Process multiple files
+                total_files = len(e.files)
+                crack_count = 0
+                no_crack_count = 0
+                
+                print(f"📁 Processing {total_files} image(s)...")
+                
+                model_path = self.get_model_path()
+                classifier = CrackClassifier(model_path)
+                
+                # Process each file
+                for idx, file in enumerate(e.files, 1):
+                    file_path = file.path
+                    print(f"\n[{idx}/{total_files}] Processing: {os.path.basename(file_path)}")
                     
-                    print(f"📊 Prediction probability: {self.prob}")
-
-                    # Always save the image (crack or no crack)
+                    prob = classifier.predict(file_path)
+                    print(f"📊 Prediction probability: {prob}")
+                    
+                    # Save image (crack or no crack)
                     saved_path = classifier.analyze_and_save(file_path, confidence_threshold=0.5)
                     
                     if saved_path:
                         print(f"💾 Saved to: {saved_path}")
-                                                
-                        # ✅ Refresh gallery (use refresh method)
-                        self.gallery_instance.refresh()
                         
-                        # ✅ Refresh detection history (use refresh method)
-                        self.detection_history_instance.refresh()
-
-                        self.last_saved_path = saved_path
-                        self.page.run_task(self.add_crack)
-                        
-                        if self.prob > 0.5:
-                            # CRACK DETECTED
-                            self.page.snack_bar = ft.SnackBar(
-                                content=ft.Text("✓ Crack detected and saved!"),
-                                bgcolor=ft.Colors.GREEN,
-                            )
+                        if prob > 0.5:
+                            crack_count += 1
+                            print("🔴 Crack detected!")
                         else:
-                            # NO CRACK
-                            self.page.snack_bar = ft.SnackBar(
-                                content=ft.Text("No crack detected. Image saved."),
-                                bgcolor=ft.Colors.ORANGE,
-                            )
-                        
-                        self.page.snack_bar.open = True
-                        self.page.update()
-                    
-                except Exception as ex:
-                    print(f"❌ ERROR in pick_file_result: {ex}")
-                    import traceback
-                    traceback.print_exc()
-                    
-                    error_dialog = ft.AlertDialog(
-                        title=ft.Text("Error"),
-                        content=ft.Text(f"An error occurred: {str(ex)}"),
-                        actions=[ft.TextButton("Close", on_click=lambda _: self.page.close(error_dialog))]
-                    )
-                    self.page.dialog = error_dialog
-                    error_dialog.open = True
-                    self.page.update()
-            else:
-                print("⚠️ No file selected")
-
-    async def add_crack(self):
-        """Add crack to backend via service"""
-        try:
-            user_info = await self.page.client_storage.get_async("user_info")
-            user_id = user_info.get("id")
-            image_base64 = image_to_base64(self.last_saved_path)
-            probability = self.prob # Use the predicted probability
-            severity = "High" if self.prob > 0.7 else "Medium" if self.prob > 0.4 else "Low"
-
-            response = await add_crack_service(
-                user_id=user_id,
-                image_base64=image_base64,
-                probability=probability,
-                severity=severity
-            )
-
-            if response.get("success"):
-                print("✅ Crack added successfully via service.")
-            else:
-                print(f"❌ Failed to add crack: {response.get('message')}")
-
-        except Exception as ex:
-            print(f"❌ ERROR in add_crack: {ex}")
-            import traceback
-            traceback.print_exc()
+                            no_crack_count += 1
+                            print("🟢 No crack detected.")
                 
+                # ✅ Refresh gallery and history once after all files processed
+                self.gallery_instance.refresh()
+                self.detection_history_instance.refresh()
+                
+                # Show summary message
+                summary = []
+                if crack_count > 0:
+                    summary.append(f"{crack_count} crack(s) detected")
+                if no_crack_count > 0:
+                    summary.append(f"{no_crack_count} no crack(s)")
+                
+                message = f"✓ Processed {total_files} image(s): {', '.join(summary)}"
+                
+                self.page.snack_bar = ft.SnackBar(
+                    content=ft.Text(message),
+                    bgcolor=ft.Colors.GREEN if crack_count > 0 else ft.Colors.BLUE,
+                )
+                self.page.snack_bar.open = True
+                self.page.update()
+                
+            except Exception as ex:
+                print(f"❌ ERROR in pick_file_result: {ex}")
+                import traceback
+                traceback.print_exc()
+                
+                error_dialog = ft.AlertDialog(
+                    title=ft.Text("Error"),
+                    content=ft.Text(f"An error occurred: {str(ex)}"),
+                    actions=[ft.TextButton("Close", on_click=lambda _: self.page.close(error_dialog))]
+                )
+                self.page.dialog = error_dialog
+                error_dialog.open = True
+                self.page.update()
+        else:
+            print("⚠️ No file selected")
+
     def get_model_path(self):
         """Get model path that works in dev and ALL production builds (mobile + desktop)"""
         import sys
