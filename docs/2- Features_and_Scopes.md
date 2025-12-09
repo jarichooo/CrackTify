@@ -7,10 +7,12 @@
 - Integration with emerging tech (Flet)
 - Responsive UI layouts
 - Light data processing/storage
+- Profile interaction
+- Digital Image Processing
 
 ## Out-of-Scope Features
 - Full backend database
-- Real-time server features
+- Server Features
 
 ## Scope Table
 | Feature | In Scope | Out of Scope | Notes |

@@ -108,8 +108,8 @@ class RegisterPage(TemplatePage):
 
         # Main content container
         main_container = ft.Container(
+            width=500,
             content= ft.ListView(
-                # expand=True,
                 padding=ft.padding.all(20),
                 spacing=15,
                 auto_scroll=False,
@@ -153,8 +153,10 @@ class RegisterPage(TemplatePage):
         content = [
             ft.Column(
                 expand=True,
-                alignment=ft.MainAxisAlignment.END,
+                alignment=ft.MainAxisAlignment.SPACE_BETWEEN,
+                horizontal_alignment=ft.CrossAxisAlignment.CENTER,
                 controls=[
+                    ft.Container(),
                     main_container,   # starts immediately below back button
                 ]
             )

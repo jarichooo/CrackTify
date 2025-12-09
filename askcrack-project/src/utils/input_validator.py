@@ -88,7 +88,7 @@ def validate_login(email: str, password: str) -> tuple[bool, dict]:
 
     return is_valid, errors
 
-def validate_password_change(current_password: str, new_password: str, confirm_password: str) -> tuple[bool, dict]:
+def validate_password_change(current_password: str | None, new_password: str, confirm_password: str) -> tuple[bool, dict]:
     """
     Validates password change fields.
     Returns:
@@ -98,7 +98,7 @@ def validate_password_change(current_password: str, new_password: str, confirm_p
     errors = {}
     is_valid = True
 
-    if not current_password:
+    if current_password is not None and not current_password:
         errors["current_password"] = "Please enter your current password."
         is_valid = False
 
@@ -125,6 +125,27 @@ def validate_password_change(current_password: str, new_password: str, confirm_p
         is_valid = False
     elif new_password != confirm_password:
         errors["confirm_password"] = "Passwords do not match."
+        is_valid = False
+
+    return is_valid, errors
+
+def validate_email(email: str) -> tuple[bool, dict]:
+    """
+    Validates email field.
+    Returns:
+        is_valid (bool): True if validation passes
+        errors (dict): field-specific error messages
+    """
+    errors = {}
+    is_valid = True
+
+    # Validate email
+    if not email.strip():
+        errors["email"] = "Please enter your email."
+        is_valid = False
+    # Email format check
+    elif not re.match(r"[^@]+@[^@]+\.[^@]+", email):
+        errors["email"] = "Please enter a valid email address."
         is_valid = False
 
     return is_valid, errors

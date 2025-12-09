@@ -1,7 +1,7 @@
 from fastapi import APIRouter, Depends, Body
 from sqlalchemy.orm import Session
 from app.database.db import get_db
-from app.services.auth_service import register_user_service, login_user_service, check_email_unique_service
+from app.services.auth_service import register_user_service, login_user_service, check_email_unique_service, forgot_password_service
 
 router = APIRouter()
 
@@ -26,3 +26,10 @@ def api_login_user(data: dict = Body(...), db: Session = Depends(get_db)):
     password = data.get("password")
     
     return login_user_service(email, password, db)
+
+@router.post("/forgot-password")
+def api_forgot_password(data: dict = Body(...), db: Session = Depends(get_db)):
+    email = data.get("email")
+    new_password = data.get("new_password")
+
+    return forgot_password_service(email, new_password, db)

@@ -263,7 +263,7 @@ class ProfilePage:
                         controls=[
                             ft.ListTile(
                                 title=ft.Text("Download My Data"),
-                                on_click=self.download_pdf,
+                                on_click=lambda e: self.page.run_task(self.download_pdf),
                             ),
                             ft.ListTile(
                                 title=ft.Text("Delete My Account", color=ft.Colors.RED_100),
@@ -575,11 +575,23 @@ class ProfilePage:
             self.page.update()
 
 
-    def download_pdf(self, e):
+    async def download_pdf(self):
         """Download user data as PDF"""
         from config import Config
+        # import httpx
         user_id = self.user.get("id")
         api_base_url = Config.API_BASE_URL
         download_url = f"{api_base_url}/profile/download_data/{user_id}"
 
         self.page.launch_url(download_url)
+
+        # async with httpx.AsyncClient() as client:
+        #     response = await client.get(download_url)
+
+        # if response.status_code != 200:
+        #     return
+
+        # path = Path("C:/Users/Admin/Downloads/user_data.pdf")
+        # path.write_bytes(response.content)
+
+        # self.page.launch_url(path.as_uri())

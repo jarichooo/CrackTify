@@ -6,6 +6,8 @@ import cv2
 import sys
 from datetime import datetime
 
+from services.crack_service import add_crack_service
+
 class CrackClassifier:
     def __init__(self, model_path: str):
         """
