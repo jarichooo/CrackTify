@@ -12,10 +12,9 @@ from app.utils.time_util import human_time
 def fetch_recent_activity(user_id: int, db):
     """Fetch recent activity for a given user."""
     # Get groups the user belongs to
-    group_memberships = db.query(GroupMember).filter(GroupMember.user_id == user_id).all()
-    group_ids = [membership.group_id for membership in group_memberships]
-
-    # Fetch recent cracks in these groups
+    groups = db.query(Group).join(GroupMember).filter(GroupMember.user_id == user_id).all()
+    group_ids = [group.id for group in groups]
+    # Get recent cracks from these groups
     recent_cracks = (
         db.query(Crack)
         .join(CrackGroup, CrackGroup.crack_id == Crack.id)
@@ -24,14 +23,28 @@ def fetch_recent_activity(user_id: int, db):
         .limit(20)
         .all()
     )
+
     activity_list = []
+
+    total_cracks = len(recent_cracks)
+    total_severe_cracks = sum(1 for crack in recent_cracks if crack.severity == "Severe")
+    total_mild_cracks = sum(1 for crack in recent_cracks if crack.severity == "Mild")
+    total_none_cracks = sum(1 for crack in recent_cracks if crack.severity == "None")
+
     for crack in recent_cracks:
+        location = (
+            db.query(Group.name)
+            .join(CrackGroup, CrackGroup.group_id == Group.id)
+            .filter(CrackGroup.crack_id == crack.id)
+            .first()
+        )
         activity_list.append({
             "type": "crack_detected",
             "crack_id": crack.id,
-            "user_id": crack.user_id,
-            "detected_at": crack.detected_at.isoformat(),
-            "time_ago": human_time(crack.detected_at)
+            "location": location[0] if location else "Unknown location",
+            "severity": crack.severity,
+            "time_ago": human_time(crack.detected_at),
         })
 
-    return {"success": True, "activities": activity_list}
+    return {"success": True, "activities": activity_list, "overview": {"total_cracks": total_cracks, "total_severe_cracks": total_severe_cracks, "total_mild_cracks": total_mild_cracks, "total_none_cracks": total_none_cracks}}
+                                                                            
