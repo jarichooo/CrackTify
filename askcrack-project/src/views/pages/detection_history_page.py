@@ -5,6 +5,7 @@ import flet as ft
 from typing import List
 import os
 from datetime import datetime
+import re
 
 from services.crack_service import *
 
@@ -57,26 +58,21 @@ class DetectionHistoryPage:
         self.load_history()
 
     def load_history(self):
-        """Load detected images from folder (like ImageGallery does)"""
+        """Load detected images with confidence-based severity coloring"""
 
-        # Cache file listing if not already done
         if self.cached_files is None:
             self.cached_files = [
                 f for f in self.IMAGES_FOLDER.iterdir()
                 if f.suffix.lower() in {".png", ".jpg", ".jpeg", ".bmp"}
             ]
 
-        # FILTER OUT MISSING FILES (important!)
         self.cached_files = [f for f in self.cached_files if f.exists()]
-
-        # Sort by date descending
         files = sorted(self.cached_files, key=lambda f: f.stat().st_mtime, reverse=True)
 
-        # Clear list
         self.listview.controls.clear()
 
         if not files:
-            # Empty state
+            # Empty state (unchanged)
             self.listview.controls.append(
                 ft.Container(
                     alignment=ft.alignment.center,
@@ -95,22 +91,18 @@ class DetectionHistoryPage:
             )
         else:
             for f in files:
-                # Thumbnail caching (like ImageGallery)
                 if f not in self.cached_thumbs:
                     self.cached_thumbs[f] = image_to_base64(f, (80, 80))
 
                 thumb = self.cached_thumbs[f]
-                
-                # Get file info
                 file_name = f.name
                 file_date = datetime.fromtimestamp(f.stat().st_mtime).strftime("%Y-%m-%d %H:%M:%S")
-                
-                # Determine if it's a crack (based on filename pattern)
-                is_crack = "_crack_" in file_name.lower()
-                result = "Crack detected" if is_crack else "No crack"
-                result_color = ft.Colors.RED_400 if is_crack else ft.Colors.GREEN_400
 
-                # Thumbnail preview
+                # === Extract confidence score from filename ===
+                confidence = self.extract_confidence(file_name)
+                severity_text, severity_color = self.get_severity_info(confidence)
+
+                # Thumbnail
                 image_control = ft.Image(
                     src_base64=thumb,
                     width=80,
@@ -119,7 +111,6 @@ class DetectionHistoryPage:
                     border_radius=ft.border_radius.all(8),
                 )
 
-                # Action buttons
                 action_buttons = [
                     ft.FilledButton(
                         "View Full",
@@ -137,10 +128,12 @@ class DetectionHistoryPage:
                     )
                 ]
 
-                # Collapse panel (Expandable)
                 panel = ft.ExpansionTile(
                     title=ft.Text(file_name, weight=ft.FontWeight.BOLD),
-                    subtitle=ft.Text(f"{result} • {file_date}", color=result_color),
+                    subtitle=ft.Text(
+                        f"{severity_text} ({confidence*100:.1f}%) • {file_date}",
+                        color=severity_color
+                    ),
                     controls=[
                         ft.Container(
                             content=ft.Row(
@@ -149,7 +142,17 @@ class DetectionHistoryPage:
                                     ft.Column(
                                         [
                                             ft.Text(f"File: {file_name}", size=14),
-                                            ft.Text(f"Result: {result}", size=14, weight=ft.FontWeight.BOLD, color=result_color),
+                                            ft.Text(
+                                                f"Severity: {severity_text}",
+                                                size=14,
+                                                weight=ft.FontWeight.BOLD,
+                                                color=severity_color
+                                            ),
+                                            ft.Text(
+                                                f"Confidence: {confidence*100:.1f}%",
+                                                size=14,
+                                                color=severity_color
+                                            ),
                                             ft.Text(f"Date: {file_date}", size=12, color=ft.Colors.GREY),
                                             ft.Row(action_buttons, spacing=10),
                                         ],
@@ -167,6 +170,48 @@ class DetectionHistoryPage:
                 self.listview.controls.append(panel)
 
         self.page.update()
+
+    # === Helper Methods (Add these to your class) ===
+
+    def extract_confidence(self, filename: str) -> float:
+        """
+        Extract confidence score from filename.
+        Supported patterns:
+            _conf_0.87
+            _0.87_
+            _92%_
+            crack_0.76
+        Returns confidence as float (0.0 to 1.0), default 0.0 if not found
+        """
+        text = filename.lower()
+
+        # Pattern 1: _conf_0.87 or conf_0.92
+        match = re.search(r'_conf[_-]?([0-9]*\.?[0-9]+)', text)
+        if match:
+            return min(float(match.group(1)), 1.0)
+
+        # Pattern 2: contains number like 0.85 or 92%
+        match = re.search(r'([0-9]*\.?[0-9]+)%?', text)
+        if match:
+            val = float(match.group(1))
+            if val <= 1.0:
+                return val
+            elif val <= 100:
+                return val / 100.0
+
+        # Fallback: check for old _crack_ pattern → assume high confidence
+        if "_crack_" in text:
+            return 0.9  # assume high confidence
+        return 0.0  # no crack
+
+    def get_severity_info(self, confidence: float):
+        """Return (text, color) based on confidence"""
+        if confidence < 0.4:
+            return "No Crack", ft.Colors.GREEN_600
+        elif confidence < 0.8:
+            return "Mild Crack", ft.Colors.ORANGE_600
+        else:
+            return "Severe Crack", ft.Colors.RED_600
 
     def show_full_image(self, file_path: Path):
         """Show full detected image with crack outlines in overlay"""
