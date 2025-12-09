@@ -226,16 +226,17 @@ class DetectionHistoryPage:
         )
 
         self.page.open(dlg)
-
-    def delete_image(self, file_path: Path, dlg):
+    def delete_image(self, file_path: Path, dlg, sheet):
         """ Perform the deletion of the file. """
+        self.page.close(sheet)
         self.page.close(dlg)
         try:
-            file_path.unlink()
-            # Clear cached files so load_history refreshes
-            self.cached_files = None
-            self.cached_thumbs.pop(file_path, None)
-            self.load_history()
+            if file_path.exists():
+                file_path.unlink()
+            
+            # ✅ Force full refresh (rescan folder)
+            self.refresh()
+            
         except Exception as e:
             print(f"Error deleting: {e}")
 
@@ -272,10 +273,11 @@ class DetectionHistoryPage:
         self.load_history()
 
     def refresh(self):
-        """Refresh detection history - only if page has been built"""
+        """Refresh gallery - clear cache and reload"""
+        # Force rescan of folder (don't trust cached_files)
         self.cached_files = None
         self.cached_thumbs.clear()
         
-        # Only reload if the page has been built (listview exists)
-        if hasattr(self, 'listview'):
-            self.load_history()
+        # Only reload if the page has been built (gallery_grid exists)
+        if hasattr(self, 'gallery_grid') and self.gallery_grid is not None:
+            self.load_images()

@@ -121,6 +121,9 @@ class ImageGallery:
                 f for f in self.IMAGES_FOLDER.iterdir()
                 if f.suffix.lower() in {".png", ".jpg", ".jpeg", ".bmp"}
             ]
+        
+        # ✅ Filter out files that no longer exist (in case they were deleted)
+        self.cached_files = [f for f in self.cached_files if f.exists()]
 
         # Apply sorting
         files = sorted(self.cached_files, key=self.sort_key(), reverse=self.sort_reverse())
@@ -321,6 +324,7 @@ class ImageGallery:
             # Clear cached files so load_images refreshes
             self.cached_files = None
             self.cached_thumbs.pop(file_path, None)  # remove thumbnail cache
+
             self.load_images()
         except Exception as e:
             print(e)
