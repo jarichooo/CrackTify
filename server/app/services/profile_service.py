@@ -5,10 +5,9 @@ from app.models.group_member import GroupMember
 from app.utils.password import hash_password, verify_password
 from app.utils.pdf import generate_user_pdf
 
-def update_profile(profile_data: dict, db):
+def update_profile(profile_data: dict, new_password, db):
     """Update user profile with provided data"""
     user_id = profile_data.get("id")
-    new_password = profile_data.get("new_password")
 
     user = db.query(User).filter(User.id == user_id).first()
     if not user:
