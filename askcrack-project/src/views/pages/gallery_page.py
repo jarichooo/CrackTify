@@ -3,6 +3,7 @@ from pathlib import Path
 from PIL import Image
 import flet as ft
 from typing import List
+import os
 
 from utils.image_utils import image_to_base64
 from widgets.inputs import AppTextField, CustomDropdown
@@ -27,6 +28,10 @@ class ImageGallery:
         self.gallery_grid: ft.GridView | None = None
         self.ensure_folder()
 
+    def what_platform(self):
+        is_android = os.path.exists("/system/build.prop")
+        return 'Android' if is_android else 'Desktop'
+    
         self.user_id = self.page.client_storage.get("user").get("id")
 
     # Utilities
@@ -368,3 +373,12 @@ class ImageGallery:
             self.page.close(dlg)
         except Exception as e:
             print(e)
+    
+    def refresh(self):
+        """Refresh gallery - clear cache and reload"""
+        self.cached_files = None
+        self.cached_thumbs.clear()
+        
+        # Only reload if the page has been built (gallery_grid exists)
+        if hasattr(self, 'gallery_grid') and self.gallery_grid is not None:
+            self.load_images()
