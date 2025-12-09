@@ -375,68 +375,62 @@ class MainPage(TemplatePage):
         file_picker = ft.FilePicker(on_result=self.pick_file_result)
         self.page.overlay.append(file_picker)
         self.page.update()
-        file_picker.pick_files(allow_multiple=False)
+        file_picker.pick_files(allow_multiple=True)
             
     def pick_file_result(self, e: ft.FilePickerResultEvent):
         
         if e.files:
             try:
-                file_path = e.files[0].path
-                model_path = self.get_model_path()
-
-                # load model
-                classifier = CrackClassifier(model_path)
-                prob = classifier.predict(file_path)
+                # ✅ Process multiple files
+                total_files = len(e.files)
+                crack_count = 0
+                no_crack_count = 0
                 
-                print(f"📊 Prediction probability: {prob}")
-
-                if prob > 0.5:
-                    # CRACK DETECTED
-                    print("🔴 Crack detected! Running OpenCV analysis...")
+                print(f"📁 Processing {total_files} image(s)...")
+                
+                model_path = self.get_model_path()
+                classifier = CrackClassifier(model_path)
+                
+                # Process each file
+                for idx, file in enumerate(e.files, 1):
+                    file_path = file.path
+                    print(f"\n[{idx}/{total_files}] Processing: {os.path.basename(file_path)}")
+                    
+                    prob = classifier.predict(file_path)
+                    print(f"📊 Prediction probability: {prob}")
+                    
+                    # Save image (crack or no crack)
                     saved_path = classifier.analyze_and_save(file_path, confidence_threshold=0.5)
                     
                     if saved_path:
                         print(f"💾 Saved to: {saved_path}")
                         
-                        # ✅ Refresh gallery
-                        self.gallery_instance.cached_files = None
-                        self.gallery_instance.cached_thumbs.clear()
-                        if self.current_view_instance == self.gallery_instance:
-                            self.gallery_instance.load_images()
-                        
-                        # ✅ Refresh detection history
-                        self.detection_history_instance.refresh()
-                        
-                        # Success message
-                        self.page.snack_bar = ft.SnackBar(
-                            content=ft.Text("✓ Crack detected and saved!"),
-                            bgcolor=ft.Colors.GREEN,
-                        )
-                        self.page.snack_bar.open = True
-                        self.page.update()
-                else:
-                    # NO CRACK
-                    print("🟢 No crack detected.")
-                    saved_path = classifier.analyze_and_save(file_path, confidence_threshold=0.5)
-                    
-                    if saved_path:
-                        print(f"💾 Saved to: {saved_path}")
-                        
-                        # ✅ Refresh gallery
-                        self.gallery_instance.cached_files = None
-                        self.gallery_instance.cached_thumbs.clear()
-                        if self.current_view_instance == self.gallery_instance:
-                            self.gallery_instance.load_images()
-                        
-                        # ✅ Refresh detection history
-                        self.detection_history_instance.refresh()
-                    
-                    self.page.snack_bar = ft.SnackBar(
-                        content=ft.Text("No crack detected."),
-                        bgcolor=ft.Colors.ORANGE,
-                    )
-                    self.page.snack_bar.open = True
-                    self.page.update()
+                        if prob > 0.5:
+                            crack_count += 1
+                            print("🔴 Crack detected!")
+                        else:
+                            no_crack_count += 1
+                            print("🟢 No crack detected.")
+                
+                # ✅ Refresh gallery and history once after all files processed
+                self.gallery_instance.refresh()
+                self.detection_history_instance.refresh()
+                
+                # Show summary message
+                summary = []
+                if crack_count > 0:
+                    summary.append(f"{crack_count} crack(s) detected")
+                if no_crack_count > 0:
+                    summary.append(f"{no_crack_count} no crack(s)")
+                
+                message = f"✓ Processed {total_files} image(s): {', '.join(summary)}"
+                
+                self.page.snack_bar = ft.SnackBar(
+                    content=ft.Text(message),
+                    bgcolor=ft.Colors.GREEN if crack_count > 0 else ft.Colors.BLUE,
+                )
+                self.page.snack_bar.open = True
+                self.page.update()
                 
             except Exception as ex:
                 print(f"❌ ERROR in pick_file_result: {ex}")
