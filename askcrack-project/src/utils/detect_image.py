@@ -50,74 +50,119 @@ class CrackClassifier:
 
         return probability
             
-    def analyze_and_save(self, image_path: str, confidence_threshold: float = 0.5) -> str:
-        prob = self.predict(image_path)
-        
-        # Get the correct path to your storage/ folder FIRST
-        if getattr(sys, 'frozen', False):
-            # Running as packaged app (Android APK or desktop exe)
-            base_path = sys._MEIPASS
-            storage_path = os.path.join(base_path, "storage")
-        else:
-            # Development mode
-            current_dir = os.path.dirname(os.path.abspath(__file__))  # utils/detect_image.py
-            src_dir = os.path.dirname(os.path.dirname(current_dir))  # src/
-            storage_path = os.path.join(src_dir, "storage", "data", "images", "detected")  # ✅ Fixed path separators
+    def analyze_and_save(self, image_path: str, confidence_threshold: float = 0.4) -> str:
+        """
+        Analyzes image, draws crack contours if confidence > threshold,
+        and saves with confidence in filename for proper history display.
+        """
+        prob = self.predict(image_path)  # 0.0 to 1.0
 
-        # Create storage folder if it doesn't exist
+        # === Determine storage path (same as before) ===
+        if getattr(sys, 'frozen', False):
+            base_path = sys._MEIPASS
+            storage_path = os.path.join(base_path, "storage", "data", "images", "detected")
+        else:
+            current_dir = os.path.dirname(os.path.abspath(__file__))
+            src_dir = os.path.dirname(os.path.dirname(current_dir))
+            storage_path = os.path.join(src_dir, "storage", "data", "images", "detected")
+
         os.makedirs(storage_path, exist_ok=True)
 
-        # Generate filename with timestamp
+        # === Generate clean, parseable filename ===
         timestamp = datetime.now().strftime("%Y%m%d_%H%M%S")
         original_name = os.path.splitext(os.path.basename(image_path))[0]
         
-        # ✅ CRACK NOT DETECTED - Save original image
-        if prob <= confidence_threshold:
-            save_filename = f"{original_name}_no_{timestamp}.jpg"
-            save_path = os.path.join(storage_path, save_filename)
-            
-            # Just copy the original image (no processing needed)
-            img = cv2.imread(image_path)
-            if img is None:
-                raise RuntimeError("Failed to load image")
-            
-            success = cv2.imwrite(save_path, img)
-            if not success:
-                raise RuntimeError(f"Failed to save to {save_path}")
-            
-            print(f"No crack image saved to storage/: {save_filename}")
-            return save_path
+        # Clean filename (remove special chars that might break parsing)
+        safe_name = "".join(c for c in original_name if c.isalnum() or c in " _-")
 
-        # ✅ CRACK DETECTED - Process and save with outlines
-        img = cv2.imread(image_path)
-        if img is None:
-            raise RuntimeError("Failed to load image")
-        
-        gray = cv2.cvtColor(img, cv2.COLOR_BGR2GRAY)
-        binary = cv2.adaptiveThreshold(
-            gray, 255, cv2.ADAPTIVE_THRESH_GAUSSIAN_C,
-            cv2.THRESH_BINARY_INV, 99, 15
-        )
-        kernel = cv2.getStructuringElement(cv2.MORPH_RECT, (3,3))
-        binary = cv2.morphologyEx(binary, cv2.MORPH_CLOSE, kernel, iterations=2)
-        contours, _ = cv2.findContours(binary, cv2.RETR_EXTERNAL, cv2.CHAIN_APPROX_SIMPLE)
-
-        output = img.copy()
-        valid_contours = [cnt for cnt in contours if cv2.contourArea(cnt) > 200]
-
-        # Draw crack outlines + light boxes
-        cv2.drawContours(output, valid_contours, -1, (0, 0, 255), 2)
-        for cnt in valid_contours:
-            x, y, w, h = cv2.boundingRect(cnt)
-            cv2.rectangle(output, (x, y), (x + w, y + h), (100, 255, 100), 2)
-
-        save_filename = f"{original_name}_crack_{timestamp}.jpg"
+        # NEW: Always include confidence in filename → _conf_0.87
+        confidence_str = f"{prob:.4f}"
+        save_filename = f"{timestamp}_{safe_name}_conf_{confidence_str}.jpg"
         save_path = os.path.join(storage_path, save_filename)
 
-        # Save the image
+        # Load image once
+    def analyze_and_save(self, image_path: str, confidence_threshold: float = 0.4) -> str:
+        """
+        Analyzes image, draws crack contours if confidence > threshold,
+        and saves with confidence in filename for proper history display.
+        """
+        prob = self.predict(image_path)  # 0.0 to 1.0
+
+        # === Determine storage path (same as before) ===
+        if getattr(sys, 'frozen', False):
+            base_path = sys._MEIPASS
+            storage_path = os.path.join(base_path, "storage", "data", "images", "detected")
+        else:
+            current_dir = os.path.dirname(os.path.abspath(__file__))
+            src_dir = os.path.dirname(os.path.dirname(current_dir))
+            storage_path = os.path.join(src_dir, "storage", "data", "images", "detected")
+
+        os.makedirs(storage_path, exist_ok=True)
+
+        # === Generate clean, parseable filename ===
+        timestamp = datetime.now().strftime("%Y%m%d_%H%M%S")
+        original_name = os.path.splitext(os.path.basename(image_path))[0]
+        
+        # Clean filename (remove special chars that might break parsing)
+        safe_name = "".join(c for c in original_name if c.isalnum() or c in " _-")
+
+        # NEW: Always include confidence in filename → _conf_0.87
+        confidence_str = f"{prob:.4f}"
+        save_filename = f"{timestamp}_{safe_name}_conf_{confidence_str}.jpg"
+        save_path = os.path.join(storage_path, save_filename)
+
+        # Load image once
+        img = cv2.imread(image_path)
+        if img is None:
+            raise RuntimeError(f"Failed to load image: {image_path}")
+
+        output = img.copy()
+
+        # === Only draw contours if confidence is meaningful ===
+        if prob >= confidence_threshold:
+            gray = cv2.cvtColor(img, cv2.COLOR_BGR2GRAY)
+            binary = cv2.adaptiveThreshold(
+                gray, 255, cv2.ADAPTIVE_THRESH_GAUSSIAN_C,
+                cv2.THRESH_BINARY_INV, 99, 15
+            )
+            kernel = cv2.getStructuringElement(cv2.MORPH_RECT, (3,3))
+            binary = cv2.morphologyEx(binary, cv2.MORPH_CLOSE, kernel, iterations=2)
+            contours, _ = cv2.findContours(binary, cv2.RETR_EXTERNAL, cv2.CHAIN_APPROX_SIMPLE)
+
+            valid_contours = [cnt for cnt in contours if cv2.contourArea(cnt) > 200]
+
+            # Draw red contours + green bounding boxes
+            cv2.drawContours(output, valid_contours, -1, (0, 0, 255), 3)  # Red outline
+            for cnt in valid_contours:
+                x, y, w, h = cv2.boundingRect(cnt)
+                cv2.rectangle(output, (x, y), (x + w, y + h), (100, 255, 100), 3)
+
+            # Optional: Add confidence text on image
+            cv2.putText(
+                output,
+                f"Crack: {prob*100:.1f}%",
+                (10, 30),
+                cv2.FONT_HERSHEY_SIMPLEX,
+                1.0,
+                (0, 0, 255) if prob > 0.8 else (0, 165, 255) if prob > 0.4 else (0, 255, 0),
+                2
+            )
+        else:
+            # Low confidence → just show "No Crack" text
+            cv2.putText(
+                output,
+                f"No Crack ({prob*100:.1f}%)",
+                (10, 30),
+                cv2.FONT_HERSHEY_SIMPLEX,
+                1.0,
+                (0, 255, 0),
+                2
+            )
+
+        # === Save final image ===
         success = cv2.imwrite(save_path, output)
         if not success:
-            raise RuntimeError(f"Failed to save to {save_path}")
+            raise RuntimeError(f"Failed to save image to {save_path}")
 
-        print(f"Crack image saved to storage/: {save_filename}")
+        print(f"Image saved: {save_filename} | Confidence: {prob:.4f}")
         return save_path

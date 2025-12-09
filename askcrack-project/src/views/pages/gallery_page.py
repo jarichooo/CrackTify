@@ -317,19 +317,22 @@ class ImageGallery:
 
         self.page.open(dlg)
 
-    def delete_image(self, file_path: Path, dlg, sheet):
-        """ Perform the deletion of the file. """
+    def delete_image(self, file_path: Path, dlg, sheet=None, history_page=None):
         self.page.close(sheet)
         self.page.close(dlg)
         try:
             file_path.unlink()
-            # Clear cached files so load_images refreshes
             self.cached_files = None
-            self.cached_thumbs.pop(file_path, None)  # remove thumbnail cache
-
+            self.cached_thumbs.pop(file_path, None)
             self.load_images()
+            
+            # Refresh history page if provided
+            if history_page:
+                history_page.refresh()
+                
         except Exception as e:
             print(e)
+
 
     def rename_dialog(self, file_path: Path, sheet):
         """ Show rename dialog. """
@@ -378,10 +381,7 @@ class ImageGallery:
             print(e)
     
     def refresh(self):
-        """Refresh gallery - clear cache and reload"""
+        """Refresh detection history - clear cache and reload"""
         self.cached_files = None
         self.cached_thumbs.clear()
-        
-        # Only reload if the page has been built (gallery_grid exists)
-        if hasattr(self, 'gallery_grid') and self.gallery_grid is not None:
-            self.load_images()
+        self.load_images()
