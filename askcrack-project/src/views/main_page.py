@@ -378,73 +378,62 @@ class MainPage(TemplatePage):
         file_picker.pick_files(allow_multiple=False)
             
     def pick_file_result(self, e: ft.FilePickerResultEvent):
-        
-        if e.files:
-            try:
-                file_path = e.files[0].path
-                model_path = self.get_model_path()
-                assets_dir = os.path.dirname(model_path)
+    
+            if e.files:
+                try:
+                    file_path = e.files[0].path
+                    model_path = self.get_model_path()
 
-                # load model
-                classifier = CrackClassifier(model_path)
-                prob = classifier.predict(file_path)
-                label = 1 if prob > 0.5 else 0
-                
-                print(f"Prediction: {label}, Probability: {prob}")
+                    # load model
+                    classifier = CrackClassifier(model_path)
+                    prob = classifier.predict(file_path)
+                    
+                    print(f"📊 Prediction probability: {prob}")
 
-                if prob > 0.5:
+                    # Always save the image (crack or no crack)
                     saved_path = classifier.analyze_and_save(file_path, confidence_threshold=0.5)
+                    
                     if saved_path:
-                        print(f"Crack analysis complete! Saved to: {saved_path}")
+                        print(f"💾 Saved to: {saved_path}")
                         
-                        # Refresh gallery
-                        self.gallery_instance.cached_files = None
-                        self.gallery_instance.cached_thumbs.clear()
-
-                        # refresh history
-                        self.page.history_page.refresh()
+                        # ✅ Refresh gallery (use refresh method)
+                        self.gallery_instance.refresh()
                         
-                        # If gallery is currently visible, reload it
-                        if self.current_view_instance == self.gallery_instance:
-                            self.gallery_instance.load_images()
+                        # ✅ Refresh detection history (use refresh method)
+                        self.detection_history_instance.refresh()
                         
-                        # Show success message
-                        self.page.snack_bar = ft.SnackBar(
-                            content=ft.Text("✓ Crack detected and saved to gallery!"),
-                            bgcolor=ft.Colors.GREEN,
-                        )
+                        if prob > 0.5:
+                            # CRACK DETECTED
+                            self.page.snack_bar = ft.SnackBar(
+                                content=ft.Text("✓ Crack detected and saved!"),
+                                bgcolor=ft.Colors.GREEN,
+                            )
+                        else:
+                            # NO CRACK
+                            self.page.snack_bar = ft.SnackBar(
+                                content=ft.Text("No crack detected. Image saved."),
+                                bgcolor=ft.Colors.ORANGE,
+                            )
+                        
                         self.page.snack_bar.open = True
                         self.page.update()
-                
-                    else:
-                        print("Analysis ran but no save path returned (should not happen)")
-                else:
-                    print("No crack detected. Skipping OpenCV analysis.")
                     
-                    # Optional: Show "no crack" message
-                    self.page.snack_bar = ft.SnackBar(
-                        content=ft.Text("No crack detected in this image."),
-                        bgcolor=ft.Colors.ORANGE,
+                except Exception as ex:
+                    print(f"❌ ERROR in pick_file_result: {ex}")
+                    import traceback
+                    traceback.print_exc()
+                    
+                    error_dialog = ft.AlertDialog(
+                        title=ft.Text("Error"),
+                        content=ft.Text(f"An error occurred: {str(ex)}"),
+                        actions=[ft.TextButton("Close", on_click=lambda _: self.page.close(error_dialog))]
                     )
-                    self.page.snack_bar.open = True
+                    self.page.dialog = error_dialog
+                    error_dialog.open = True
                     self.page.update()
+            else:
+                print("⚠️ No file selected")
                 
-            except Exception as ex:
-                print(f"ERROR in pick_file_result: {ex}")
-                import traceback
-                traceback.print_exc()
-                
-                error_dialog = ft.AlertDialog(
-                    title=ft.Text("Error"),
-                    content=ft.Text(f"An error occurred: {str(ex)}"),
-                    actions=[ft.TextButton("Close", on_click=lambda _: self.page.close(error_dialog))]
-                )
-                self.page.dialog = error_dialog
-                error_dialog.open = True
-                self.page.update()
-        else:
-            print("No file selected")
-    
     def get_model_path(self):
         """Get model path that works in dev and ALL production builds (mobile + desktop)"""
         import sys
