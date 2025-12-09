@@ -12,7 +12,9 @@ class HomePage:
         # Stats
         self.stats = {
             "Detected Cracks": 0,
-            "Critical Cracks": 0,
+            "Severe Cracks": 0,
+            "Mild Cracks": 0,
+            "No Cracks": 0,
         }
 
         self.grid: ft.GridView | None = None
@@ -77,8 +79,8 @@ class HomePage:
         )
 
         # Load async data
-        self.page.run_task(self.load_recent_activity)
         self.page.run_task(self.load_stats)
+        self.page.run_task(self.load_recent_activity)
 
         # MAIN PAGE LAYOUT
         return [
@@ -130,30 +132,41 @@ class HomePage:
         )
 
         self.grid.controls.append(
-            self.info_tile("Critical Cracks", self.stats["Critical Cracks"], ft.Icons.DESCRIPTION)
+            self.info_tile("Severe Cracks", self.stats["Severe Cracks"], ft.Icons.WARNING)
+        )
+
+        self.grid.controls.append(
+            self.info_tile("Mild Cracks", self.stats["Mild Cracks"], ft.Icons.INFO)
+        )
+
+        self.grid.controls.append(
+            self.info_tile("No Cracks", self.stats["No Cracks"], ft.Icons.CHECK_CIRCLE)
         )
 
     # ASYNC LOAD STATS
     async def load_stats(self):
-        # Replace with real API later
-        self.stats["Detected Cracks"] = 14
-        self.stats["Critical Cracks"] = 5
+        self.activities = await self.fetch_recent_activity()
+
+        print("Fetched activities:", self.activities)
+
+        self.stats["Detected Cracks"] = self.activities.get("overview", {}).get("total_cracks", 0)
+        self.stats["Severe Cracks"] = self.activities.get("overview", {}).get("total_severe_cracks", 0)
+        self.stats["Mild Cracks"] = self.activities.get("overview", {}).get("total_mild_cracks", 0)
+        self.stats["No Cracks"] = self.activities.get("overview", {}).get("total_none_cracks", 0)
 
         self.load_tiles()
         self.page.update()
 
         # Fetch recent activity (wrapper for actual API)
     
-    async def fetch_recent_activity(self, user_id):
+    async def fetch_recent_activity(self):
         """Fetch recent activity (wrapper for actual API)"""
-        return await fetch_recent_activity_service(user_id)
+        return await fetch_recent_activity_service(self.user_id)
     
     # ASYNC LOAD RECENT ACTIVITY
     async def load_recent_activity(self):
         
-        activities = await self.fetch_recent_activity(self.user.get("id"))
-        
-        if not activities.get("activities"):
+        if not self.activities.get("activities"):
             # No activities returned; clear list and show placeholder
             if self.activity_list:
                 self.activity_list.controls.clear()
@@ -163,40 +176,33 @@ class HomePage:
                 self.page.update()
             return
 
-        # Ensure activities is a list
-        if isinstance(activities, str):
-            import json
-            try:
-                activities = json.loads(activities)
-            except Exception:
-                activities = []
-
-        if not isinstance(activities, list):
-            activities = []
 
         # Clear existing controls
         if self.activity_list:
             self.activity_list.controls.clear()
 
-            for act in activities:
-                # Only process dict items
-                if not isinstance(act, dict):
-                    continue
-
+            for act in self.activities.get("activities", []):
                 severity_color = ft.Colors.RED if act.get("severity") == "Critical" else (
                     ft.Colors.ORANGE if act.get("severity") == "Moderate" else ft.Colors.GREEN
                 )
-
+                
                 item = ft.Container(
                     padding=15,
                     bgcolor=ft.Colors.SECONDARY_CONTAINER,
                     border_radius=12,
                     shadow=ft.BoxShadow(blur_radius=5, color=ft.Colors.BLACK12),
                     content=ft.Column([
-                        ft.Text(f"{act.get('title', 'No title')} in {act.get('group', 'Unknown')}", size=14, weight="bold"),
+                        ft.Text(f"{act.get("type", "Activity")} in {act.get("location", "Unknown location")}" , size=14, weight="bold", color=ft.Colors.PRIMARY),
                         ft.Row([
-                            ft.Text(f"Severity: {act.get('severity', '-')}", color=severity_color),
-                            ft.Text(f"Time: {act.get('time', '-')}", color=ft.Colors.BLUE_GREY)
+                            ft.Text(
+                                f"Severity: {act.get('severity', '-')}",
+                                color=severity_color
+                            ),
+                            ft.Text(
+                                f"{act.get('time_ago', 'Unknown time')}",
+                                color=ft.Colors.BLUE_GREY,
+                                italic=True
+                            )
                         ], alignment=ft.MainAxisAlignment.SPACE_BETWEEN)
                     ])
                 )
