@@ -58,15 +58,18 @@ class DetectionHistoryPage:
 
     def load_history(self):
         """Load detected images from folder (like ImageGallery does)"""
-        
-        # Cache file listing
+
+        # Cache file listing if not already done
         if self.cached_files is None:
             self.cached_files = [
                 f for f in self.IMAGES_FOLDER.iterdir()
                 if f.suffix.lower() in {".png", ".jpg", ".jpeg", ".bmp"}
             ]
 
-        # Sort by date descending (most recent first)
+        # FILTER OUT MISSING FILES (important!)
+        self.cached_files = [f for f in self.cached_files if f.exists()]
+
+        # Sort by date descending
         files = sorted(self.cached_files, key=lambda f: f.stat().st_mtime, reverse=True)
 
         # Clear list
@@ -228,9 +231,9 @@ class DetectionHistoryPage:
         )
 
         self.page.open(dlg)
-    def delete_image(self, file_path: Path, dlg, sheet):
+    def delete_image(self, file_path: Path, dlg):
         """ Perform the deletion of the file. """
-        self.page.close(sheet)
+        
         self.page.close(dlg)
         try:
             if file_path.exists():
@@ -275,11 +278,6 @@ class DetectionHistoryPage:
         self.load_history()
 
     def refresh(self):
-        """Refresh gallery - clear cache and reload"""
-        # Force rescan of folder (don't trust cached_files)
         self.cached_files = None
         self.cached_thumbs.clear()
-        
-        # Only reload if the page has been built (gallery_grid exists)
-        if hasattr(self, 'gallery_grid') and self.gallery_grid is not None:
-            self.load_images()
+        self.load_history()
