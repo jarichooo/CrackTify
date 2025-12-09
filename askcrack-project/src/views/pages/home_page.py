@@ -185,9 +185,12 @@ class HomePage:
             self.activity_list.controls.clear()
 
             for act in self.activities.get("activities", []):
-                severity_color = ft.Colors.RED if act.get("severity") == "Critical" else (
-                    ft.Colors.ORANGE if act.get("severity") == "Moderate" else ft.Colors.GREEN
-                )
+                if act.get("severity") == "Severe":
+                    severity_color = ft.Colors.RED  
+                elif act.get("severity") == "Mild":
+                    severity_color = ft.Colors.ORANGE
+                else:
+                    severity_color = ft.Colors.GREEN
                 
                 item = ft.Container(
                     padding=15,
