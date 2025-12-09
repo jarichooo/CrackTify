@@ -12,7 +12,7 @@ from services.group_service import (
     edit_member,
     remove_member
 )
-from services.crack_service import fetch_cracks_service, delete_crack_service
+from services.crack_service import delete_crack_from_group_service, fetch_cracks_service
 from widgets.inputs import AppTextField
 from utils.image_utils import image_to_base64, base64_to_image
 
@@ -553,14 +553,24 @@ class GroupsPage:
                 padding=10,
                 border_radius=12,
                 content=ft.Column(
-                    controls=[
-                        image_control,
-                        ft.Text(f"Severity: {severity}", weight=ft.FontWeight.BOLD),
-                        delete_btn
-                    ],
                     spacing=6,
-                    horizontal_alignment=ft.CrossAxisAlignment.CENTER
-                )
+                    horizontal_alignment=ft.CrossAxisAlignment.CENTER,
+                    controls=[
+                        ft.Stack(
+                            controls=[
+                                image_control,
+                                ft.Container(
+                                    content=delete_btn,
+                                    padding=5,
+                                    alignment=ft.alignment.top_right
+                                ),
+                            ],
+                            width=image_control.width,
+                            height=image_control.height,
+                        ),
+                        ft.Text(f"Severity: {severity}", weight=ft.FontWeight.BOLD),
+                    ],
+                ),
             )
 
             grid_items.append(tile)
@@ -579,14 +589,15 @@ class GroupsPage:
 
     def _prepare_delete_crack(self, crack_id):
         self.page.client_storage.set("crack_to_delete", crack_id)
+        
         self.page.run_task(self.delete_crack_action)
 
     async def delete_crack_action(self):
         crack_id = await self.page.client_storage.get_async("crack_to_delete")
         if not crack_id:
             return
-
-        response = delete_crack_service(crack_id, self.user_id, db=None)
+    
+        response = await delete_crack_from_group_service(crack_id, self.current_group_id)
 
         if response.get("success"):
             print("Crack deleted:", crack_id)
