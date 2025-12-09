@@ -212,7 +212,6 @@ class DetectionHistoryPage:
             return "Mild Crack", ft.Colors.ORANGE_600
         else:
             return "Severe Crack", ft.Colors.RED_600
-
     def show_full_image(self, file_path: Path):
         """Show full detected image with crack outlines in overlay"""
         base64_img = image_to_base64(file_path, (1200, 1200))
