@@ -27,6 +27,8 @@ class ImageGallery:
         self.gallery_grid: ft.GridView | None = None
         self.ensure_folder()
 
+        self.user_id = self.page.client_storage.get("user").get("id")
+
     # Utilities
     def ensure_folder(self):
         if not self.IMAGES_FOLDER.exists():
@@ -316,6 +318,7 @@ class ImageGallery:
             # Clear cached files so load_images refreshes
             self.cached_files = None
             self.cached_thumbs.pop(file_path, None)  # remove thumbnail cache
+
             self.load_images()
         except Exception as e:
             print(e)

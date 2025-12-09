@@ -13,6 +13,7 @@ from .pages import (
 )
 from utils.toggle_theme import toggle_theme
 from utils.detect_image import CrackClassifier
+from utils.image_utils import image_to_base64
 from services.crack_service import add_crack_service
 
 class MainPage(TemplatePage):
@@ -381,27 +382,27 @@ class MainPage(TemplatePage):
         if e.files:
             try:
                 file_path = e.files[0].path
+                self.crack_base64 = image_to_base64(file_path)
                 model_path = self.get_model_path()
                 assets_dir = os.path.dirname(model_path)
-
                 # load model
                 classifier = CrackClassifier(model_path)
-                prob = classifier.predict(file_path)
-                label = 1 if prob > 0.5 else 0
+                self.prob = classifier.predict(file_path)
+                label = 1 if self.prob > 0.5 else 0
                 
-                print(f"Prediction: {label}, Probability: {prob}")
-
-                if prob > 0.5:
+                print(f"Prediction: {label}, Probability: {self.prob}")
+                
+                if self.prob > 0.5:
                     saved_path = classifier.analyze_and_save(file_path, confidence_threshold=0.5)
+                    self.last_saved_path = saved_path
+                    self.page.run_task(self.add_crack)
                     if saved_path:
-                        print(f"Crack analysis complete! Saved to: {saved_path}")
-                        
                         # Refresh gallery
                         self.gallery_instance.cached_files = None
                         self.gallery_instance.cached_thumbs.clear()
 
                         # refresh history
-                        self.page.history_page.refresh()
+                        # self.page.history_page.refresh()
                         
                         # If gallery is currently visible, reload it
                         if self.current_view_instance == self.gallery_instance:
@@ -443,7 +444,24 @@ class MainPage(TemplatePage):
                 self.page.update()
         else:
             print("No file selected")
-    
+
+    async def add_crack(self):
+        resp = await add_crack_service(
+            user_id=self.user.get("id"),
+            image_base64=self.crack_base64,
+            probability=self.prob,
+            severity="Critical" if self.prob > 0.8 else "Moderate" if self.prob > 0.5 else "Low"
+        )
+
+        dialog = ft.AlertDialog(
+            title=ft.Text("Add Crack Result"),
+            content=ft.Text(resp.get("message", "No response message.")),
+            actions=[ft.TextButton("Close", on_click=lambda _: self.page.close(dialog))]
+        )
+
+        self.page.open(dialog)
+
+
     def get_model_path(self):
         """Get model path that works in dev and ALL production builds (mobile + desktop)"""
         import sys
