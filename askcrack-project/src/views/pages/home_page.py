@@ -20,6 +20,10 @@ class HomePage:
         self.grid: ft.GridView | None = None
         self.activity_list: ft.ListView | None = None
 
+    async def fetch_recent_activity(self):
+        """Fetch recent activity (wrapper for actual API)"""
+        return await fetch_recent_activity_service(self.user_id)
+
     # MAIN BUILD
     def build(self) -> List[ft.Control]:
         self.user = self.page.client_storage.get("user_info")
@@ -27,6 +31,7 @@ class HomePage:
         self.user_id = self.user.get("id")
         self.first_name = self.user.get("first_name", "User")
         self.avatar_base64 = self.user.get("avatar_base64")
+        
 
         # HEADER CARD
         header_card = ft.Container(
@@ -69,7 +74,6 @@ class HomePage:
             spacing=12,
             run_spacing=12,
         )
-        self.load_tiles()
 
         # RECENT ACTIVITY LIST
         self.activity_list = ft.ListView(
@@ -81,6 +85,10 @@ class HomePage:
         # Load async data
         self.page.run_task(self.load_stats)
         self.page.run_task(self.load_recent_activity)
+
+        self.load_tiles()
+        self.load_recent_activity()
+        
 
         # MAIN PAGE LAYOUT
         return [
@@ -143,6 +151,7 @@ class HomePage:
             self.info_tile("No Cracks", self.stats["No Cracks"], ft.Icons.CHECK_CIRCLE)
         )
 
+
     # ASYNC LOAD STATS
     async def load_stats(self):
         self.activities = await self.fetch_recent_activity()
@@ -156,12 +165,6 @@ class HomePage:
 
         self.load_tiles()
         self.page.update()
-
-        # Fetch recent activity (wrapper for actual API)
-    
-    async def fetch_recent_activity(self):
-        """Fetch recent activity (wrapper for actual API)"""
-        return await fetch_recent_activity_service(self.user_id)
     
     # ASYNC LOAD RECENT ACTIVITY
     async def load_recent_activity(self):
@@ -209,5 +212,7 @@ class HomePage:
                 self.activity_list.controls.append(item)
 
             self.page.update()
+
+
 
 

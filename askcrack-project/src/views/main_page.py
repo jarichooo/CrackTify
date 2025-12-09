@@ -12,8 +12,8 @@ from .pages import (
     AboutPage
 )
 from utils.toggle_theme import toggle_theme
-from widgets.inputs import AppTextField
-from widgets.buttons import PrimaryButton, SecondaryButton, CustomTextButton
+from utils.image_utils import image_to_base64
+from services.crack_service import add_crack_service
 from utils.detect_image import CrackClassifier
 
 class MainPage(TemplatePage):
@@ -411,10 +411,16 @@ class MainPage(TemplatePage):
                         else:
                             no_crack_count += 1
                             print("🟢 No crack detected.")
+
+                        self.last_saved_path = saved_path  # Save last processed path
+                        self.prob = prob  # Save last predicted probability
+                        self.page.run_task(self.add_crack)  # Call async add_crack method
                 
                 # Refresh gallery and history once after all files processed
                 self.gallery_instance.refresh()
                 self.detection_history_instance.refresh()
+                self.home_instance.build()  # Reload stats on home page
+                
                 
                 # Show summary message
                 summary = []
@@ -447,6 +453,33 @@ class MainPage(TemplatePage):
                 self.page.update()
         else:
             print("⚠️ No file selected")
+
+    async def add_crack(self):
+        """Add crack to backend via service"""
+        try:
+            user_info = await self.page.client_storage.get_async("user_info")
+            user_id = user_info.get("id")
+            image_base64 = image_to_base64(self.last_saved_path)
+            probability = self.prob # Use the predicted probability
+            severity = "Severe" if self.prob > 0.7 else "Mild" if self.prob > 0.4 else "None"
+
+            response = await add_crack_service(
+                user_id=user_id,
+                image_base64=image_base64,
+                probability=probability,
+                severity=severity
+            )
+
+            if response.get("success"):
+                print("✅ Crack added successfully via service.")
+            else:
+                print(f"❌ Failed to add crack: {response.get('message')}")
+
+        except Exception as ex:
+            print(f"❌ ERROR in add_crack: {ex}")
+            import traceback
+            traceback.print_exc()
+
 
     def get_model_path(self):
         """Get model path that works in dev and ALL production builds (mobile + desktop)"""
