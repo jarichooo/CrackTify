@@ -378,90 +378,91 @@ class MainPage(TemplatePage):
         file_picker.pick_files(allow_multiple=False)
             
     def pick_file_result(self, e: ft.FilePickerResultEvent):
-        
-        if e.files:
-            try:
-                file_path = e.files[0].path
-                self.crack_base64 = image_to_base64(file_path)
-                model_path = self.get_model_path()
-                assets_dir = os.path.dirname(model_path)
-                # load model
-                classifier = CrackClassifier(model_path)
-                self.prob = classifier.predict(file_path)
-                label = 1 if self.prob > 0.5 else 0
-                
-                print(f"Prediction: {label}, Probability: {self.prob}")
-                
-                if self.prob > 0.5:
-                    saved_path = classifier.analyze_and_save(file_path, confidence_threshold=0.5)
-                    self.last_saved_path = saved_path
-                    self.page.run_task(self.add_crack)
-                    if saved_path:
-                        # Refresh gallery
-                        self.gallery_instance.cached_files = None
-                        self.gallery_instance.cached_thumbs.clear()
+    
+            if e.files:
+                try:
+                    file_path = e.files[0].path
+                    model_path = self.get_model_path()
 
-                        # refresh history
-                        # self.page.history_page.refresh()
+                    # load model
+                    classifier = CrackClassifier(model_path)
+                    self.prob = classifier.predict(file_path)
+                    
+                    print(f"📊 Prediction probability: {self.prob}")
+
+                    # Always save the image (crack or no crack)
+                    saved_path = classifier.analyze_and_save(file_path, confidence_threshold=0.5)
+                    
+                    if saved_path:
+                        print(f"💾 Saved to: {saved_path}")
+                                                
+                        # ✅ Refresh gallery (use refresh method)
+                        self.gallery_instance.refresh()
                         
-                        # If gallery is currently visible, reload it
-                        if self.current_view_instance == self.gallery_instance:
-                            self.gallery_instance.load_images()
+                        # ✅ Refresh detection history (use refresh method)
+                        self.detection_history_instance.refresh()
+
+                        self.last_saved_path = saved_path
+                        self.page.run_task(self.add_crack)
                         
-                        # Show success message
-                        self.page.snack_bar = ft.SnackBar(
-                            content=ft.Text("✓ Crack detected and saved to gallery!"),
-                            bgcolor=ft.Colors.GREEN,
-                        )
+                        if self.prob > 0.5:
+                            # CRACK DETECTED
+                            self.page.snack_bar = ft.SnackBar(
+                                content=ft.Text("✓ Crack detected and saved!"),
+                                bgcolor=ft.Colors.GREEN,
+                            )
+                        else:
+                            # NO CRACK
+                            self.page.snack_bar = ft.SnackBar(
+                                content=ft.Text("No crack detected. Image saved."),
+                                bgcolor=ft.Colors.ORANGE,
+                            )
+                        
                         self.page.snack_bar.open = True
                         self.page.update()
-                
-                    else:
-                        print("Analysis ran but no save path returned (should not happen)")
-                else:
-                    print("No crack detected. Skipping OpenCV analysis.")
                     
-                    # Optional: Show "no crack" message
-                    self.page.snack_bar = ft.SnackBar(
-                        content=ft.Text("No crack detected in this image."),
-                        bgcolor=ft.Colors.ORANGE,
+                except Exception as ex:
+                    print(f"❌ ERROR in pick_file_result: {ex}")
+                    import traceback
+                    traceback.print_exc()
+                    
+                    error_dialog = ft.AlertDialog(
+                        title=ft.Text("Error"),
+                        content=ft.Text(f"An error occurred: {str(ex)}"),
+                        actions=[ft.TextButton("Close", on_click=lambda _: self.page.close(error_dialog))]
                     )
-                    self.page.snack_bar.open = True
+                    self.page.dialog = error_dialog
+                    error_dialog.open = True
                     self.page.update()
-                
-            except Exception as ex:
-                print(f"ERROR in pick_file_result: {ex}")
-                import traceback
-                traceback.print_exc()
-                
-                error_dialog = ft.AlertDialog(
-                    title=ft.Text("Error"),
-                    content=ft.Text(f"An error occurred: {str(ex)}"),
-                    actions=[ft.TextButton("Close", on_click=lambda _: self.page.close(error_dialog))]
-                )
-                self.page.dialog = error_dialog
-                error_dialog.open = True
-                self.page.update()
-        else:
-            print("No file selected")
+            else:
+                print("⚠️ No file selected")
 
     async def add_crack(self):
-        resp = await add_crack_service(
-            user_id=self.user.get("id"),
-            image_base64=self.crack_base64,
-            probability=self.prob,
-            severity="Critical" if self.prob > 0.8 else "Moderate" if self.prob > 0.5 else "Low"
-        )
+        """Add crack to backend via service"""
+        try:
+            user_info = await self.page.client_storage.get_async("user_info")
+            user_id = user_info.get("id")
+            image_base64 = image_to_base64(self.last_saved_path)
+            probability = self.prob # Use the predicted probability
+            severity = "High" if self.prob > 0.7 else "Medium" if self.prob > 0.4 else "Low"
 
-        dialog = ft.AlertDialog(
-            title=ft.Text("Add Crack Result"),
-            content=ft.Text(resp.get("message", "No response message.")),
-            actions=[ft.TextButton("Close", on_click=lambda _: self.page.close(dialog))]
-        )
+            response = await add_crack_service(
+                user_id=user_id,
+                image_base64=image_base64,
+                probability=probability,
+                severity=severity
+            )
 
-        self.page.open(dialog)
+            if response.get("success"):
+                print("✅ Crack added successfully via service.")
+            else:
+                print(f"❌ Failed to add crack: {response.get('message')}")
 
-
+        except Exception as ex:
+            print(f"❌ ERROR in add_crack: {ex}")
+            import traceback
+            traceback.print_exc()
+                
     def get_model_path(self):
         """Get model path that works in dev and ALL production builds (mobile + desktop)"""
         import sys
