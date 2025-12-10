@@ -457,6 +457,7 @@ class MainPage(TemplatePage):
     async def add_crack(self):
         """Add crack to backend via service"""
         try:
+            self.show_loading()
             user_info = await self.page.client_storage.get_async("user_info")
             user_id = user_info.get("id")
             image_base64 = image_to_base64(self.last_saved_path)
@@ -471,8 +472,17 @@ class MainPage(TemplatePage):
             )
 
             if response.get("success"):
-                print("✅ Crack added successfully via service.")
+                self.hide_loading()
+                dialog = ft.AlertDialog(
+                    title=ft.Text("Success"),
+                    content=ft.Text("Crack added successfully."),
+                    actions=[ft.TextButton("Close", on_click=lambda _: self.page.close(dialog))]
+                )
+                self.page.open(dialog)
+                print("✅ Crack added successfully.")
+
             else:
+                self.hide_loading()
                 print(f"❌ Failed to add crack: {response.get('message')}")
 
         except Exception as ex:

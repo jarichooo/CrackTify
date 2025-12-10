@@ -19,6 +19,7 @@ class HomePage:
 
         self.grid: ft.GridView | None = None
         self.activity_list: ft.ListView | None = None
+        self.activities = {}
 
     async def fetch_recent_activity(self):
         """Fetch recent activity (wrapper for actual API)"""
@@ -84,10 +85,7 @@ class HomePage:
 
         # Load async data
         self.page.run_task(self.load_stats)
-        self.page.run_task(self.load_recent_activity)
 
-        self.load_tiles()
-        self.load_recent_activity()
         
 
         # MAIN PAGE LAYOUT
@@ -164,6 +162,8 @@ class HomePage:
         self.stats["No Cracks"] = self.activities.get("overview", {}).get("total_none_cracks", 0)
 
         self.load_tiles()
+        await self.load_recent_activity()
+
         self.page.update()
     
     # ASYNC LOAD RECENT ACTIVITY

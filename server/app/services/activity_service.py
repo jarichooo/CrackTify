@@ -39,7 +39,7 @@ def fetch_recent_activity(user_id: int, db):
             .first()
         )
         activity_list.append({
-            "type": "crack_detected",
+            "type": "Crack detected",
             "crack_id": crack.id,
             "location": location[0] if location else "Unknown location",
             "severity": crack.severity,

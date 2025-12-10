@@ -266,7 +266,7 @@ class ProfilePage:
                                 on_click=lambda e: self.page.run_task(self.download_pdf),
                             ),
                             ft.ListTile(
-                                title=ft.Text("Delete My Account", color=ft.Colors.RED_100),
+                                title=ft.Text("Delete My Account", color=ft.Colors.RED),
                                 on_click=self.delete_account,
                             ),
                         ],

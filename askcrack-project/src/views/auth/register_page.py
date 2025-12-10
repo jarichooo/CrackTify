@@ -54,6 +54,7 @@ class RegisterPage(TemplatePage):
             value=self.saved_first_name,
             label="First Name",
             hint_text="Enter your first name",
+            autofocus=True,
             expand=1,
             on_change=lambda e: self.first_name.clear_error()
         )

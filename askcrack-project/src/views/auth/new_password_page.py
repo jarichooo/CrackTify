@@ -32,6 +32,7 @@ class ForgotPasswordPage(TemplatePage):
         self.new_password_input = AppTextField(
             label="New Password",
             hint_text="Enter your new password",
+            autofocus=True,
             prefix_icon=ft.Icons.LOCK,
             password=True,
             can_reveal_password=True,
