@@ -106,3 +106,5 @@ flet run # flet run --android if you want to run it on Flet mobile
 ---
 
 ## Running the Application
+In order to access the main features of the application, you must first undergo a series of authentications for the user's security.
+ 
