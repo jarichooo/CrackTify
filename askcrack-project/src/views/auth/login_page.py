@@ -35,6 +35,7 @@ class LoginPage(TemplatePage):
         self.email_input = AppTextField(
             label="Email",
             value=self.page.client_storage.get("saved_email") or None,
+            autofocus=True,
             hint_text="Enter your email",
             prefix_icon=ft.Icons.PERSON,
             keyboard_type=ft.KeyboardType.EMAIL,

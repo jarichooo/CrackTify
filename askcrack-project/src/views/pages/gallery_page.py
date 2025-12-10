@@ -131,7 +131,7 @@ class ImageGallery:
         files = sorted(self.cached_files, key=self.sort_key(), reverse=self.sort_reverse())
 
         # Clear grid
-        self.gallery_grid.controls.clear()
+        self.gallery_grid.controls.clear() if self.gallery_grid else None
 
         if not files:
             self.gallery_grid.controls.append(ft.Text("No images found."))

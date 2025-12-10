@@ -132,7 +132,7 @@ class CrackClassifier:
             valid_contours = [cnt for cnt in contours if cv2.contourArea(cnt) > 200]
 
             # Draw red contours + green bounding boxes
-            cv2.drawContours(output, valid_contours, -1, (0, 0, 255), 3)  # Red outline
+            cv2.drawContours(output, valid_contours, -1, (200, 0, 0), 3)  # Red outline
             for cnt in valid_contours:
                 x, y, w, h = cv2.boundingRect(cnt)
                 cv2.rectangle(output, (x, y), (x + w, y + h), (100, 255, 100), 3)
