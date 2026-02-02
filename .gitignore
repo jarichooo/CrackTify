@@ -12,3 +12,6 @@ __pycache__/
 .vs/
 .vscode/
 .DS_Store
+
+# Flet file picker cache
+uploads/

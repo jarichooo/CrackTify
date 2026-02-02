@@ -1,7 +1,0 @@
-from .home_page import HomePage
-from .groups_page import GroupsPage
-from .gallery_page import ImageGallery
-from .detection_history_page import DetectionHistoryPage
-from .reports_page import ReportsPage
-from .about_page import AboutPage
-from .profile_page import ProfilePage
