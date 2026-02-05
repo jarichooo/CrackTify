@@ -2,6 +2,11 @@ import asyncio
 
 import flet as ft
 
+
+from services.auth_service import login_user
+from utils.input_validation import validate_login
+from views.register_page import RegisterPage
+
 from .template import TemplatePage
 
 from widgets.inputs import TextField
@@ -36,6 +41,7 @@ class LoginPage(TemplatePage):
         login_button = PrimaryButton(
             text="Login",
             icon=ft.Icons.LOGIN,
+            on_click=self.on_login_click
         )
 
         google_button = GoogleButton(
@@ -47,7 +53,8 @@ class LoginPage(TemplatePage):
                 ft.Text("Don't have an account?", size=14),
                 CustomTextButton(
                     text="Register Here",
-                    on_tap=lambda: asyncio.create_task(self.page.push_route("/register")))
+                    on_tap=lambda: self.page.views.append(RegisterPage(self.page).build())
+                )
             ],
             alignment=ft.MainAxisAlignment.CENTER,
             spacing=5,
@@ -100,6 +107,50 @@ class LoginPage(TemplatePage):
             ),
         )
     
+    def on_login_click(self, e):
+        """Handles the login button click event."""
+        email = self.email_field.value
+        password = self.password_field.value
+
+        # Validate inputs
+        is_valid, errors = validate_login(email, password)
+
+        if is_valid:
+            self.show_loading()
+            self.page.run_task(self.user_login, email, password) # Perform login asynchronously
+
+        else:
+            # Display errors
+            self.email_input.error = errors.get("email", "")
+            self.password_input.error = errors.get("password", "")
+            self.page.update()
+
+    async def user_login(self, email, password):
+        """Perform user login asynchronously"""
+        response = await login_user(email, password)
+        self.hide_loading()
+
+        if response.get("success"):
+            # If login is successful, save the token and navigate to the home page
+            token = response.get("token")
+            user = response.get("user")
+            
+            await self.page.shared_preferences.set("auth_token", token)
+            await self.page.shared_preferences.set("user_info", user)
+
+            await self.page.push_route("/home")
+
+        else:
+            # If login fails, show an error dialog with the message from the response
+            error_dialog = ft.AlertDialog(
+                title=ft.Text("Login Failed"),
+                content=ft.Text(response.get("message", "An unknown error occurred.")),
+                actions=[
+                    ft.TextButton("OK", on_click=lambda _: self.page.pop_dialog(error_dialog))
+                ]
+            )
+            self.page.show_dialog(error_dialog)
+
     def on_forgot_password_click(self, e):
         """Handles the forgot password button click event."""
         self.email_field = TextField(

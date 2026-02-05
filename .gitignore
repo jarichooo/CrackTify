@@ -1,6 +1,8 @@
 # Python virtual environments
 venv/
-.env/
+.env
+
+build/
 
 # Python cache and bytecode
 __pycache__/
@@ -21,4 +23,3 @@ vendor/
 
 thumbnails/
 
-temps/services/

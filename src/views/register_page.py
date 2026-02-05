@@ -14,11 +14,9 @@ class RegisterPage(TemplatePage):
     def build(self) -> ft.View:
         """Builds the registration Page layout."""
         back_button = BackButton(
-            on_click=lambda: asyncio.create_task(
-                self.page.push_route("/login")
-            )
+            on_click=lambda: self.page.views.pop()
         )
-
+        
         appbar = ft.AppBar(
             leading=back_button,
         )

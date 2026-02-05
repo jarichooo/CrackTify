@@ -10,7 +10,7 @@ class TextField(ft.TextField):
         width: float | None = None,
         height: float | None = None,
         border_color: ft.Colors | None = ft.Colors.SURFACE_TINT,
-        border_radius: ft.BorderRadius | None = ft.BorderRadius.all(10),
+        border_radius: ft.BorderRadius | None = ft.BorderRadius(top_left=10, top_right=10, bottom_left=10, bottom_right=10),
         error: str | None = None,
         **kwargs
     ) -> None:
@@ -39,7 +39,7 @@ class Dropdown(ft.Dropdown):
         options: list[ft.dropdown.Option] | None = None,
         width: float | None = None,
         border_color: ft.Colors | None = ft.Colors.SURFACE_TINT,
-        border_radius: ft.BorderRadius | None = ft.BorderRadius.all(10),
+        border_radius: ft.BorderRadius | None = ft.BorderRadius(top_left=10, top_right=10, bottom_left=10, bottom_right=10),
         **kwargs
     ) -> None:
         super().__init__(
