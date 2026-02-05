@@ -1,6 +1,6 @@
 [project]
 name = "cracktify-project"
-version = "0.1.0"
+version = "0.2.0"
 description = ""
 readme = "README.md"
 requires-python = ">=3.10"
@@ -8,21 +8,42 @@ authors = [
     { name = "Flet developer", email = "you@example.com" }
 ]
 dependencies = [
-    "flet>=0.80.4"
+    "flet>=0.80.4",
+    "pyjnius==1.6.1",
+    "pillow>=10.4.0",
+    "flet-video==0.80.5",
+    "opencv-python==4.10.0.84"
+
 ]
 
 [dependency-groups]
 dev = [
     "flet-cli>=0.80.4",
     "flet-desktop>=0.80.4",
-    "flet-web>=0.80.4",
+    "flet-web>=0.80.4"
 ]
 
 [tool.flet]
 org = "com.mycompany"
-product = "cracktify-project"
+product = "Cracktify"
 company = "Flet"
 copyright = "Copyright (C) 2023-2026 by Flet"
 
+assets = ["src/assets"]
+
+compile.app = true
+compile.packages = true
+compile.cleanup = true
+
+[tool.flet.android.permissions]
+permissions = [
+    "android.permission.READ_MEDIA_IMAGES",
+    "android.permission.READ_MEDIA_VIDEO",
+    "android.permission.READ_MEDIA_AUDIO",
+    "android.permission.READ_EXTERNAL_STORAGE"
+]
+
 [tool.flet.app]
 path = "src"
+
+

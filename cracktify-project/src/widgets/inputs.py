@@ -32,3 +32,21 @@ class TextField(ft.TextField):
         self.error = None
         self.page.update()
 
+class Dropdown(ft.Dropdown):
+    def __init__(
+        self,
+        label: str | None = None,
+        options: list[ft.dropdown.Option] | None = None,
+        width: float | None = None,
+        border_color: ft.Colors | None = ft.Colors.SURFACE_TINT,
+        border_radius: ft.BorderRadius | None = ft.BorderRadius.all(10),
+        **kwargs
+    ) -> None:
+        super().__init__(
+            label=label,
+            options=options,
+            width=width,
+            border_color=border_color,
+            border_radius=border_radius,
+            **kwargs
+        )

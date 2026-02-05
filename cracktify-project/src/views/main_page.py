@@ -1,16 +1,18 @@
-from dataclasses import dataclass, field
 import os
 import asyncio
+from dataclasses import dataclass, field
+
 import flet as ft
 import flet_video as ftv
 
 from .template import TemplatePage
-# from .preview_page import PreviewPage
+from .more_page import MorePage
 
 from views.sections.home import HomeSection
 from views.sections.gallery import ImageGallery
 from views.sections.history import HistorySection
-from views.sections.about import AboutSection
+
+from utils.themes import toggle_theme
 
 @dataclass
 class State:
@@ -29,10 +31,9 @@ class MainPage(TemplatePage):
         self.home_page = HomeSection(page)
         self.gallery_page = ImageGallery(page)
         self.history_page = HistorySection(page)
-        self.about_page = AboutSection(page)
 
         self.active_section = self.home_page
-        # File picker
+      
         self.file_picker = ft.FilePicker()
 
         # Progress bars for uploads
@@ -44,11 +45,9 @@ class MainPage(TemplatePage):
             automatically_imply_leading=False,
             actions=[
                 ft.IconButton(
-                    icon=ft.Icons.PERSON,
-                    tooltip="Profile",
-                    on_click=lambda _: asyncio.create_task(
-                        self.page.push_route("/login")
-                    ),
+                    icon=ft.Icons.LIGHT_MODE if self.is_light else ft.Icons.DARK_MODE,
+                    tooltip="Toggle Theme",
+                    on_click=lambda _: toggle_theme(self.page, self.app_bar.actions[0]),
                 )
             ]
         )
@@ -81,7 +80,7 @@ class MainPage(TemplatePage):
                 ft.NavigationBarDestination(icon=ft.Icons.HOME, label="Home"),
                 ft.NavigationBarDestination(icon=ft.Icons.PHOTO_LIBRARY, label="Gallery"),
                 ft.NavigationBarDestination(icon=ft.Icons.HISTORY, label="History"),
-                ft.NavigationBarDestination(icon=ft.Icons.INFO, label="About"),
+                ft.NavigationBarDestination(icon=ft.Icons.MORE_HORIZ, label="More"),
             ],
         )
 
@@ -126,40 +125,32 @@ class MainPage(TemplatePage):
         preview_page = PreviewPage(self.page, file, self.state)
         self.page.views.append(preview_page.build())
 
-    # async def handle_file_upload(self, e: ft.Event[ft.Button]):
-    #     self.upload_button.disabled = True
-    #     self.upload_progress.visible = True
-    #     self.upload_progress.content.value = 0
-    #     self.upload_progress.update()
-
-    #     await self.state.file_picker.upload(
-    #         files=[
-    #             ft.FilePickerUploadFile(
-    #                 name=f.name,
-    #                 upload_url=self.page.get_upload_url(
-    #                     f"uploads/{f.name}", 60
-    #                 )
-    #             )
-    #             for f in self.state.picked_file
-    #         ]
-    #     )
-
 
     def on_nav_change(self, e):
         index = e.control.selected_index
         if index == 0:
             self.active_section = self.home_page
+            self.pick_file_button.visible = True
             self.app_bar.title = ft.Text("Cracktify")
+            self.app_bar.automatically_imply_leading = False
         elif index == 1:
             self.active_section = self.gallery_page
+            self.pick_file_button.visible = False
             self.app_bar.title = ft.Text("Gallery")
+            self.app_bar.automatically_imply_leading = False
         elif index == 2:
             self.active_section = self.history_page
+            self.pick_file_button.visible = False
             self.app_bar.title = ft.Text("History")
+            self.app_bar.automatically_imply_leading = False
         elif index == 3:
-            self.active_section = self.about_page
-            self.app_bar.title = ft.Text("About")
+            self.page.views.append(MorePage(self.page).build())
+            return
 
-        self.body.content = self.active_section.build()[0]
         self.app_bar.update()
+        self.body.content = self.active_section.build()[0]
+
+        if hasattr(self.active_section, "update_gallery"):
+            self.active_section.update_gallery()
+
         self.body.update()

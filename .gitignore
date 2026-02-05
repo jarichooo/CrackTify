@@ -15,3 +15,10 @@ __pycache__/
 
 # Flet file picker cache
 uploads/
+
+# Vendor packages
+vendor/
+
+thumbnails/
+
+temps/services/

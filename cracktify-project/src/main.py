@@ -1,12 +1,18 @@
-import asyncio
+
+import os
+import sys
+
+# Ensure vendor packages are in sys.path
+sys.path.append(os.path.join(os.path.dirname(__file__), "vendor"))
+
 import flet as ft
+
 from views.login_page import LoginPage
 from views.register_page import RegisterPage
 from views.forgot_password_page import ForgotPasswordPage
 from views.main_page import MainPage
 
 from views.not_found import NotFoundPage
-
 
 def main(page: ft.Page):
     page.title = "Cracktify"

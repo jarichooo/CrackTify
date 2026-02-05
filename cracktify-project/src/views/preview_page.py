@@ -1,9 +1,11 @@
-import os
 import asyncio
+import os
+import shutil
+from pathlib import Path
+
 import flet as ft
 import flet_video as ftv
 from .template import TemplatePage
-
 
 class PreviewPage(TemplatePage):
     def __init__(self, page: ft.Page, file: ft.FilePickerFile, state):
@@ -87,7 +89,7 @@ class PreviewPage(TemplatePage):
             controls=[self.app_bar, self.body],
             floating_action_button=self.upload_btn,
         )
-
+    
     async def upload_file(self, e):
         """Uploads the selected file to the server."""
         if not self.selected_file:
@@ -114,3 +116,33 @@ class PreviewPage(TemplatePage):
         self.page.update()
 
         self.page.views.pop()  # Close preview page after upload
+
+    # # TODO: FIX UPLOAD FOR ANDROID AND DESKTOP
+    # async def upload_file(self, e):
+    #     if not self.selected_file or not self.selected_file.path:
+    #         return
+
+    #     try:
+    #         uploads_dir = os.path.join(os.getenv("EXTERNAL_STORAGE"), "Android", "data", "com.mycompany.cracktify", "files", "cracktify")
+
+    #         src = Path(self.selected_file.path)
+    #         dst = os.path.join(uploads_dir, src.name)
+
+    #         shutil.copyfile(src, dst)
+
+    #         self.page.snack_bar = ft.SnackBar(
+    #             ft.Text(f"{src.name} uploaded successfully"),
+    #             bgcolor=ft.Colors.GREEN_500,
+    #         )
+    #         self.page.snack_bar.open = True
+    #         self.page.update()
+
+    #         self.page.views.pop()
+
+    #     except Exception as err:
+    #         self.page.snack_bar = ft.SnackBar(
+    #             ft.Text(f"UPLOAD ERROR: {err}"),
+    #             bgcolor=ft.Colors.RED_500,
+    #         )
+    #         self.page.snack_bar.open = True
+            # self.page.update()

@@ -2,16 +2,9 @@ import asyncio
 import flet as ft
 from config import Config
 
-from utils.screensize import get_screen_size
-
 class TemplatePage:
     def __init__(self, page: ft.Page):
         self.page = page
-
-        # Set window size to screen size
-        screen_width, screen_height = get_screen_size()
-        self.page.window.height = screen_height
-        self.page.window.width = screen_width
 
         # Loading overlay
         self.loading_overlay = ft.Container(
@@ -34,7 +27,7 @@ class TemplatePage:
         self.page.title = Config.APP_TITLE
         self.page.theme_mode = ft.ThemeMode.SYSTEM
 
-        self.is_light_theme = True if self.page.theme_mode == ft.ThemeMode.LIGHT else False
+        self.is_light = True if self.page.theme_mode == ft.ThemeMode.LIGHT else False
     
         self.page.overlay.append(self.loading_overlay)
         self.page.window.maximized = True
