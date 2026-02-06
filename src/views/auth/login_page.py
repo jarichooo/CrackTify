@@ -5,9 +5,9 @@ import flet as ft
 
 from services.auth_service import login_user
 from utils.input_validation import validate_login
-from views.register_page import RegisterPage
+from views.auth.register_page import RegisterPage
 
-from .template import TemplatePage
+from views.template import TemplatePage
 
 from widgets.inputs import TextField
 from widgets.buttons import PrimaryButton, SecondaryButton, GoogleButton, CustomTextButton, BackButton
@@ -121,8 +121,8 @@ class LoginPage(TemplatePage):
 
         else:
             # Display errors
-            self.email_input.error = errors.get("email", "")
-            self.password_input.error = errors.get("password", "")
+            self.email_field.error = errors.get("email", "")
+            self.password_field.error = errors.get("password", "")
             self.page.update()
 
     async def user_login(self, email, password):
@@ -146,7 +146,7 @@ class LoginPage(TemplatePage):
                 title=ft.Text("Login Failed"),
                 content=ft.Text(response.get("message", "An unknown error occurred.")),
                 actions=[
-                    ft.TextButton("OK", on_click=lambda _: self.page.pop_dialog(error_dialog))
+                    ft.TextButton("OK", on_click=lambda _: self.page.pop_dialog())
                 ]
             )
             self.page.show_dialog(error_dialog)

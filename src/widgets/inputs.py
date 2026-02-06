@@ -24,6 +24,7 @@ class TextField(ft.TextField):
             border_color=border_color,
             border_radius=border_radius,
             error=error,
+            on_change=lambda e: self.clear_error(),
             **kwargs
         )
 

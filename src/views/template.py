@@ -1,4 +1,5 @@
 import asyncio
+import json
 import flet as ft
 from config import Config
 
@@ -11,6 +12,7 @@ class TemplatePage:
             visible=False,
             expand=True,    
             bgcolor=ft.Colors.with_opacity(0.6, ft.Colors.BLACK),
+            alignment=ft.Alignment.CENTER,
             content=ft.Container(
                 width=120,
                 height=120,
@@ -21,6 +23,9 @@ class TemplatePage:
         )
         
         self.configure_page()
+        self.auth_token = None
+        self.saved_user = {}
+        self.page.run_task(self.load_shared_preferences)
     
     def configure_page(self):
         """Configure common page settings."""
@@ -60,6 +65,14 @@ class TemplatePage:
         """Hide the loading overlay."""
         self.loading_overlay.visible = False
         self.page.update()
+
+    async def load_shared_preferences(self):
+        raw_token = await self.page.shared_preferences.get("auth_token")
+        raw_saved_user = await self.page.shared_preferences.get("saved_user") or {}
+
+        self.auth_token = json.loads(raw_token) if raw_token else None
+        self.saved_user = json.loads(raw_saved_user) if raw_saved_user else {}
+
 
     def main_container(self, content: ft.ListView) -> ft.Container:
         """Create the main container for authentication forms."""

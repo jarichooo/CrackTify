@@ -1,0 +1,199 @@
+import asyncio
+import json
+from urllib import response
+
+import flet as ft
+
+from services.auth_service import check_email_unique
+from services.otp_service import send_otp
+from utils.input_validation import validate_registration
+
+from views.template import TemplatePage
+from views.auth.otp_page import OTPVerificationPage
+
+from widgets.inputs import TextField
+from widgets.buttons import PrimaryButton, SecondaryButton, GoogleButton, CustomTextButton, BackButton
+from widgets.dialogs import AlertDialog
+
+class RegisterPage(TemplatePage):
+    def __init__(self, page: ft.Page):
+        super().__init__(page)
+        
+    def build(self) -> ft.View:
+        """Builds the registration Page layout."""
+        google_button = GoogleButton(
+            text="Sign up with Google",
+        )
+
+        self.first_name_field = TextField(
+            label="First Name",
+            hint_text="Enter your first name",
+            autofocus=True,
+            expand=1,
+            value=self.saved_user.get("first_name", "")
+        )
+
+        self.last_name_field = TextField(
+            label="Last Name",
+            hint_text="Enter your last name",
+            expand=1,
+            value=self.saved_user.get("last_name", "")
+        )
+
+        self.email_field = TextField(
+            label="Email",
+            keyboard_type=ft.KeyboardType.EMAIL,
+            value=self.saved_user.get("email_address", "")
+        )
+
+        self.password_field = TextField(
+            label="Password",
+            password=True,
+            can_reveal_password=True,
+            value=self.saved_user.get("password_1", "")
+        )
+
+        self.confirm_password_field = TextField(
+            label="Confirm Password",
+            password=True,
+            can_reveal_password=True,
+            value=self.saved_user.get("password_2", "")
+        )
+
+        continue_button = PrimaryButton(
+            text="Continue",
+            icon=ft.Icons.ARROW_FORWARD,
+            on_click=lambda _: self.page.run_task(self.on_continue_click)
+        )
+
+        main_container = self.main_container(
+            content=ft.ListView(
+                padding=ft.Padding.only(left=20, right=20),
+                spacing=15,
+                auto_scroll=False,
+                controls=[
+                    ft.Column(
+                        [
+                            ft.Text("Let’s Register", size=28, weight="bold"),
+                            ft.Text("Create a new account", size=14),
+                        ],
+                        spacing=0,
+                        horizontal_alignment=ft.CrossAxisAlignment.CENTER,
+                    ),
+                    
+                    self.horizontal_divider(height=1, opacity=0),
+                    google_button,
+                    self.horizontal_divider(with_or=True),
+
+                    ft.Row(
+                        spacing=10,
+                        controls=[
+                            self.first_name_field,
+                            self.last_name_field
+                        ],
+                    ),
+
+                    self.email_field,
+                    self.password_field,
+                    self.confirm_password_field,
+                    self.horizontal_divider(height=1, opacity=0),
+                    continue_button,
+                ]
+            ),
+        )
+
+        return self.layout(
+            route="/register",
+            appbar=ft.AppBar(force_material_transparency=True),
+            controls=ft.Column(
+                expand=True,
+                alignment=ft.MainAxisAlignment.START,
+                horizontal_alignment=ft.CrossAxisAlignment.CENTER,
+                controls=[
+                    ft.Column(height=20),  # Spacer
+                    ft.Container(
+                        ft.Text("Cracktify", size=32, weight="bold"),
+                        alignment=ft.Alignment.CENTER,
+                    ),
+                    ft.Column(height=20),  # Spacer
+                    main_container
+                ],
+            ),
+        )
+
+    async def on_continue_click(self):
+        """Handle continue button click"""
+        first_name = self.first_name_field.value
+        last_name = self.last_name_field.value
+        email = self.email_field.value
+        password = self.password_field.value
+        confirm_password = self.confirm_password_field.value
+
+        # Validate input values
+        is_valid, errors = validate_registration(first_name, last_name, email, password, confirm_password)
+
+        if not is_valid:
+            # Display validation errors
+            self.first_name_field.error = errors.get("first_name")
+            self.last_name_field.error = errors.get("last_name")
+            self.email_field.error = errors.get("email")
+            self.password_field.error = errors.get("password")
+            self.confirm_password_field.error = errors.get("confirm_password")
+            self.page.update()
+            return
+
+        # Inputs are valid → proceed
+        self.show_loading()
+
+        try:
+            # Save user input temporarily in shared preferences
+            saved_user = {
+                "first_name": first_name,
+                "last_name": last_name,
+                "email_address": email,
+                "password_1": password,
+                "password_2": confirm_password
+            }
+            await self.page.shared_preferences.set("saved_user", json.dumps(saved_user))
+
+            # Run OTP sending safely
+            await self.handle_send_otp(email, first_name)
+
+        except Exception as ex:
+            self.hide_loading()
+            self.page.show_dialog(
+                AlertDialog(
+                    title="Error",
+                    content=f"Unexpected error: {ex}",
+                )
+            )
+
+
+    async def handle_send_otp(self, email, first_name):
+        # Check if email is unique
+        email_response = await check_email_unique(email)
+        if not email_response.get("success"):
+            self.hide_loading()
+            self.page.show_dialog(AlertDialog(
+                title="Email Already Exists",
+                content="The email address is already registered."
+            ))
+            return
+
+        # Send OTP and **await** response
+        otp_response = await send_otp(email, first_name)
+        self.hide_loading()  # hide loading after response
+
+        if not otp_response.get("success"):
+            self.page.show_dialog(AlertDialog(
+                title="OTP Failed",
+                content=otp_response.get("message", "Failed to send OTP"),
+            ))
+            return
+
+        # Navigate to OTP page only if OTP succeeded
+        self.page.views.append(
+            OTPVerificationPage(self.page, email, first_name, self.saved_user.get("last_name"), self.saved_user.get("password_2")).build()
+        )
+        self.page.update()
+
