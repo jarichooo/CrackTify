@@ -123,11 +123,11 @@ class RegisterPage(TemplatePage):
 
     async def on_continue_click(self):
         """Handle continue button click"""
-        first_name = self.first_name_field.value
-        last_name = self.last_name_field.value
-        email = self.email_field.value
-        password = self.password_field.value
-        confirm_password = self.confirm_password_field.value
+        first_name = self.first_name_field.value.strip()
+        last_name = self.last_name_field.value.strip()
+        email = self.email_field.value.strip()
+        password = self.password_field.value.strip()
+        confirm_password = self.confirm_password_field.value.strip()
 
         # Validate input values
         is_valid, errors = validate_registration(first_name, last_name, email, password, confirm_password)
@@ -193,7 +193,7 @@ class RegisterPage(TemplatePage):
 
         # Navigate to OTP page only if OTP succeeded
         self.page.views.append(
-            OTPVerificationPage(self.page, email, first_name, self.saved_user.get("last_name"), self.saved_user.get("password_2")).build()
+            OTPVerificationPage(self.page, email, first_name, self.last_name_field.value, self.password_field.value).build()
         )
         self.page.update()
 

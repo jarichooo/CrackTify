@@ -1,8 +1,10 @@
 import asyncio
+import json
 
 import flet as ft
 
 
+from config import Config
 from services.auth_service import login_user
 from utils.input_validation import validate_login
 from views.auth.register_page import RegisterPage
@@ -46,6 +48,7 @@ class LoginPage(TemplatePage):
 
         google_button = GoogleButton(
             text="Sign in with Google",
+            on_click=lambda _: self.page.run_task(self.handle_google_sign_in)
         )
 
         register_button = ft.Row(
@@ -107,6 +110,31 @@ class LoginPage(TemplatePage):
             ),
         )
     
+    async def handle_google_sign_in(self):
+        """Handles the Google sign-in button click event."""
+        from flet.auth.providers import GoogleOAuthProvider
+
+        provider = GoogleOAuthProvider(
+            client_id=Config.GOOGLE_CLIENT_ID,
+            client_secret=Config.GOOGLE_CLIENT_SECRET,
+            redirect_url=Config.GOOGLE_REDIRECT_URI
+        )
+
+        await self.page.login(provider)
+
+        # Checks if email is in database after successful Google sign-in
+        # If not, it will create a new account for the user and then navigate to the home page
+        self.page.on_login = self.on_google_login_success
+
+    def on_google_login_success(self):
+        """Handles successful Google login and navigates to the home page."""
+        # Here you would typically check if the user's email exists in your database
+        # If it doesn't, create a new user account with the information from Google
+        # Then navigate to the home page
+
+        # For demonstration, we'll just navigate to the home page directly
+        self.page.push_route("/home")
+
     def on_login_click(self, e):
         """Handles the login button click event."""
         email = self.email_field.value
@@ -121,8 +149,8 @@ class LoginPage(TemplatePage):
 
         else:
             # Display errors
-            self.email_field.error = errors.get("email", "")
-            self.password_field.error = errors.get("password", "")
+            self.email_field.error = errors.get("email")
+            self.password_field.error = errors.get("password")
             self.page.update()
 
     async def user_login(self, email, password):
@@ -136,7 +164,7 @@ class LoginPage(TemplatePage):
             user = response.get("user")
             
             await self.page.shared_preferences.set("auth_token", token)
-            await self.page.shared_preferences.set("user_info", user)
+            await self.page.shared_preferences.set("user", json.dumps(user))
 
             await self.page.push_route("/home")
 
@@ -193,7 +221,7 @@ class LoginPage(TemplatePage):
             actions=[
                 ft.TextButton(
                     content="Continue",
-                    on_click=lambda: asyncio.create_task(self.page.push_route("/forgot-password"))
+                    on_click=lambda _: asyncio.create_task(self.page.push_route("/forgot-password"))
                 )
             ],
         )

@@ -1,4 +1,5 @@
 import asyncio
+import json
 import flet as ft
 
 from services.auth_service import register_user
@@ -137,13 +138,13 @@ class OTPVerificationPage(TemplatePage):
                 self.page.show_dialog(
                     AlertDialog(
                         title="Registration Failed",
-                        content=reg_response.get("message", "Registration failed."),
+                        content=reg_response.get("message", "Registration failed.")
                     )
                 )
                 return
 
-            await self.page.shared_preferences.set("auth_token", reg_response.get("auth_token"))
-            await self.page.shared_preferences.set("user_info", reg_response.get("user_info"))
+            await self.page.shared_preferences.set("auth_token", reg_response.get("token"))
+            await self.page.shared_preferences.set("user", json.dumps(reg_response.get("user")))
 
             await self.page.push_route("/home")
 
