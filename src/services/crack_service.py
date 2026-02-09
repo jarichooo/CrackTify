@@ -1,15 +1,28 @@
 from .api_client import post_request
 
 async def fetch_cracks_service(user_id: int):
-    """Services to fetch cracks for a user."""
-    endpoint = "/cracks/fetch"
-    data = {"user_id": user_id}
-    response = await post_request(endpoint, data)
-    return response
+    """Service to fetch cracks for a user."""
+    try:
+        return await post_request(
+            "/cracks/fetch", 
+            {
+                "user_id": user_id
+            }
+        )
+    
+    except Exception as e:
+        return {"success": False, "message": str(e)}
 
-async def upload_crack_service(user_id: int, crack_data: dict):
-    """Service to upload a new crack."""
-    endpoint = "/cracks/upload"
-    data = {"user_id": user_id, "crack_data": crack_data}
-    response = await post_request(endpoint, data)
-    return response
+async def add_crack_service(user_id: int, crack_data: dict):
+    """Service to add a new crack."""
+    try:
+        return await post_request(
+            "/cracks/add",
+            {
+                "user_id": user_id,
+                "crack_data": crack_data
+            }
+        )
+    
+    except Exception as e:
+        return {"success": False, "message": str(e)}

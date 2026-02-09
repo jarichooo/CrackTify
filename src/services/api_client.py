@@ -48,7 +48,7 @@ async def post_request(endpoint: str, data: Dict[str, Any], headers: Dict[str, s
     print(f"[DEBUG] Payload: {data}")
     print(f"[DEBUG] Headers: {headers}")
 
-    async with httpx.AsyncClient(timeout=20) as client:
+    async with httpx.AsyncClient(timeout=10) as client:
         try:
             response = await client.post(url, json=data, headers=headers)
             print(f"[DEBUG] Raw HTTP Response: {response.status_code} {response.text}")
@@ -85,7 +85,7 @@ async def get_request(
         dict: Server JSON response, or a dict with success=False if network error
     """
     try:
-        async with httpx.AsyncClient(timeout=20) as client:
+        async with httpx.AsyncClient(timeout=10) as client:
             response = await client.get(f"{api_url}{endpoint}", headers=headers)
             # Do NOT raise for status — preserve backend success field
             return response.json()

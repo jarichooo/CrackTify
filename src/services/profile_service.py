@@ -16,9 +16,15 @@ async def update_profile(profile_data: Dict[str, Any], new_password: str = None)
         f"/profile/update/{user_id}",
         {
             "profile_data": profile_data,
-            "new_password": new_password
         }
     )
+
+async def get_current_user(user_id: str) -> Dict[str, Any]:
+    try:
+        return await get_request(f"/profile/{user_id}", {})
+        
+    except Exception as e:
+        return {"success": False, "message": str(e)}
 
 async def verify_user_password(user_id: int, old_password: str) -> Dict[str, Any]:
     return await post_request(
