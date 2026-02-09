@@ -1,5 +1,6 @@
 
 import asyncio
+import json
 import os
 import sys
 
@@ -8,70 +9,55 @@ sys.path.append(os.path.join(os.path.dirname(__file__), "vendor"))
 
 import flet as ft
 
+from widgets.dialogs import AlertDialog
 from views.auth.login_page import LoginPage
 from views.main_page import MainPage
+from views.more_page import MorePage
 
 from views.not_found import NotFoundPage
 
 from services.api_client import verify_connection
+from services.profile_service import get_current_user
 
 async def main(page: ft.Page):
     """Main function to initialize the Flet application."""
+    page.title = "Cracktify" # Set the window title
 
+    def pop_return():
+        page.pop_dialog()
+        sys.exit(0)
+    
+    # Verify API connection before proceeding
     connection_ok = await verify_connection()
     if not connection_ok:
-        page.add(
-            ft.AlertDialog(
-                title=ft.Text("Connection Error"),
-                content=ft.Text("Unable to connect to the API server. Please check your internet connection and try again."),
-                actions=[
-                    ft.TextButton("OK", on_click=lambda e: page.window_destroy())
-                ],
-                actions_alignment=ft.MainAxisAlignment.END,
-            )
+        conn_error_dialog = AlertDialog(
+            title="Connection Error",
+            content="Unable to connect to the API server. Please check your internet connection and try again.",
+            actions=[
+                ft.TextButton("OK", on_click=lambda e: pop_return())
+            ],
+            actions_alignment=ft.MainAxisAlignment.END,
         )
-        page.update()
+        page.show_dialog(conn_error_dialog)
         return
-
-    def window_event(e: ft.WindowEvent):
-        # Intercept the window close event to show a confirmation dialog
-        if e.type == ft.WindowEventType.CLOSE:
-            page.show_dialog(confirm_dialog)
-            page.update()
-
-    page.title = "Cracktify" # Set the window title
-    page.window.prevent_close = True # Prevent the window from closing immediately 
-    page.window.on_event = window_event # Attach the window event handler
-
-    async def handle_yes_click(e: ft.Event[ft.Button]):
-        # Close the confirmation dialog and then close the window
-        await page.window.destroy()
-
-    def handle_no_click(e: ft.Event[ft.OutlinedButton]):
-        # Close the confirmation dialog without closing the window
-        page.pop_dialog()
-        page.update()
-
-    # Create the confirmation dialog
-    confirm_dialog = ft.AlertDialog(
-        modal=True,
-        title=ft.Text("Please confirm"),
-        content=ft.Text("Do you really want to exit this app?"),
-        actions=[
-            ft.Button(content="Yes", on_click=handle_yes_click),
-            ft.OutlinedButton(content="No", on_click=handle_no_click),
-        ],
-        actions_alignment=ft.MainAxisAlignment.END,
-    )
-
-    def route_change():
+    
+    async def route_change():
         # Clear existing views and push the new view based on the current route
+        raw_user = await page.shared_preferences.get("user")
+        user = json.loads(raw_user) if raw_user else {}
+
         page.views.clear()
         if page.route == "/home" or page.route == "/":
-            page.views.append(MainPage(page).build())
+            main_page = MainPage(page, user)
+            page.views.append(main_page.build())
 
         elif page.route == "/login":
-            page.views.append(LoginPage(page).build())
+            login_page = LoginPage(page)
+            page.views.append(login_page.build())
+
+        elif page.route == "/more":
+            more_page = MorePage(page, user)
+            page.views.append(more_page.build())
 
         else:
             page.views.append(NotFoundPage(page).build())
@@ -85,20 +71,21 @@ async def main(page: ft.Page):
             top_view = page.views[-1]
             await page.push_route(top_view.route)
 
+
     # Attach the route change and view pop handlers
     page.on_route_change = route_change
     page.on_view_pop = view_pop
 
     # Check for auth token in shared preferences to determine initial route
     auth_token = await page.shared_preferences.get("auth_token")
+    
     if auth_token:
         page.route = "/home"
     else:
         page.route = "/login"
 
-    route_change() # Manually trigger route change to load the initial view
+    await route_change() # Manually trigger route change to load the initial view
+
 
 if __name__ == "__main__":
     ft.run(main, upload_dir="uploads")
-
-
