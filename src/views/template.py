@@ -23,10 +23,10 @@ class TemplatePage:
         )
         
         self.configure_page()
-        self.auth_token = None
-        self.saved_user = {}
+        self.saved_user: dict = {}
+        self.auth_token: str | None = None
         self.page.run_task(self.load_shared_preferences)
-    
+        
     def configure_page(self):
         """Configure common page settings."""
         self.page.title = Config.APP_TITLE
@@ -35,7 +35,9 @@ class TemplatePage:
         self.is_light = True if self.page.theme_mode == ft.ThemeMode.LIGHT else False
     
         self.page.overlay.append(self.loading_overlay)
-        self.page.window.maximized = True
+        self.page.window.maximized = False
+        self.page.window.height = 720
+        self.page.window.width = 400
 
     def horizontal_divider(
         self, 
@@ -67,12 +69,9 @@ class TemplatePage:
         self.page.update()
 
     async def load_shared_preferences(self):
-        raw_token = await self.page.shared_preferences.get("auth_token")
-        raw_saved_user = await self.page.shared_preferences.get("saved_user") or {}
-
-        self.auth_token = json.loads(raw_token) if raw_token else None
+        raw_saved_user = await self.page.shared_preferences.get("saved_user")
         self.saved_user = json.loads(raw_saved_user) if raw_saved_user else {}
-
+        self.auth_token = await self.page.shared_preferences.get("auth_token")
 
     def main_container(self, content: ft.ListView) -> ft.Container:
         """Create the main container for authentication forms."""

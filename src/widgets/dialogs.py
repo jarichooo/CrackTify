@@ -12,7 +12,7 @@ class AlertDialog(ft.AlertDialog):
 
         super().__init__(
             title=ft.Text(title),
-            content=ft.Text(content),
+            content=ft.Text(content) if type(content) is str else content,
             actions=actions,
             **kwargs
         )

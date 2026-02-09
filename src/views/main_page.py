@@ -1,5 +1,6 @@
 import os
 import asyncio
+import json
 from dataclasses import dataclass, field
 
 import flet as ft
@@ -21,16 +22,16 @@ class State:
 
 
 class MainPage(TemplatePage):
-    def __init__(self, page: ft.Page):
+    def __init__(self, page: ft.Page, user: dict = None):
         super().__init__(page)
 
         # Initialize state
         self.state = State()
 
         # Initialize page sections instances for navigation
-        self.home_page = HomeSection(page)
-        self.gallery_page = ImageGallery(page)
-        self.history_page = HistorySection(page)
+        self.home_page = HomeSection(page, user)
+        self.gallery_page = ImageGallery(page, user)
+        self.history_page = HistorySection(page, user)
 
         self.active_section = self.home_page
       
@@ -39,10 +40,13 @@ class MainPage(TemplatePage):
         # Progress bars for uploads
         self.prog_bar: dict[str, ft.ProgressRing] = {}
 
+        self.user: dict = user
+
     def build(self) -> ft.View:
         self.app_bar = ft.AppBar(
             title=ft.Text("Cracktify"),
             automatically_imply_leading=False,
+            force_material_transparency=True,
             actions=[
                 ft.IconButton(
                     icon=ft.Icons.LIGHT_MODE if self.is_light else ft.Icons.DARK_MODE,
@@ -59,8 +63,8 @@ class MainPage(TemplatePage):
             expand=True,
         )
 
-
         self.body = ft.Container(
+            padding=20,
             expand=True,
             alignment=ft.Alignment.CENTER,
             content=self.active_section.build()[0]
@@ -68,6 +72,8 @@ class MainPage(TemplatePage):
 
         # Floating button to trigger picker
         self.pick_file_button = ft.FloatingActionButton(
+            content=ft.Text("New Detection"),
+            mini=True,
             icon=ft.Icons.UPLOAD_FILE,
             tooltip="Select File",
             on_click=self.handle_files_pick,
@@ -83,7 +89,7 @@ class MainPage(TemplatePage):
                 ft.NavigationBarDestination(icon=ft.Icons.MORE_HORIZ, label="More"),
             ],
         )
-
+    
         return self.layout(
             route="/home",
             appbar=self.app_bar,
@@ -98,6 +104,7 @@ class MainPage(TemplatePage):
         )
     
     def on_upload_progress(self, e: ft.FilePickerUploadEvent):
+        """Handle file upload progress events and update the progress bar accordingly."""
         self.upload_progress.visible = True
         self.upload_progress.content.value = e.progress
         self.upload_progress.update()
@@ -107,6 +114,7 @@ class MainPage(TemplatePage):
             self.preview_content.update()
 
     async def handle_files_pick(self, e: ft.Event[ft.Button]):
+        """Handle file picking and navigate to preview page with the selected file."""
         self.state.file_picker = ft.FilePicker()
 
         files = await self.state.file_picker.pick_files(
@@ -122,35 +130,40 @@ class MainPage(TemplatePage):
 
         # Create preview page with file and push it
         from .preview_page import PreviewPage
-        preview_page = PreviewPage(self.page, file, self.state)
+        preview_page = PreviewPage(self.page, file, self.state, self.user)
         self.page.views.append(preview_page.build())
 
-
     def on_nav_change(self, e):
+        """Handle navigation bar changes and update the active section accordingly."""
         index = e.control.selected_index
+
         if index == 0:
             self.active_section = self.home_page
-            self.pick_file_button.visible = True
             self.app_bar.title = ft.Text("Cracktify")
             self.app_bar.automatically_imply_leading = False
+
         elif index == 1:
             self.active_section = self.gallery_page
-            self.pick_file_button.visible = False
             self.app_bar.title = ft.Text("Gallery")
             self.app_bar.automatically_imply_leading = False
+
         elif index == 2:
             self.active_section = self.history_page
-            self.pick_file_button.visible = False
             self.app_bar.title = ft.Text("History")
             self.app_bar.automatically_imply_leading = False
+
         elif index == 3:
-            self.page.views.append(MorePage(self.page).build())
+            more_page = MorePage(self.page, self.user)
+            self.page.views.append(more_page.build())
             return
 
         self.app_bar.update()
         self.body.content = self.active_section.build()[0]
 
-        if hasattr(self.active_section, "update_gallery"):
-            self.active_section.update_gallery()
+        if hasattr(self.active_section, "load_files"):
+            asyncio.create_task(self.active_section.load_files())
+            
+        if hasattr(self.active_section, "load_history"):
+            asyncio.create_task(self.active_section.load_history())
 
         self.body.update()

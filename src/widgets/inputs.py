@@ -12,6 +12,7 @@ class TextField(ft.TextField):
         border_color: ft.Colors | None = ft.Colors.SURFACE_TINT,
         border_radius: ft.BorderRadius | None = ft.BorderRadius(top_left=10, top_right=10, bottom_left=10, bottom_right=10),
         error: str | None = None,
+        on_change = None,
         **kwargs
     ) -> None:
         super().__init__(
@@ -24,7 +25,7 @@ class TextField(ft.TextField):
             border_color=border_color,
             border_radius=border_radius,
             error=error,
-            on_change=lambda e: self.clear_error(),
+            on_change=on_change if on_change is not None else lambda _: self.clear_error(),
             **kwargs
         )
 
