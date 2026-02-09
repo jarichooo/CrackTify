@@ -7,11 +7,14 @@ import flet as ft
 import flet_video as ftv
 from .template import TemplatePage
 
+from services.crack_service import add_crack_service
+
 class PreviewPage(TemplatePage):
-    def __init__(self, page: ft.Page, file: ft.FilePickerFile, state):
+    def __init__(self, page: ft.Page, file: ft.FilePickerFile, state, user):
         super().__init__(page)
         self.selected_file = file
         self.state = state
+        self.user = user
 
         # Determine file type
         ext = file.name.lower().rsplit('.', 1)[-1]
@@ -61,7 +64,7 @@ class PreviewPage(TemplatePage):
             content="Upload",
             icon=ft.Icons.CLOUD_UPLOAD,
             tooltip="Upload",
-            on_click=self.upload_file,
+            on_click=self.handle_upload_file,
         )
 
         # Close button
@@ -90,59 +93,53 @@ class PreviewPage(TemplatePage):
             floating_action_button=self.upload_btn,
         )
     
-    async def upload_file(self, e):
-        """Uploads the selected file to the server."""
+    async def handle_upload_file(self, e):
+        """Handles the upload button click event."""
+        from services.file_service import upload_file
+
         if not self.selected_file:
             return
-        
-        await self.state.file_picker.upload(
-            files=[
-                ft.FilePickerUploadFile(
-                    name=f.name,
-                    upload_url=self.page.get_upload_url(
-                        f"{f.name}", 60
-                    )
+
+        self.show_loading()
+        self.upload_btn.disabled = True
+        self.upload_btn.update()
+        try:
+            result = await upload_file(self.selected_file.path)
+
+            user_id = self.user.get("id")
+            crack_data = {
+                "user_id": user_id,
+                "file_url": result.get("url"),
+                "probability": 0.7,  # Placeholder
+                "severity": "N/A",
+            }
+
+            add_response = await add_crack_service(user_id, crack_data)
+
+            self.page.show_dialog(
+                ft.SnackBar(
+                    ft.Text("Uploaded successfully!"),
+                    bgcolor=ft.Colors.GREEN_500,
                 )
-                for f in self.state.picked_file
-            ]
-        )
+            )
+            self.page.views.pop()
 
-        # Show snackbar
-        self.snack_bar = ft.SnackBar(
-            ft.Text(f"{self.selected_file.name} uploaded successfully!"),
-            bgcolor=ft.Colors.GREEN_500,
-        )
-        self.page.show_dialog(self.snack_bar)
-        self.page.update()
-
-        self.page.views.pop()  # Close preview page after upload
-
-    # # TODO: FIX UPLOAD FOR ANDROID AND DESKTOP
-    # async def upload_file(self, e):
-    #     if not self.selected_file or not self.selected_file.path:
-    #         return
-
-    #     try:
-    #         uploads_dir = os.path.join(os.getenv("EXTERNAL_STORAGE"), "Android", "data", "com.mycompany.cracktify", "files", "cracktify")
-
-    #         src = Path(self.selected_file.path)
-    #         dst = os.path.join(uploads_dir, src.name)
-
-    #         shutil.copyfile(src, dst)
-
-    #         self.page.snack_bar = ft.SnackBar(
-    #             ft.Text(f"{src.name} uploaded successfully"),
-    #             bgcolor=ft.Colors.GREEN_500,
-    #         )
-    #         self.page.snack_bar.open = True
-    #         self.page.update()
-
-    #         self.page.views.pop()
-
-    #     except Exception as err:
-    #         self.page.snack_bar = ft.SnackBar(
-    #             ft.Text(f"UPLOAD ERROR: {err}"),
-    #             bgcolor=ft.Colors.RED_500,
-    #         )
-    #         self.page.snack_bar.open = True
-            # self.page.update()
+        except Exception as err:
+            self.page.show_dialog(
+                ft.SnackBar(
+                    ft.Text(f"Upload failed: {err}"),
+                    bgcolor=ft.Colors.RED_500,
+                )
+            )
+            self.page.show_dialog(
+                ft.SnackBar(
+                    ft.Text(f"Upload failed: {err}"),
+                    bgcolor=ft.Colors.RED_500,
+                )
+            )
+            self.page.update()
+            
+        finally:
+            self.hide_loading()
+            self.upload_btn.disabled = False
+            self.upload_btn.update()
