@@ -64,8 +64,6 @@ class ImageGallery:
             content=ft.Column()
         )
 
-        self.page.run_task(self.load_files)
-
         return [self.body]
 
     async def load_files(self):
@@ -96,7 +94,8 @@ class ImageGallery:
         old_ids = {f["id"] for f in self.files}
         new_ids = {f["id"] for f in new_files}
 
-        if new_ids == old_ids:
+        if (new_ids == old_ids) and self.files != []: # if both is equal but not empty, no changes and new feches is not empty
+            print("Gallery: No changes in files.")
             return  # nothing changed → no UI update
 
         # Update only if changed
@@ -123,7 +122,8 @@ class ImageGallery:
             self.body.content = ft.Column(
                 controls=[
                     ft.Icon(ft.Icons.BROKEN_IMAGE, size=64, color=ft.Colors.GREY),
-                    ft.Text("No files uploaded yet. Detect some cracks to see gallery.", size=16, color=ft.Colors.GREY),
+                    ft.Text("No files uploaded yet.", size=16, color=ft.Colors.GREY),
+                    ft.Text("Detect some cracks to see gallery.", size=16, color=ft.Colors.GREY),
                 ],
                 alignment=ft.MainAxisAlignment.CENTER,
                 horizontal_alignment=ft.CrossAxisAlignment.CENTER,
@@ -191,5 +191,12 @@ class ImageGallery:
             height=size,
             border_radius=10,
             clip_behavior=ft.ClipBehavior.HARD_EDGE,
-            on_click=lambda _: print("Open preview:", url),
+            on_click=lambda _: self.show_full(file),
+        )
+
+    def show_full(self, file: dict):
+        """Show the gallery in a full-page view."""
+        from views.sections.full_view import FullViewPage
+        self.page.views.append(
+            FullViewPage(self.page, file.get("file_url")).build()
         )

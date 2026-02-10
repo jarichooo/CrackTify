@@ -1,27 +1,348 @@
+import asyncio
 from typing import List
-from pathlib import Path
-
 import flet as ft
+import flet_lottie as ftl
 
 class HomeSection:
     def __init__(self, page: ft.Page, user):
         self.page = page
         self.user = user
+        self.header_index = 0 # Start with the first header state
 
-    def build(self) -> List[ft.Control]:
-        """Builds the about Page layout."""
-        # self.recent_
-        self.body = ft.Container(
-            alignment=ft.Alignment.CENTER,
-            expand=True,
-            content=ft.Text(
-                value="Welcome to the Home Page!",
-                size=24,
-                weight="bold",
-                color=ft.Colors.PRIMARY
-            )
+        # Define header states with text and corresponding Lottie animation URLs
+        self.header_states = [
+            {
+                "text": f"Hello,\n{self.user.get('first_name', 'User')}!",
+                "lottie": "https://lottie.host/70c56776-19ff-4847-b384-e93db9f84eff/jhhLCVXM5i.json",
+            },
+            {
+                "text": "Crack the code.\nLevel up your skills.",
+                "lottie": "https://lottie.host/b9c2c1c3-251e-4429-84bd-7e01f5494881/04fQlqqIzI.json",
+            },
+            {
+                "text": "Every crack leads\nto discovery.",
+                "lottie": "https://lottie.host/dd1339c6-836f-4233-885f-70642daa2a64/PQgmgLrzYI.json",
+            },
+            {
+                "text": "Cracktify\nyour curiosity.",
+                "lottie": "https://lottie.host/b7449fb3-0234-4294-8537-dd8da8863241/Q80p9HiW2S.json",
+            },
+            {
+                "text": "Break the limits.\nFind the crack.",
+                "lottie": "https://lottie.host/8949bf4b-3fb2-481c-8900-2a770573497d/d3H80coEST.json",
+            },
+            {
+                "text": "Think deeper.\nCrack smarter.",
+                "lottie": "https://lottie.host/0a4df0d8-fc9d-47c1-818b-470a31dd0888/QVKgINrlWC.json",
+            },
+            {
+                "text": "One crack at a time.\nMaster the unknown.",
+                "lottie": "https://lottie.host/12a053ab-0a52-41ad-8760-0c2c0b492ac2/sITwjOvf3X.json",
+            },
+            {
+                "text": "A mouse finds its way\nthrough cracks. So will you.",
+                "lottie": "https://lottie.host/c5f163ee-bdd5-4aa6-9833-3081b3dbe752/EiZ7MUjUSr.json",
+            }
+        ]
+
+        # Build header controls
+        self.text_control = ft.Text(
+            value=self.header_states[0]["text"],
+            size=23,
+            weight=ft.FontWeight.BOLD,
+            color=ft.Colors.PRIMARY,
+            text_align=ft.TextAlign.LEFT,
         )
 
-        return [
-            self.body
-        ]
+        self.text_container = ft.Container(
+            expand=2,
+            content=self.text_control,
+            opacity=1,
+            offset=ft.Offset(0, 0),
+            animate_opacity=400,
+            animate_offset=400,
+            alignment=ft.Alignment.CENTER_LEFT,
+            width=self.page.width * 0.6 if self.page.width else 300,
+        )
+
+        self.lottie_control = ftl.Lottie(
+            src=self.header_states[0]["lottie"],
+            animate=True,
+            repeat=True,
+            fit=ft.BoxFit.CONTAIN,
+        )
+
+        self.lottie_container = ft.Container(
+            expand=1,
+            content=self.lottie_control,
+            height=self.page.height * 0.30 if self.page.height else 240,
+            opacity=1,
+            offset=ft.Offset(0, 0),
+            animate_opacity=400,
+            animate_offset=400,
+            # right=-20,
+            # top=-40,
+            alignment=ft.Alignment.CENTER_RIGHT,
+            width=self.page.width * 0.4 if self.page.width else 300,
+        )
+
+        # Initialize stats and recents data
+        self.stats = {}
+        self.recents_data: list[dict] = []
+
+    def build(self) -> List[ft.Control]:
+        """Build the home section UI."""
+        self.header = ft.Container(
+            width=self.page.width,
+            expand=1,
+            alignment=ft.Alignment.TOP_CENTER,
+            content=ft.Row(
+                controls=[
+                    self.lottie_container,  # Right
+                    self.text_container,    # Left
+                ],
+            ),
+        )
+
+        # Start animation loop
+        # self.page.run_task(self.rotate_header_loop)
+
+        self.stat_container = ft.Container(
+            width=self.page.width,
+            expand=1,
+            content=ft.Column(
+                controls=[
+                    ft.Text("Stats", size=20),
+                    ft.Row(
+                        spacing=10,
+                        controls=[
+                            self.create_info_tile(
+                                "Total", self.stats.get("total_cracks", 0), ft.Colors.with_opacity(0.8, ft.Colors.BLUE_900)
+                            ),
+                            self.create_info_tile(
+                                "Severe", self.stats.get("total_severe_cracks", 0), ft.Colors.with_opacity(0.8, ft.Colors.RED_900)   
+                            ),
+                            self.create_info_tile(
+                                "Mild", self.stats.get("total_mild_cracks", 0), ft.Colors.with_opacity(0.8, ft.Colors.YELLOW_900)
+                            ),
+                            self.create_info_tile(
+                                "Low", self.stats.get("total_none_cracks", 0), ft.Colors.with_opacity(0.8, ft.Colors.GREEN_900)
+                            ),
+                        ]
+                    )
+                ],
+            ),
+        )
+
+        self.recent_list = ft.ListView(
+            expand=True,
+            spacing=10,
+        )
+
+        self.recent_container = ft.Container(
+            expand=3,
+            content=ft.Column(
+                controls=[
+                    ft.Text("Recents", size=20),
+                    self.recent_list
+                ]
+            ),   
+        )
+
+        self.page.run_task(self.load_data)
+
+        # Body
+        self.body = ft.Column(
+            controls=[
+                self.header,
+                self.stat_container,
+                self.recent_container,
+            ],
+            spacing=0,
+        )
+
+        return [self.body]
+
+    async def rotate_header_loop(self):
+        """Continuously rotate through header states with animation."""
+        again_count = 0
+        while True:
+            await asyncio.sleep(7)  # Wait before rotating to the next header state
+            # Animate OUT
+            self.text_container.opacity = 0
+            self.text_container.offset = ft.Offset(0, -0.1)
+            self.lottie_container.opacity = 0
+            self.lottie_container.offset = ft.Offset(0, -0.1)
+
+            self.page.update()
+            await asyncio.sleep(0.45)
+
+            # Swap content
+            self.header_index = (self.header_index + 1) % len(self.header_states)
+            state = self.header_states[self.header_index]
+
+            if state["text"] == self.header_states[0]["text"]:
+                if again_count >= 5:  # Reset after 5 "again"s to prevent it from getting too long
+                    again_count = 0
+                    continue # Skip updating text to original "Hello, User!" for one cycle to avoid it looking weird with "Hello again again again again again, User!"
+                again_count += 1
+
+            self.text_control.value = state["text"].replace("Hello", f"Hello{' again' * again_count}")
+            self.lottie_control.src = state["lottie"]
+
+            # Prepare IN
+            self.text_container.offset = ft.Offset(0, 0.1)
+            self.lottie_container.offset = ft.Offset(0, 0.1)
+            self.page.update()
+            await asyncio.sleep(0.05)
+
+            # Animate IN
+            self.text_container.opacity = 1
+            self.text_container.offset = ft.Offset(0, 0)
+            self.lottie_container.opacity = 1
+            self.lottie_container.offset = ft.Offset(0, 0)
+            self.page.update()
+
+    async def load_data(self):
+        """Load data for stats and recents."""
+        from services.crack_service import fetch_cracks_service
+        self.recent_list.controls = [ft.ProgressBar()]  # Show loading indicator while fetching data
+        self.page.update()
+
+        if self.recents_data:
+            self.update_home()
+            
+        # Fetch in background
+        crack_resp = await fetch_cracks_service(self.user.get("id"))
+
+        if not crack_resp.get("success"):
+            self.recent_container.content = ft.Text(
+                "Failed to load recents.", 
+                size=16, 
+                color=ft.Colors.RED
+            )
+            self.page.update()
+            return
+        
+        # Compare old and new data to determine if UI update is needed
+        old_stats = self.stats
+        old_recents = self.recents_data
+
+        new_stats = crack_resp.get("stats", {})
+        new_recents = crack_resp.get("cracks", [])[:5]  # Get top 7 recent cracks
+
+        if new_stats == old_stats and new_recents == old_recents and self.recents_data != []: # if both is equal but not empty, no changes and new feches is not empty
+            print("Home: No changes in stats or recents.")
+            return  # nothing changed → no UI update
+        
+        self.stats = new_stats
+        self.recents_data = new_recents
+        self.update_home()
+        
+    def update_home(self):
+        """Public method to trigger data refresh on the home section."""
+        import datetime
+        from services.crack_service import fetch_cracks_service
+
+        self.recent_list.controls.clear()  # Clear existing recent items
+
+        if not self.recents_data: # If no recents found, show message
+            self.recent_container.content.controls[1] = ft.Column(
+                controls=[
+                    ft.Text("No recents found.", size=16, color=ft.Colors.GREY),
+                    ft.Text("Detect some cracks to see your recent uploads.", size=16, color=ft.Colors.GREY),
+                ]
+            )
+            self.page.update()
+            return
+        
+        for crack in self.recents_data:
+            # Extract relevant info with fallbacks
+            severity = crack.get("severity", "Unknown Severity")
+            probability = crack.get("probability", 0)
+            date_str = crack.get("detected_at", "")
+            
+            date = date_str.split("T")[0] if "T" in date_str else date_str
+            time = date_str.split("T")[1].split(".")[0] if "T" in date_str else ""
+
+            thumb_image = self.build_thumb(crack)
+
+            bgcolor = ft.Colors.GREEN if severity == "Low" else ft.Colors.YELLOW if severity == "Medium" else ft.Colors.RED if severity == "High" else ft.Colors.GREY
+
+            self.recent_list.controls.append(
+                ft.ListTile(
+                    leading=thumb_image,
+                    title=ft.Column(
+                        controls=[
+                            ft.Text(f"Crack ID: {crack.get('id', 'N/A')}", size=16, weight="bold"),
+                            ft.Text(f"Status: {severity} ({probability*100:.1f}%)", size=14),
+                        ],
+                        spacing=2,
+                    ),
+                    subtitle=ft.Text(f"Uploaded on {date} at {time}", size=12, color=ft.Colors.GREY),
+                    is_three_line=True,
+                    bgcolor=ft.Colors.with_opacity(0.1, bgcolor),
+                    shape=ft.RoundedRectangleBorder(radius=10),
+                )
+            )
+
+        self.page.update()
+
+    def create_info_tile(self, title, value, bg_color):
+        return ft.Container(
+            padding=10,
+            expand=1,
+            bgcolor=bg_color,
+            border_radius=10,
+            alignment=ft.Alignment.CENTER,
+            content=ft.Column(
+                controls=[
+                    ft.Text(str(value), size=18, weight="bold"),
+                    ft.Text(title, size=14),
+                ],
+                alignment=ft.MainAxisAlignment.CENTER,
+                horizontal_alignment=ft.CrossAxisAlignment.CENTER,
+                spacing=10,
+            )
+        )
+    
+    def build_thumb(self, file: dict) -> ft.Control:
+        """Build a thumbnail control for a given file."""
+        from utils.file_utils import get_file_type, get_video_thumbnail
+        size = 60
+        url = file.get("file_url") # Assuming the file dict has a 'file_url' key with the Cloudinary URL
+        thumb_url = url # Default thumbnail is the file itself
+
+        is_video = get_file_type(url) == "video"  # Check if the file is a video to generate a thumbnail
+        if is_video:
+            thumb_url = get_video_thumbnail(url)
+
+        thumbnail_img = ft.Image(
+            src=thumb_url,
+            width=size,
+            height=size,
+            fit=ft.BoxFit.COVER,
+        )
+
+        content = ft.Stack(
+            controls=[
+                thumbnail_img,
+                ft.Container(
+                    content=ft.Icon(
+                        ft.Icons.PLAY_CIRCLE_FILL, size=48, color=ft.Colors.WHITE
+                    ),
+                    alignment=ft.Alignment.CENTER,
+                    visible=is_video,
+                    bgcolor=ft.Colors.with_opacity(0.35, ft.Colors.BLACK),
+                ),
+            ]
+        )
+
+        return ft.Container(
+            content=content,
+            width=size,
+            height=size,
+            border_radius=10,
+            clip_behavior=ft.ClipBehavior.HARD_EDGE,
+            on_click=lambda _: print("Open preview:", url),
+        )

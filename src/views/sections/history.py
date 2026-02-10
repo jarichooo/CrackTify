@@ -39,6 +39,7 @@ class HistorySection(ImageGallery):
 
         # Fetch in background
         res = await fetch_cracks_service(self.user.get("id"))
+        
         if not res.get("success"):
             self.history_body.content = ft.Text(
                 "Failed to load history.",
@@ -55,7 +56,8 @@ class HistorySection(ImageGallery):
         old_ids = {f["id"] for f in self.crack_files}
         new_ids = {f["id"] for f in new_files}
 
-        if new_ids == old_ids:
+        if new_ids == old_ids and self.crack_files != []: # if both is equal but not empty, no changes and new feches is not empty
+            print("History: No changes in files.")
             return  # nothing changed → no UI update
         
         self.crack_files = new_files
@@ -70,7 +72,8 @@ class HistorySection(ImageGallery):
             self.history_body.content = ft.Column(
                 controls=[
                     ft.Icon(ft.Icons.HISTORY, size=64, color=ft.Colors.GREY),
-                    ft.Text("No history found. Detect some cracks to see history.", size=16, color=ft.Colors.GREY),
+                    ft.Text("No history found.", size=16, color=ft.Colors.GREY),
+                    ft.Text("Detect some cracks to see history.", size=16, color=ft.Colors.GREY),
                 ],
                 alignment=ft.MainAxisAlignment.CENTER,
                 horizontal_alignment=ft.CrossAxisAlignment.CENTER,
