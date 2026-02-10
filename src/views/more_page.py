@@ -1,3 +1,4 @@
+import asyncio
 import json
 import flet as ft
 
@@ -6,6 +7,7 @@ from .edit_user_page import EditUserPage
 
 from widgets.buttons import PrimaryButton, SecondaryButton
 from widgets.inputs import TextField
+from widgets.dialogs import AlertDialog
 
 from services.profile_service import verify_user_password, update_profile, delete_account
 from services.otp_service import send_otp, verify_otp
@@ -113,7 +115,7 @@ class MorePage(TemplatePage):
                             ),
                             ft.ListTile(
                                 title=ft.Text("Delete Account", color=ft.Colors.RED),
-                                # on_click=self.delete_account,
+                                on_click=self.delete_account,
                             ),
                         ],
                         tight=True,
@@ -150,6 +152,7 @@ class MorePage(TemplatePage):
         )
 
     def refresh_user(self, updated_user):
+        """Updates the user information displayed on the MorePage after editing."""
         self.user = updated_user
 
         # Update the controls directly
@@ -160,6 +163,7 @@ class MorePage(TemplatePage):
         self.page.update()
         
     async def on_infos_click(self, e):
+        """Navigates to the EditUserPage when the user info section is clicked."""
         edit_page = EditUserPage(
             self.page, 
             self.user,
@@ -168,6 +172,67 @@ class MorePage(TemplatePage):
         self.page.views.append(edit_page.build())
 
     async def on_logout_click(self, e):
-        await self.page.shared_preferences.remove("auth_token")
-        await self.page.shared_preferences.remove("user")
-        await self.page.push_route("/login")
+        """Shows a confirmation dialog before logging out."""
+        self.page.show_dialog(
+            AlertDialog(
+                title="Confirm Logout",
+                content="Are you sure you want to log out?",
+                actions=[
+                    SecondaryButton("Cancel", on_click=lambda _: self.page.pop_dialog()),
+                    PrimaryButton("Logout", on_click=confirm_logout)
+                ]
+            )
+        )
+        async def confirm_logout(e):
+            await self.page.shared_preferences.remove("auth_token")
+            await self.page.shared_preferences.remove("user")
+            await self.page.push_route("/login")
+
+    async def delete_account(self, e):
+        """Shows a confirmation dialog before deleting the account."""
+        self.page.show_dialog(
+            AlertDialog(
+                title="Confirm Account Deletion",
+                content="Are you sure you want to delete your account? This action cannot be undone.",
+                actions=[
+                    SecondaryButton("Cancel", on_click=lambda _: self.page.pop_dialog()),
+                    PrimaryButton("Delete", color=ft.Colors.RED, on_click=lambda _: asyncio.create_task(confirm_delete()))
+                ]
+            )
+        )
+        async def confirm_delete():
+            # Here you would call the delete_account service and handle the response
+            self.password_field = TextField(
+                label="Enter your password to confirm", password=True
+            )
+            self.page.show_dialog(
+                AlertDialog(
+                    title="Confirm Password",
+                    content=self.password_field,
+                    actions=[
+                        SecondaryButton("Cancel", on_click=lambda _: self.page.pop_dialog()),
+                        PrimaryButton("Delete", color=ft.Colors.RED, on_click=lambda _: asyncio.create_task(confirm_password(self.password_field.value)))
+                    ]
+                )
+            )
+            async def confirm_password(password):
+                # Here you would call the delete_account service with the password and handle the response
+                resp = await delete_account(self.user.get("id"), password)
+
+                if not resp.get("success"):
+                    self.password_field.error = resp.get("message", "An error occurred")
+                    self.page.update()
+                    return
+
+                await self.page.shared_preferences.remove("auth_token")
+                await self.page.shared_preferences.remove("user")
+
+                self.page.show_dialog(
+                    AlertDialog(
+                        title="Account Deleted",
+                        content="Your account has been successfully deleted.",
+                        actions=[
+                            PrimaryButton("OK", on_click=lambda _: asyncio.create_task(self.page.push_route("/login")))
+                        ]
+                    )
+                )

@@ -12,8 +12,7 @@ dependencies = [
     "pyjnius==1.6.1",
     "pillow>=10.4.0",
     "flet-video==0.80.5",
-    "opencv-python==4.10.0.84"
-
+    "flet-lottie==0.80.5",
 ]
 
 [dependency-groups]

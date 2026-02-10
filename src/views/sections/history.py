@@ -105,7 +105,7 @@ class HistorySection(ImageGallery):
 
             thumb_image = self.build_thumb(crack)
 
-            bgcolor = ft.Colors.GREEN if severity == "Low" else ft.Colors.YELLOW if severity == "Medium" else ft.Colors.RED if severity == "High" else ft.Colors.GREY
+            bgcolor = ft.Colors.GREEN if severity == "Low" else ft.Colors.YELLOW if severity == "Medium" else ft.Colors.RED if severity == "High" else ft.Colors.GREEN
 
             self.history_list.controls.append(
                 ft.ListTile(
@@ -113,7 +113,7 @@ class HistorySection(ImageGallery):
                     title=ft.Column(
                         controls=[
                             ft.Text(f"Crack ID: {crack.get('id', 'N/A')}", size=16, weight="bold"),
-                            ft.Text(f"Status: {severity} ({probability*100:.1f}%)", size=14),
+                            ft.Text(f"Severity: {severity} ({probability*100:.1f}%)", size=14),
                         ],
                         spacing=2,
                     ),
@@ -121,6 +121,8 @@ class HistorySection(ImageGallery):
                     is_three_line=True,
                     bgcolor=ft.Colors.with_opacity(0.1, bgcolor),
                     shape=ft.RoundedRectangleBorder(radius=10),
+                    # on_click=lambda _: self.show_full(crack),
+                    on_click=lambda _, url=crack.get("file_url", ""): self.show_full(url),
                 )
             )
 

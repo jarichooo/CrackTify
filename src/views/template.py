@@ -22,22 +22,45 @@ class TemplatePage:
             )
         )
         
-        self.configure_page()
+        self.page.run_task(self.configure_page)
+
+        self.saved_theme: str | None = None
         self.saved_user: dict = {}
         self.auth_token: str | None = None
-        self.page.run_task(self.load_shared_preferences)
-        
-    def configure_page(self):
-        """Configure common page settings."""
-        self.page.title = Config.APP_TITLE
-        self.page.theme_mode = ft.ThemeMode.SYSTEM
 
-        self.is_light = True if self.page.theme_mode == ft.ThemeMode.LIGHT else False
+        self.page.run_task(self.load_shared_preferences)
+
+    async def configure_page(self):
+        self.page.title = Config.APP_TITLE
+
+        self.saved_theme = await self.page.shared_preferences.get("theme_mode")
+
+        if self.saved_theme:
+            self.page.theme_mode = ft.ThemeMode(self.saved_theme)
+        else:
+            self.page.theme_mode = ft.ThemeMode.SYSTEM
+
+        self.is_light = self.page.theme_mode == ft.ThemeMode.LIGHT
+
+        if self.loading_overlay not in self.page.overlay:
+            self.page.overlay.append(self.loading_overlay)
+
+        self.page.window.height = 820
+        self.page.window.width = 430
+
+
+    # def configure_page(self):
+    #     """Configure common page settings."""
+    #     self.page.title = Config.APP_TITLE
+    #     self.page.theme_mode = ft.ThemeMode.SYSTEM
+
+    #     self.is_light = True if self.page.theme_mode == ft.ThemeMode.LIGHT else False
     
-        self.page.overlay.append(self.loading_overlay)
-        self.page.window.maximized = False
-        self.page.window.height = 720
-        self.page.window.width = 400
+    #     self.page.overlay.append(self.loading_overlay)
+
+    #     # Set initial window size (can be adjusted as needed)
+    #     self.page.window.height = 820
+    #     self.page.window.width = 430
 
     def horizontal_divider(
         self, 

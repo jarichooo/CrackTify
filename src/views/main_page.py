@@ -1,7 +1,7 @@
-import os
 import asyncio
-import json
 from dataclasses import dataclass, field
+import json
+import os
 
 import flet as ft
 import flet_video as ftv
@@ -20,7 +20,6 @@ class State:
     file_path: ft.FilePicker | None = None
     picked_file: list[ft.FilePickerFile] = field(default_factory=list)
 
-
 class MainPage(TemplatePage):
     def __init__(self, page: ft.Page, user: dict = None):
         super().__init__(page)
@@ -33,29 +32,43 @@ class MainPage(TemplatePage):
         self.gallery_page = ImageGallery(page, user)
         self.history_page = HistorySection(page, user)
 
-        self.active_section = self.home_page
+        self.page.run_task(self.home_page.rotate_header_loop) # Start header rotation loop for home page
+
+        self.active_section = self.home_page # Start with home page as the active section
       
-        self.file_picker = ft.FilePicker()
+        self.file_picker = ft.FilePicker() # File picker instance for handling file selection
 
-        # Progress bars for uploads
-        self.prog_bar: dict[str, ft.ProgressRing] = {}
-
+        # User info for personalized features (like showing user-specific cracks in history)
         self.user: dict = user
 
     def build(self) -> ft.View:
+        """Builds the main page view with app bar, navigation, and body content."""
+
+        # App bar with title and actions
+        self.appbar_upload_button = ft.IconButton(
+            icon=ft.Icons.ADD,
+            tooltip="Select File",
+            visible=False,  # Initially hidden, only show on Gallery page
+            on_click=self.handle_files_pick,
+        )
+        self.toggle_theme_button = ft.IconButton(
+            icon=ft.Icons.LIGHT_MODE if self.page.theme_mode == ft.ThemeMode.LIGHT else ft.Icons.DARK_MODE,
+            tooltip="Toggle Theme",
+            on_click=lambda _: asyncio.create_task(
+                toggle_theme(self.page, self.toggle_theme_button)
+            ),
+        )
         self.app_bar = ft.AppBar(
             title=ft.Text("Cracktify"),
             automatically_imply_leading=False,
             force_material_transparency=True,
             actions=[
-                ft.IconButton(
-                    icon=ft.Icons.LIGHT_MODE if self.is_light else ft.Icons.DARK_MODE,
-                    tooltip="Toggle Theme",
-                    on_click=lambda _: toggle_theme(self.page, self.app_bar.actions[0]),
-                )
+                self.appbar_upload_button,
+                self.toggle_theme_button,
             ]
         )
         
+        # Upload progress bar container
         self.upload_progress = ft.Container(
             content=ft.ProgressBar(value=0),
             visible=False,
@@ -74,7 +87,7 @@ class MainPage(TemplatePage):
         self.pick_file_button = ft.FloatingActionButton(
             content=ft.Text("New Detection"),
             mini=True,
-            icon=ft.Icons.UPLOAD_FILE,
+            icon=ft.Icons.ADD,
             tooltip="Select File",
             on_click=self.handle_files_pick,
         )
@@ -129,27 +142,34 @@ class MainPage(TemplatePage):
         self.state.picked_file = [file]
 
         # Create preview page with file and push it
-        from .preview_page import PreviewPage
+        from .upload_preview import PreviewPage
         preview_page = PreviewPage(self.page, file, self.state, self.user)
         self.page.views.append(preview_page.build())
 
     def on_nav_change(self, e):
         """Handle navigation bar changes and update the active section accordingly."""
+        self.page.overlay.clear()  # Clear any overlays (like gallery full view) when navigating
         index = e.control.selected_index
 
         if index == 0:
             self.active_section = self.home_page
             self.app_bar.title = ft.Text("Cracktify")
+            self.pick_file_button.visible = True
+            self.appbar_upload_button.visible = False  # Hide upload button in app bar for home page
             self.app_bar.automatically_imply_leading = False
 
         elif index == 1:
             self.active_section = self.gallery_page
             self.app_bar.title = ft.Text("Gallery")
+            self.pick_file_button.visible = False
+            self.appbar_upload_button.visible = True  # Show upload button in app bar for gallery page
             self.app_bar.automatically_imply_leading = False
 
         elif index == 2:
             self.active_section = self.history_page
             self.app_bar.title = ft.Text("History")
+            self.pick_file_button.visible = False
+            self.appbar_upload_button.visible = True  # Show upload button in app bar for history page
             self.app_bar.automatically_imply_leading = False
 
         elif index == 3:

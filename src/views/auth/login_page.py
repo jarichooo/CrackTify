@@ -1,18 +1,15 @@
-import asyncio
 import json
 
 import flet as ft
 
-
 from config import Config
+
 from services.auth_service import login_user
 from utils.input_validation import validate_login, validate_email
-from views.auth.register_page import RegisterPage
-
 from views.template import TemplatePage
-
+from views.auth.register_page import RegisterPage
 from widgets.inputs import TextField
-from widgets.buttons import PrimaryButton, SecondaryButton, GoogleButton, CustomTextButton, BackButton
+from widgets.buttons import PrimaryButton, GoogleButton, CustomTextButton
 
 class LoginPage(TemplatePage):
     def __init__(self, page: ft.Page):

@@ -18,10 +18,10 @@ class FullViewPage(TemplatePage):
                 content=ftv.Video(
                     playlist=video_playlist,
                     title=self.file_url.rsplit('/', 1)[-1],
-                    expand=True,
+                    # expand=True,
                     autoplay=True,
                 ),
-                expand=True,
+              height=self.page.height - 200,  # leave space for app bar
             )
 
         else: # For images, use the interactive viewer

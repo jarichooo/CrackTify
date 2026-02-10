@@ -191,12 +191,12 @@ class ImageGallery:
             height=size,
             border_radius=10,
             clip_behavior=ft.ClipBehavior.HARD_EDGE,
-            on_click=lambda _: self.show_full(file),
+            on_click=lambda _: self.show_full(url),
         )
 
-    def show_full(self, file: dict):
+    def show_full(self, url: str):
         """Show the gallery in a full-page view."""
         from views.sections.full_view import FullViewPage
         self.page.views.append(
-            FullViewPage(self.page, file.get("file_url")).build()
+            FullViewPage(self.page, url).build()
         )
