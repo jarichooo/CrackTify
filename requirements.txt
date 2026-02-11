@@ -25,6 +25,7 @@ flatbuffers==25.9.23
 flet==0.80.5
 flet-cli==0.80.5
 flet-desktop==0.80.5
+flet-lottie==0.80.5
 flet-video==0.80.5
 flet-web==0.80.5
 fonttools==4.61.0
