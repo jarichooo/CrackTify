@@ -43,11 +43,6 @@ class LoginPage(TemplatePage):
             on_click=self.on_login_click
         )
 
-        google_button = GoogleButton(
-            text="Sign in with Google",
-            on_click=lambda _: self.page.run_task(self.handle_google_sign_in)
-        )
-
         register_button = ft.Row(
             controls=[
                 ft.Text("Don't have an account?", size=14),
@@ -80,8 +75,6 @@ class LoginPage(TemplatePage):
                     forgot_button,
                     self.horizontal_divider(height=1, opacity=0),
                     login_button,
-                    self.horizontal_divider(with_or=True),
-                    google_button,
                     register_button,
                     self.horizontal_divider(height=5, opacity=0),
                 ]
@@ -107,43 +100,6 @@ class LoginPage(TemplatePage):
             ),
         )
     
-    async def handle_google_sign_in(self):
-        """Handles the Google sign-in button click event."""
-        try:
-            from flet.auth import OAuthProvider
-
-            provider = OAuthProvider(
-                client_id=Config.GOOGLE_CLIENT_ID,
-                client_secret=Config.GOOGLE_CLIENT_SECRET,
-                redirect_url=Config.GOOGLE_REDIRECT_URI
-            )
-
-            await self.page.login(provider)
-            self.page.on_login = self.on_google_login_success
-            
-        except Exception as e:
-            error_dialog = ft.AlertDialog(
-                title=ft.Text("Google Sign-In Failed"),
-                content=ft.Text(str(e)),
-                actions=[
-                    ft.TextButton("OK", on_click=lambda _: self.page.pop_dialog())
-                ]
-            )
-            self.page.show_dialog(error_dialog)
-            return
-
-        # Checks if email is in database after successful Google sign-in
-        # If not, it will create a new account for the user and then navigate to the home page
-
-    def on_google_login_success(self):
-        """Handles successful Google login and navigates to the home page."""
-        # Here you would typically check if the user's email exists in your database
-        # If it doesn't, create a new user account with the information from Google
-        # Then navigate to the home page
-
-        # For demonstration, we'll just navigate to the home page directly
-        self.page.push_route("/home")
-
     def on_login_click(self, e):
         """Handles the login button click event."""
         email = self.email_field.value

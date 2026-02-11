@@ -21,10 +21,6 @@ class RegisterPage(TemplatePage):
         
     def build(self) -> ft.View:
         """Builds the registration Page layout."""
-        google_button = GoogleButton(
-            text="Sign up with Google",
-        )
-
         self.first_name_field = TextField(
             label="First Name",
             hint_text="Enter your first name",
@@ -82,8 +78,6 @@ class RegisterPage(TemplatePage):
                     ),
                     
                     self.horizontal_divider(height=1, opacity=0),
-                    google_button,
-                    self.horizontal_divider(with_or=True),
 
                     ft.Row(
                         spacing=10,

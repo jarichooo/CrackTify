@@ -34,6 +34,7 @@ class TemplatePage:
         self.page.title = Config.APP_TITLE
 
         self.saved_theme = await self.page.shared_preferences.get("theme_mode")
+        self.saved_theme_color = await self.page.shared_preferences.get("theme_color")
 
         if self.saved_theme:
             self.page.theme_mode = ft.ThemeMode(self.saved_theme)
@@ -41,6 +42,9 @@ class TemplatePage:
             self.page.theme_mode = ft.ThemeMode.SYSTEM
 
         self.is_light = self.page.theme_mode == ft.ThemeMode.LIGHT
+
+        if self.saved_theme_color:
+            self.page.theme = ft.Theme(color_scheme_seed=ft.Colors(self.saved_theme_color))
 
         if self.loading_overlay not in self.page.overlay:
             self.page.overlay.append(self.loading_overlay)

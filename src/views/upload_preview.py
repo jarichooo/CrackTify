@@ -96,29 +96,32 @@ class PreviewPage(TemplatePage):
     async def handle_upload_file(self, e):
         """Handles the upload button click event."""
         from services.file_service import upload_file
+        from services.crack_service import detect_crack
 
         if not self.selected_file:
             return
 
         self.show_loading()
         self.upload_btn.disabled = True
-        self.upload_btn.update()
+        self.page.update()
         try:
             result = await upload_file(self.selected_file.path)
+
+            detect_resp = await detect_crack(result.get("url"), confidence_threshold=0.5)
 
             user_id = self.user.get("id")
             crack_data = {
                 "user_id": user_id,
-                "file_url": result.get("url"),
-                "probability": 0.7,  # Placeholder
-                "severity": "N/A",
+                "file_url": detect_resp.get("file_url"),
+                "severity": detect_resp.get("severity", "unknown"),
+                "probability": detect_resp.get("probability", 0),  # Placeholder
             }
 
             add_response = await add_crack_service(user_id, crack_data)
 
             self.page.show_dialog(
                 ft.SnackBar(
-                    ft.Text("Uploaded successfully!"),
+                    ft.Text("Detected successfully!"),
                     bgcolor=ft.Colors.GREEN_500,
                 )
             )
@@ -127,13 +130,7 @@ class PreviewPage(TemplatePage):
         except Exception as err:
             self.page.show_dialog(
                 ft.SnackBar(
-                    ft.Text(f"Upload failed: {err}"),
-                    bgcolor=ft.Colors.RED_500,
-                )
-            )
-            self.page.show_dialog(
-                ft.SnackBar(
-                    ft.Text(f"Upload failed: {err}"),
+                    ft.Text(f"Detection failed: {err}"),
                     bgcolor=ft.Colors.RED_500,
                 )
             )
@@ -142,4 +139,4 @@ class PreviewPage(TemplatePage):
         finally:
             self.hide_loading()
             self.upload_btn.disabled = False
-            self.upload_btn.update()
+            self.page.update()

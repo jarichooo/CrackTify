@@ -120,13 +120,13 @@ class HomeSection:
                                 "Total", self.stats.get("total_cracks", 0), ft.Colors.with_opacity(0.8, ft.Colors.BLUE_900)
                             ),
                             self.create_info_tile(
-                                "Severe", self.stats.get("total_severe_cracks", 0), ft.Colors.with_opacity(0.8, ft.Colors.RED_900)   
+                                "High", self.stats.get("total_high_cracks", 0), ft.Colors.with_opacity(0.8, ft.Colors.RED_900)   
                             ),
                             self.create_info_tile(
                                 "Mild", self.stats.get("total_mild_cracks", 0), ft.Colors.with_opacity(0.8, ft.Colors.YELLOW_900)
                             ),
                             self.create_info_tile(
-                                "Low", self.stats.get("total_none_cracks", 0), ft.Colors.with_opacity(0.8, ft.Colors.GREEN_900)
+                                "Low", self.stats.get("total_low_cracks", 0), ft.Colors.with_opacity(0.8, ft.Colors.GREEN_900)
                             ),
                         ]
                     )
@@ -286,6 +286,7 @@ class HomeSection:
                 )
             )
 
+        self.update_stats()  # Update stats section as well
         self.page.update()
 
     def create_info_tile(self, title, value, bg_color):
@@ -305,6 +306,28 @@ class HomeSection:
                 spacing=10,
             )
         )
+    
+    def update_stats(self):
+        """Update the stats section with current data."""
+
+        self.stat_container.content.controls[1] = ft.Row(
+            spacing=10,
+            controls=[
+                self.create_info_tile(
+                    "Total", self.stats.get("total_cracks", 0), ft.Colors.with_opacity(0.8, ft.Colors.BLUE_900)
+                ),
+                self.create_info_tile(
+                    "High", self.stats.get("total_high_cracks", 0), ft.Colors.with_opacity(0.8, ft.Colors.RED_900)   
+                ),
+                self.create_info_tile(
+                    "Mild", self.stats.get("total_mild_cracks", 0), ft.Colors.with_opacity(0.8, ft.Colors.YELLOW_900)
+                ),
+                self.create_info_tile(
+                    "Low", self.stats.get("total_low_cracks", 0), ft.Colors.with_opacity(0.8, ft.Colors.GREEN_900)
+                ),
+            ]
+        )
+
     
     def build_thumb(self, file: dict) -> ft.Control:
         """Build a thumbnail control for a given file."""
