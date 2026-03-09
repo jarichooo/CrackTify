@@ -9,6 +9,7 @@ from .template import TemplatePage
 
 from services.crack_service import add_crack_service
 
+
 class PreviewPage(TemplatePage):
     def __init__(self, page: ft.Page, file: ft.FilePickerFile, state, user):
         super().__init__(page)
@@ -17,24 +18,24 @@ class PreviewPage(TemplatePage):
         self.user = user
 
         # Determine file type
-        ext = file.name.lower().rsplit('.', 1)[-1]
+        ext = file.name.lower().rsplit(".", 1)[-1]
 
         if ext in ["png", "jpg", "jpeg", "gif", "bmp", "webp"]:
             # Image fully covers screen and zoomable
             media_control = ft.InteractiveViewer(
-            ft.Container(
-                content=ft.Image(
-                    src=file.path,
-                    fit=ft.BoxFit.CONTAIN,  # keep entire image visible
+                ft.Container(
+                    content=ft.Image(
+                        src=file.path,
+                        fit=ft.BoxFit.CONTAIN,  # keep entire image visible
+                    ),
+                    width=2000,  # large canvas for zooming
+                    height=2000,  # large canvas for zooming
                 ),
-                width=2000,  # large canvas for zooming
-                height=2000, # large canvas for zooming
-            ),
-            boundary_margin=ft.Margin.all(1000),  # extra panning space
-            min_scale=0.5,   # zoom out limit
-            max_scale=5.0,   # zoom in limit
-            clip_behavior=ft.ClipBehavior.HARD_EDGE,
-        )
+                boundary_margin=ft.Margin.all(1000),  # extra panning space
+                min_scale=0.5,  # zoom out limit
+                max_scale=5.0,  # zoom in limit
+                clip_behavior=ft.ClipBehavior.HARD_EDGE,
+            )
 
         elif ext in ["mp4", "mov", "webm", "avi", "mkv"]:
             # Video wrapped in container for full screen
@@ -92,7 +93,7 @@ class PreviewPage(TemplatePage):
             controls=[self.app_bar, self.body],
             floating_action_button=self.upload_btn,
         )
-    
+
     async def handle_upload_file(self, e):
         """Handles the upload button click event."""
         from services.file_service import upload_file
@@ -101,27 +102,29 @@ class PreviewPage(TemplatePage):
         if not self.selected_file:
             return
 
-        self.show_loading()
         self.upload_btn.disabled = True
         self.page.update()
         try:
+            self.show_loading("Uploading file...")
             result = await upload_file(self.selected_file.path)
 
-            detect_resp = await detect_crack(result.get("url"), confidence_threshold=0.5)
+            self.show_loading("Detecting cracks...")
+            detect_resp = await detect_crack(result, confidence_threshold=0.5)
 
             user_id = self.user.get("id")
             crack_data = {
                 "user_id": user_id,
                 "file_url": detect_resp.get("file_url"),
+                "filename": result.get("filename"),
                 "severity": detect_resp.get("severity", "unknown"),
                 "probability": detect_resp.get("probability", 0),  # Placeholder
             }
 
-            add_response = await add_crack_service(user_id, crack_data)
+            _add_response = await add_crack_service(user_id, crack_data)
 
             self.page.show_dialog(
                 ft.SnackBar(
-                    ft.Text("Detected successfully!"),
+                    ft.Text("Uploaded successfully!"),
                     bgcolor=ft.Colors.GREEN_500,
                 )
             )
@@ -135,7 +138,7 @@ class PreviewPage(TemplatePage):
                 )
             )
             self.page.update()
-            
+
         finally:
             self.hide_loading()
             self.upload_btn.disabled = False

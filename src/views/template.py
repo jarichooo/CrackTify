@@ -8,6 +8,7 @@ class TemplatePage:
         self.page = page
 
         # Loading overlay
+        self.loading_text = ft.Text()
         self.loading_overlay = ft.Container(
             visible=False,
             expand=True,    
@@ -18,7 +19,10 @@ class TemplatePage:
                 height=120,
                 border_radius=12,
                 alignment=ft.Alignment.CENTER,
-                content=ft.ProgressRing(color=ft.Colors.INVERSE_PRIMARY)
+                content=ft.Column(
+                    ft.ProgressRing(color=ft.Colors.INVERSE_PRIMARY),
+                    self.loading_text
+                )
             )
         )
         
@@ -85,14 +89,16 @@ class TemplatePage:
         else:
             return ft.Divider(height=height, opacity=opacity)
     
-    def show_loading(self):
+    def show_loading(self, loading_msg=""):
         """Show the loading overlay."""
+        self.loading_text.value = loading_msg
         self.loading_overlay.visible = True
         self.page.update()
 
     def hide_loading(self):
         """Hide the loading overlay."""
         self.loading_overlay.visible = False
+        self.loading_text.value = ""
         self.page.update()
 
     async def load_shared_preferences(self):
