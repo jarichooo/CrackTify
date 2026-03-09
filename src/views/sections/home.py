@@ -1,13 +1,37 @@
 import asyncio
 from typing import List
 import flet as ft
-import flet_lottie as ftl
+import flet_lottie as ftl # type: ignore
+from services.crack_service import fetch_cracks_service
+from utils.file_utils import build_thumb
+from utils.page_utils import show_full
+
 
 class HomeSection:
+    async def get_cracks(self):
+        limit = 5  # Limit to top 5 recent cracks for the home section
+        res = await fetch_cracks_service(self.user.get("id"), limit)
+
+        if not res.get("success"):
+            self.search_body.content = ft.Text(
+                "Failed to load files.",
+                size=20,
+                weight="bold",
+                color=ft.Colors.RED,
+            )
+            self.page.update()
+            return []
+
+        return res.get("cracks", [])
+
+    async def load_cracks(self):
+        self.recent_cracks = await self.get_cracks()
+        self.page.update()
+
     def __init__(self, page: ft.Page, user):
         self.page = page
         self.user = user
-        self.header_index = 0 # Start with the first header state
+        self.header_index = 0  # Start with the first header state
 
         # Define header states with text and corresponding Lottie animation URLs
         self.header_states = [
@@ -42,7 +66,7 @@ class HomeSection:
             {
                 "text": "A mouse finds its way\nthrough cracks. So will you.",
                 "lottie": "https://lottie.host/c5f163ee-bdd5-4aa6-9833-3081b3dbe752/EiZ7MUjUSr.json",
-            }
+            },
         ]
 
         # Build header controls
@@ -88,7 +112,11 @@ class HomeSection:
 
         # Initialize stats and recents data
         self.stats = {}
-        self.recents_data: list[dict] = []
+        self.recent_cracks = []
+
+        self.page.run_task(
+            self.load_cracks
+        )  # Load recent cracks when section is initialized
 
     def build(self) -> List[ft.Control]:
         """Build the home section UI."""
@@ -99,7 +127,7 @@ class HomeSection:
             content=ft.Row(
                 controls=[
                     self.lottie_container,  # Right
-                    self.text_container,    # Left
+                    self.text_container,  # Left
                 ],
             ),
         )
@@ -117,19 +145,27 @@ class HomeSection:
                         spacing=10,
                         controls=[
                             self.create_info_tile(
-                                "Total", self.stats.get("total_cracks", 0), ft.Colors.with_opacity(0.8, ft.Colors.BLUE_900)
+                                "Total",
+                                self.stats.get("total_cracks", 0),
+                                ft.Colors.with_opacity(0.8, ft.Colors.BLUE_900),
                             ),
                             self.create_info_tile(
-                                "High", self.stats.get("total_high_cracks", 0), ft.Colors.with_opacity(0.8, ft.Colors.RED_900)   
+                                "High",
+                                self.stats.get("total_high_cracks", 0),
+                                ft.Colors.with_opacity(0.8, ft.Colors.RED_900),
                             ),
                             self.create_info_tile(
-                                "Mild", self.stats.get("total_mild_cracks", 0), ft.Colors.with_opacity(0.8, ft.Colors.YELLOW_900)
+                                "Mild",
+                                self.stats.get("total_mild_cracks", 0),
+                                ft.Colors.with_opacity(0.8, ft.Colors.YELLOW_900),
                             ),
                             self.create_info_tile(
-                                "Low", self.stats.get("total_low_cracks", 0), ft.Colors.with_opacity(0.8, ft.Colors.GREEN_900)
+                                "Low",
+                                self.stats.get("total_low_cracks", 0),
+                                ft.Colors.with_opacity(0.8, ft.Colors.GREEN_900),
                             ),
-                        ]
-                    )
+                        ],
+                    ),
                 ],
             ),
         )
@@ -141,21 +177,17 @@ class HomeSection:
 
         self.recent_container = ft.Container(
             expand=3,
-            content=ft.Column(
-                controls=[
-                    ft.Text("Recents", size=20),
-                    self.recent_list
-                ]
-            ),   
+            alignment=ft.Alignment.TOP_CENTER,
+            content=ft.ProgressBar(),
         )
-
-        self.page.run_task(self.load_data)
 
         # Body
         self.body = ft.Column(
             controls=[
                 self.header,
                 self.stat_container,
+                ft.Text("Recent", size=20),
+                ft.Container(height=10),  # Spacer
                 self.recent_container,
             ],
             spacing=0,
@@ -182,12 +214,16 @@ class HomeSection:
             state = self.header_states[self.header_index]
 
             if state["text"] == self.header_states[0]["text"]:
-                if again_count >= 5:  # Reset after 5 "again"s to prevent it from getting too long
+                if (
+                    again_count >= 5
+                ):  # Reset after 5 "again"s to prevent it from getting too long
                     again_count = 0
-                    continue # Skip updating text to original "Hello, User!" for one cycle to avoid it looking weird with "Hello again again again again again, User!"
+                    continue  # Skip updating text to original "Hello, User!" for one cycle to avoid it looking weird with "Hello again again again again again, User!"
                 again_count += 1
 
-            self.text_control.value = state["text"].replace("Hello", f"Hello{' again' * again_count}")
+            self.text_control.value = state["text"].replace(
+                "Hello", f"Hello{' again' * again_count}"
+            )
             self.lottie_control.src = state["lottie"]
 
             # Prepare IN
@@ -203,89 +239,117 @@ class HomeSection:
             self.lottie_container.offset = ft.Offset(0, 0)
             self.page.update()
 
-    async def load_data(self):
+    async def lazy_load(self):
         """Load data for stats and recents."""
-        from services.crack_service import fetch_cracks_service
-        self.recent_list.controls = [ft.ProgressBar()]  # Show loading indicator while fetching data
+        self.recent_container.content = (
+            ft.ProgressBar()
+        )  # Show loading indicator while fetching data
         self.page.update()
 
-        if self.recents_data:
+        if self.recent_cracks:
             self.update_home()
-            
+
         # Fetch in background
-        crack_resp = await fetch_cracks_service(self.user.get("id"))
+        crack_resp = await fetch_cracks_service(self.user.get("id"), limit=5)
 
         if not crack_resp.get("success"):
             self.recent_container.content = ft.Text(
-                "Failed to load recents.", 
-                size=16, 
-                color=ft.Colors.RED
+                "Failed to load recents.", size=16, color=ft.Colors.RED
             )
             self.page.update()
             return
-        
+
         # Compare old and new data to determine if UI update is needed
         old_stats = self.stats
-        old_recents = self.recents_data
+        old_recents = self.recent_cracks
 
         new_stats = crack_resp.get("stats", {})
-        new_recents = crack_resp.get("cracks", [])[:5]  # Get top 7 recent cracks
+        new_recents = crack_resp.get("cracks", [])
 
-        if new_stats == old_stats and new_recents == old_recents and self.recents_data != []: # if both is equal but not empty, no changes and new feches is not empty
-            print("Home: No changes in stats or recents.")
+        if (
+            new_stats == old_stats
+            and new_recents == old_recents
+            and self.recent_cracks != []
+        ):  # if both is equal but not empty, no changes and new feches is not empty
+            self.recent_container.content = (
+                self.recent_list
+            )  # Remove loading indicator if data is the same but not empty
             return  # nothing changed → no UI update
-        
+
         self.stats = new_stats
-        self.recents_data = new_recents
+        self.recent_cracks = new_recents
         self.update_home()
-        
+
     def update_home(self):
         """Public method to trigger data refresh on the home section."""
-        import datetime
-        from services.crack_service import fetch_cracks_service
-
         self.recent_list.controls.clear()  # Clear existing recent items
 
-        if not self.recents_data: # If no recents found, show message
-            self.recent_container.content.controls[1] = ft.Column(
+        if not self.recent_cracks:  # If no recents found, show message
+            self.recent_container.content = ft.Column(
                 controls=[
                     ft.Text("No recents found.", size=16, color=ft.Colors.GREY),
-                    ft.Text("Detect some cracks to see your recent uploads.", size=16, color=ft.Colors.GREY),
-                ]
+                    ft.Text(
+                        "Detect some cracks to see your recent uploads.",
+                        size=16,
+                        color=ft.Colors.GREY,
+                    ),
+                ],
+                alignment=ft.MainAxisAlignment.CENTER,
+                horizontal_alignment=ft.CrossAxisAlignment.CENTER,
+                expand=True,
             )
             self.page.update()
             return
-        
-        for crack in self.recents_data:
+
+        for crack in self.recent_cracks:
             # Extract relevant info with fallbacks
+            filename = crack.get("filename", "Unknown File")
             severity = crack.get("severity", "Unknown Severity")
             probability = crack.get("probability", 0)
             date_str = crack.get("detected_at", "")
-            
+
             date = date_str.split("T")[0] if "T" in date_str else date_str
             time = date_str.split("T")[1].split(".")[0] if "T" in date_str else ""
 
-            thumb_image = self.build_thumb(crack)
+            thumb_image = build_thumb(crack)
+            thumb_image.on_click = lambda _, file=crack: show_full(self.page, file)
 
-            bgcolor = ft.Colors.GREEN if severity == "Low" else ft.Colors.YELLOW if severity == "Medium" else ft.Colors.RED if severity == "High" else ft.Colors.GREY
+            bgcolor = (
+                ft.Colors.GREEN
+                if severity == "Low"
+                else (
+                    ft.Colors.YELLOW
+                    if severity == "Medium"
+                    else ft.Colors.RED if severity == "High" else ft.Colors.GREEN
+                )
+            )
 
             self.recent_list.controls.append(
                 ft.ListTile(
                     leading=thumb_image,
                     title=ft.Column(
                         controls=[
-                            ft.Text(f"Crack ID: {crack.get('id', 'N/A')}", size=16, weight="bold"),
-                            ft.Text(f"Status: {severity} ({probability*100:.1f}%)", size=14),
+                            ft.Text(filename, size=16, weight="bold"),
+                            ft.Text(
+                                f"Severity: {severity} ({probability*100:.1f}%)",
+                                size=14,
+                            ),
                         ],
                         spacing=2,
                     ),
-                    subtitle=ft.Text(f"Uploaded on {date} at {time}", size=12, color=ft.Colors.GREY),
+                    subtitle=ft.Text(
+                        f"Uploaded on {date} at {time}", size=12, color=ft.Colors.GREY
+                    ),
                     is_three_line=True,
                     bgcolor=ft.Colors.with_opacity(0.1, bgcolor),
                     shape=ft.RoundedRectangleBorder(radius=10),
+                    on_click=lambda _, file=crack: show_full(self.page, file)
                 )
             )
 
+        self.recent_container.content = (
+            self.recent_list
+        )  # Set the recent container content to the updated list
         self.update_stats()  # Update stats section as well
         self.page.update()
 
@@ -304,9 +368,9 @@ class HomeSection:
                 alignment=ft.MainAxisAlignment.CENTER,
                 horizontal_alignment=ft.CrossAxisAlignment.CENTER,
                 spacing=10,
-            )
+            ),
         )
-    
+
     def update_stats(self):
         """Update the stats section with current data."""
 
@@ -314,58 +378,24 @@ class HomeSection:
             spacing=10,
             controls=[
                 self.create_info_tile(
-                    "Total", self.stats.get("total_cracks", 0), ft.Colors.with_opacity(0.8, ft.Colors.BLUE_900)
+                    "Total",
+                    self.stats.get("total_cracks", 0),
+                    ft.Colors.with_opacity(0.8, ft.Colors.BLUE_900),
                 ),
                 self.create_info_tile(
-                    "High", self.stats.get("total_high_cracks", 0), ft.Colors.with_opacity(0.8, ft.Colors.RED_900)   
+                    "High",
+                    self.stats.get("total_high_cracks", 0),
+                    ft.Colors.with_opacity(0.8, ft.Colors.RED_900),
                 ),
                 self.create_info_tile(
-                    "Mild", self.stats.get("total_mild_cracks", 0), ft.Colors.with_opacity(0.8, ft.Colors.YELLOW_900)
+                    "Mild",
+                    self.stats.get("total_mild_cracks", 0),
+                    ft.Colors.with_opacity(0.8, ft.Colors.YELLOW_900),
                 ),
                 self.create_info_tile(
-                    "Low", self.stats.get("total_low_cracks", 0), ft.Colors.with_opacity(0.8, ft.Colors.GREEN_900)
+                    "Low",
+                    self.stats.get("total_low_cracks", 0),
+                    ft.Colors.with_opacity(0.8, ft.Colors.GREEN_900),
                 ),
-            ]
-        )
-
-    
-    def build_thumb(self, file: dict) -> ft.Control:
-        """Build a thumbnail control for a given file."""
-        from utils.file_utils import get_file_type, get_video_thumbnail
-        size = 60
-        url = file.get("file_url") # Assuming the file dict has a 'file_url' key with the Cloudinary URL
-        thumb_url = url # Default thumbnail is the file itself
-
-        is_video = get_file_type(url) == "video"  # Check if the file is a video to generate a thumbnail
-        if is_video:
-            thumb_url = get_video_thumbnail(url)
-
-        thumbnail_img = ft.Image(
-            src=thumb_url,
-            width=size,
-            height=size,
-            fit=ft.BoxFit.COVER,
-        )
-
-        content = ft.Stack(
-            controls=[
-                thumbnail_img,
-                ft.Container(
-                    content=ft.Icon(
-                        ft.Icons.PLAY_CIRCLE_FILL, size=48, color=ft.Colors.WHITE
-                    ),
-                    alignment=ft.Alignment.CENTER,
-                    visible=is_video,
-                    bgcolor=ft.Colors.with_opacity(0.35, ft.Colors.BLACK),
-                ),
-            ]
-        )
-
-        return ft.Container(
-            content=content,
-            width=size,
-            height=size,
-            border_radius=10,
-            clip_behavior=ft.ClipBehavior.HARD_EDGE,
-            on_click=lambda _: print("Open preview:", url),
+            ],
         )

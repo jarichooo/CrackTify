@@ -3,13 +3,16 @@ from typing import List
 
 import flet as ft
 from services.crack_service import fetch_cracks_service
-from utils.file_utils import get_file_type, get_video_thumbnail
+from utils.file_utils import build_thumb
+from utils.page_utils import show_full
+
 
 class ImageGallery:
+    # (Image size, text size) for each view size
     SIZE_MAP = {
-        "Small": 80,
-        "Medium": 120,
-        "Large": 200,
+        "Small": (90, 12),
+        "Medium": (120, 14),
+        "Large": (200, 16),
     }
 
     def __init__(self, page: ft.Page, user: dict):
@@ -27,26 +30,36 @@ class ImageGallery:
         sort_popup = ft.PopupMenuButton(
             content=ft.Row([ft.Text("Sort By"), ft.Icon(ft.Icons.SORT)]),
             items=[
-                ft.PopupMenuItem(content="Date Descending", on_click=lambda _: self.change_sort("Date Descending")),
-                ft.PopupMenuItem(content="Date Ascending", on_click=lambda _: self.change_sort("Date Ascending")),
+                ft.PopupMenuItem(
+                    content="Date Descending",
+                    on_click=lambda _: self.change_sort("Date Descending"),
+                ),
+                ft.PopupMenuItem(
+                    content="Date Ascending",
+                    on_click=lambda _: self.change_sort("Date Ascending"),
+                ),
             ],
         )
 
         size_popup = ft.PopupMenuButton(
             content=ft.Row([ft.Text("View Size"), ft.Icon(ft.Icons.VIEW_MODULE)]),
             items=[
-                ft.PopupMenuItem(content="Small", on_click=lambda _: self.change_size("Small")),
-                ft.PopupMenuItem(content="Medium", on_click=lambda _: self.change_size("Medium")),
-                ft.PopupMenuItem(content="Large", on_click=lambda _: self.change_size("Large")),
+                ft.PopupMenuItem(
+                    content="Small", on_click=lambda _: self.change_size("Small")
+                ),
+                ft.PopupMenuItem(
+                    content="Medium",
+                    on_click=lambda _: self.change_size("Medium"),
+                ),
+                ft.PopupMenuItem(
+                    content="Large", on_click=lambda _: self.change_size("Large")
+                ),
             ],
         )
 
         self.top_bar = ft.Container(
             content=ft.Row(
-                controls=[
-                    sort_popup,
-                    size_popup
-                ],
+                controls=[sort_popup, size_popup],
                 alignment=ft.MainAxisAlignment.END,
                 spacing=20,
             )
@@ -54,22 +67,22 @@ class ImageGallery:
 
         self.gallery_grid = ft.GridView(
             expand=True,
-            max_extent=self.SIZE_MAP[self.current_size],
+            max_extent=self.SIZE_MAP[self.current_size][0],
+            child_aspect_ratio=0.75,  # default aspect ratio for thumbnails
             spacing=10,
             run_spacing=10,
         )
 
-        self.body = ft.Container(
-            expand=True,
-            content=ft.Column()
-        )
+        self.body = ft.Container(expand=True, content=ft.Column())
 
         return [self.body]
 
-    async def load_files(self):
+    async def lazy_load(self):
         """Instant load using cached files, background refresh."""
 
-        self.body.content = ft.ProgressRing() # Show loading indicator while fetching data
+        self.body.content = (
+            ft.ProgressRing()
+        )  # Show loading indicator while fetching data
         self.page.update()
 
         # Show existing files immediately
@@ -78,12 +91,10 @@ class ImageGallery:
 
         # Fetch in background
         res = await fetch_cracks_service(self.user.get("id"))
+
         if not res.get("success"):
             self.body.content = ft.Text(
-                "Failed to load gallery.",
-                size=20,
-                weight="bold",
-                color=ft.Colors.RED
+                "Failed to load gallery.", size=20, weight="bold", color=ft.Colors.RED
             )
             self.page.update()
             return
@@ -94,18 +105,22 @@ class ImageGallery:
         old_ids = {f["id"] for f in self.files}
         new_ids = {f["id"] for f in new_files}
 
-        if (new_ids == old_ids) and self.files != []: # if both is equal but not empty, no changes and new feches is not empty
+        if (
+            new_ids == old_ids
+        ) and self.files != []:  # if both is equal but not empty, no changes and new feches is not empty
             print("Gallery: No changes in files.")
             return  # nothing changed → no UI update
 
         # Update only if changed
         self.files = new_files
+
         self.update_gallery()
 
     def change_size(self, size: str):
         """Change the thumbnail size in the gallery."""
         self.current_size = size
-        self.gallery_grid.max_extent = self.SIZE_MAP[size]
+        self.gallery_grid.max_extent = self.SIZE_MAP[size][0]
+
         self.update_gallery()
 
     def change_sort(self, sort: str):
@@ -116,14 +131,18 @@ class ImageGallery:
     def update_gallery(self):
         """Update the gallery display based on current files, sort, and size."""
 
-        self.gallery_grid.controls.clear() # Clear existing thumbnails
+        self.gallery_grid.controls.clear()  # Clear existing thumbnails
 
-        if not self.files: # If no files to display, display a placeholder message
+        if not self.files:  # If no files to display, display a placeholder message
             self.body.content = ft.Column(
                 controls=[
                     ft.Icon(ft.Icons.BROKEN_IMAGE, size=64, color=ft.Colors.GREY),
                     ft.Text("No files uploaded yet.", size=16, color=ft.Colors.GREY),
-                    ft.Text("Detect some cracks to see gallery.", size=16, color=ft.Colors.GREY),
+                    ft.Text(
+                        "Detect some cracks to see gallery.",
+                        size=16,
+                        color=ft.Colors.GREY,
+                    ),
                 ],
                 alignment=ft.MainAxisAlignment.CENTER,
                 horizontal_alignment=ft.CrossAxisAlignment.CENTER,
@@ -148,55 +167,26 @@ class ImageGallery:
             expand=True,
         )
 
+        txt_size = self.SIZE_MAP[self.current_size][1]
+
         for f in files:
             # Build and add thumbnail for each file
-            self.gallery_grid.controls.append(self.build_thumb(f))
+            thumbnail = build_thumb(f, self.SIZE_MAP[self.current_size][0])
+            thumbnail.on_click = lambda _, file=f: show_full(self.page, file)
+            self.gallery_grid.controls.append(
+                ft.Container(
+                    content=ft.Column(
+                        controls=[
+                            thumbnail,
+                            ft.Text(
+                                f.get("filename", "Unknown"),
+                                size=txt_size,
+                                overflow=ft.TextOverflow.ELLIPSIS,
+                            ),
+                        ],
+                        horizontal_alignment=ft.CrossAxisAlignment.CENTER,
+                    ),
+                )
+            )
 
         self.page.update()
-
-    def build_thumb(self, file: dict) -> ft.Control:
-        """Build a thumbnail control for a given file."""
-        size = self.SIZE_MAP[self.current_size]
-        url = file.get("file_url") # Assuming the file dict has a 'file_url' key with the Cloudinary URL
-        thumb_url = url # Default thumbnail is the file itself
-
-        is_video = get_file_type(url) == "video"  # Check if the file is a video to generate a thumbnail
-        if is_video:
-            thumb_url = get_video_thumbnail(url)
-
-        thumbnail_img = ft.Image(
-            src=thumb_url,
-            width=size,
-            height=size,
-            fit=ft.BoxFit.COVER,
-        )
-
-        content = ft.Stack(
-            controls=[
-                thumbnail_img,
-                ft.Container(
-                    content=ft.Icon(
-                        ft.Icons.PLAY_CIRCLE_FILL, size=48, color=ft.Colors.WHITE
-                    ),
-                    alignment=ft.Alignment.CENTER,
-                    visible=is_video,
-                    bgcolor=ft.Colors.with_opacity(0.35, ft.Colors.BLACK),
-                ),
-            ]
-        )
-
-        return ft.Container(
-            content=content,
-            width=size,
-            height=size,
-            border_radius=10,
-            clip_behavior=ft.ClipBehavior.HARD_EDGE,
-            on_click=lambda _: self.show_full(url),
-        )
-
-    def show_full(self, url: str):
-        """Show the gallery in a full-page view."""
-        from views.sections.full_view import FullViewPage
-        self.page.views.append(
-            FullViewPage(self.page, url).build()
-        )
