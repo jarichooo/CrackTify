@@ -115,7 +115,7 @@ class PreviewPage(TemplatePage):
             crack_data = {
                 "user_id": user_id,
                 "file_url": detect_resp.get("file_url"),
-                "filename": result.get("filename"),
+                "filename": detect_resp.get("filename", "unknown"),
                 "severity": detect_resp.get("severity", "unknown"),
                 "probability": detect_resp.get("probability", 0),  # Placeholder
             }

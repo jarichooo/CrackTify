@@ -93,6 +93,8 @@ class SearchPage(TemplatePage):
     def on_search_change(self, e):
         """Checks if there is text in the search bar and shows/hides the close button accordingly."""
         query = self.search_bar.value
+
+        self.search_body.content = ft.ProgressRing()
         time.sleep(1)
         if query:
             self.search_bar.bar_trailing.visible = True
@@ -162,9 +164,7 @@ class SearchPage(TemplatePage):
             time = date_str.split("T")[1].split(".")[0] if "T" in date_str else ""
 
             thumb_image = build_thumb(crack)
-            thumb_image.on_click = lambda _, url=crack.get(
-                "file_url", ""
-            ), filename=crack.get("filename"): show_full(self.page, url, filename)
+            thumb_image.on_click = lambda _, crack_file=crack: show_full(self.page, crack_file)
 
             bgcolor = (
                 ft.Colors.GREEN
@@ -195,11 +195,8 @@ class SearchPage(TemplatePage):
                     is_three_line=True,
                     bgcolor=ft.Colors.with_opacity(0.1, bgcolor),
                     shape=ft.RoundedRectangleBorder(radius=10),
-                    # on_click=lambda _: self.show_full(crack),
-                    on_click=lambda _, url=crack.get(
-                        "file_url", ""
-                    ), filename=crack.get("filename"): show_full(
-                        self.page, url, filename
+                    on_click=lambda _, crack_file=crack: show_full(
+                        self.page, crack_file
                     ),
                 )
             )
