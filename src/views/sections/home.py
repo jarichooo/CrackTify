@@ -362,8 +362,8 @@ class HomeSection:
             alignment=ft.Alignment.CENTER,
             content=ft.Column(
                 controls=[
-                    ft.Text(str(value), size=18, weight="bold"),
-                    ft.Text(title, size=14),
+                    ft.Text(str(value), size=18, weight="bold", color=ft.Colors.WHITE),
+                    ft.Text(title, size=14, color=ft.Colors.WHITE),
                 ],
                 alignment=ft.MainAxisAlignment.CENTER,
                 horizontal_alignment=ft.CrossAxisAlignment.CENTER,

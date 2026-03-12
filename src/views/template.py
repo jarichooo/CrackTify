@@ -3,29 +3,33 @@ import json
 import flet as ft
 from config import Config
 
+
 class TemplatePage:
     def __init__(self, page: ft.Page):
         self.page = page
 
         # Loading overlay
-        self.loading_text = ft.Text()
+        self.loading_text = ft.Text(
+            "",
+            text_align=ft.TextAlign.CENTER,
+        )
+
         self.loading_overlay = ft.Container(
             visible=False,
-            expand=True,    
+            expand=True,
             bgcolor=ft.Colors.with_opacity(0.6, ft.Colors.BLACK),
             alignment=ft.Alignment.CENTER,
-            content=ft.Container(
-                width=120,
-                height=120,
-                border_radius=12,
-                alignment=ft.Alignment.CENTER,
-                content=ft.Column(
-                    ft.ProgressRing(color=ft.Colors.INVERSE_PRIMARY),
-                    self.loading_text
-                )
-            )
+            content=ft.Column(
+                controls=[
+                    ft.ProgressRing(),
+                    ft.Column(height=10),  # Spacer
+                    self.loading_text,
+                ],
+                horizontal_alignment=ft.CrossAxisAlignment.CENTER,
+                alignment=ft.MainAxisAlignment.CENTER,
+            ),
         )
-        
+
         self.page.run_task(self.configure_page)
 
         self.saved_theme: str | None = None
@@ -48,7 +52,9 @@ class TemplatePage:
         self.is_light = self.page.theme_mode == ft.ThemeMode.LIGHT
 
         if self.saved_theme_color:
-            self.page.theme = ft.Theme(color_scheme_seed=ft.Colors(self.saved_theme_color))
+            self.page.theme = ft.Theme(
+                color_scheme_seed=ft.Colors(self.saved_theme_color)
+            )
 
         if self.loading_overlay not in self.page.overlay:
             self.page.overlay.append(self.loading_overlay)
@@ -56,14 +62,13 @@ class TemplatePage:
         self.page.window.height = 820
         self.page.window.width = 430
 
-
     # def configure_page(self):
     #     """Configure common page settings."""
     #     self.page.title = Config.APP_TITLE
     #     self.page.theme_mode = ft.ThemeMode.SYSTEM
 
     #     self.is_light = True if self.page.theme_mode == ft.ThemeMode.LIGHT else False
-    
+
     #     self.page.overlay.append(self.loading_overlay)
 
     #     # Set initial window size (can be adjusted as needed)
@@ -71,10 +76,7 @@ class TemplatePage:
     #     self.page.window.width = 430
 
     def horizontal_divider(
-        self, 
-        with_or: bool = False, 
-        height: int | None = None, 
-        opacity: float = 1.0
+        self, with_or: bool = False, height: int | None = None, opacity: float = 1.0
     ) -> ft.Row | ft.Divider:
         """Create a horizontal divider with optional 'OR' text in the CENTER."""
         if with_or:
@@ -82,15 +84,14 @@ class TemplatePage:
                 controls=[
                     ft.Container(content=ft.Divider(), expand=True),
                     ft.Text("Or", opacity=0.7),
-                    ft.Container(content=ft.Divider(), expand=True)
+                    ft.Container(content=ft.Divider(), expand=True),
                 ],
-                alignment=ft.MainAxisAlignment.CENTER
+                alignment=ft.MainAxisAlignment.CENTER,
             )
         else:
             return ft.Divider(height=height, opacity=opacity)
-    
-    def show_loading(self, loading_msg=""):
-        """Show the loading overlay."""
+
+    def show_loading(self, loading_msg="Loading..."):
         self.loading_text.value = loading_msg
         self.loading_overlay.visible = True
         self.page.update()
@@ -115,16 +116,24 @@ class TemplatePage:
             border_radius=ft.BorderRadius.only(top_left=30, top_right=30),
             bgcolor=ft.Colors.ON_INVERSE_SURFACE,
             expand=True,
-            content=content
+            content=content,
         )
 
     def layout(
-        self, route: str = "/", 
+        self,
+        route: str = "/",
         navigation_bar: ft.NavigationBar | None = None,
         controls: ft.Control = None,
         padding: ft.Padding | None = 0,
         spacing: int = 10,
-        **kwargs
+        **kwargs,
     ) -> ft.View:
         """Creates a standard layout for pages."""
-        return ft.View(route=route, controls=controls, padding=padding, spacing=spacing, navigation_bar=navigation_bar, **kwargs)
+        return ft.View(
+            route=route,
+            controls=controls,
+            padding=padding,
+            spacing=spacing,
+            navigation_bar=navigation_bar,
+            **kwargs,
+        )

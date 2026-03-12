@@ -193,7 +193,7 @@ class LoginPage(TemplatePage):
                     content="Cancel", on_click=lambda e: self.page.pop_dialog()
                 ),
                 ft.TextButton(
-                    content="Send Reset Link",
+                    content="Reset Password",
                     disabled=True,
                     on_click=self.verify_reset_otp,
                 ),
@@ -290,14 +290,14 @@ class LoginPage(TemplatePage):
                 password=True,
                 can_reveal_password=True,
             )
-
-            self.page.pop_dialog()
+            self.page.pop_dialog()  # Close the email/OTP dialog before opening the reset password dialog
+            
             reset_password_dialog = ft.AlertDialog(
                 title=ft.Text("Reset Password"),
                 modal=True,
-                height=250,
                 content=ft.Column(
                     spacing=10,
+                    height=200,
                     controls=[
                         ft.Text("Enter your new password below.", size=14),
                         self.new_password_field,
@@ -309,7 +309,7 @@ class LoginPage(TemplatePage):
                         content="Cancel", on_click=lambda e: self.page.pop_dialog()
                     ),
                     ft.TextButton(
-                        content="Reset Password", on_click=self.reset_password
+                        content="Confirm Password", on_click=self.reset_password
                     ),
                 ],
             )
