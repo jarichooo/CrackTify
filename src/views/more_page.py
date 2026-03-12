@@ -47,8 +47,8 @@ class MorePage(TemplatePage):
             content=ft.Stack(
                 controls=[
                     ft.Container(
-                        width=150,
-                        height=150,
+                        width=120,
+                        height=120,
                         border_radius=100,
                         bgcolor=ft.Colors.GREY_300,
                         clip_behavior=ft.ClipBehavior.HARD_EDGE,
@@ -94,6 +94,18 @@ class MorePage(TemplatePage):
             ),
         )
 
+        # self.user_info = ft.Container(
+        #     bgcolor=ft.Colors.GREY_100,
+        #     border_radius=10,
+        #     on_click=self.on_infos_click,
+        #     content=ft.Row(
+        #         alignment=ft.MainAxisAlignment.CENTER,
+        #         vertical_alignment=ft.CrossAxisAlignment.CENTER,
+        #         spacing=20,
+        #         controls=[self.avatar_image, ft.Column(spacing=5, controls=[self.name_text, self.email_text])],
+        #     )
+        # )
+
         self.menu = ft.Column(
             spacing=8,
             controls=[
@@ -102,9 +114,6 @@ class MorePage(TemplatePage):
                 ft.ListTile(
                     leading=ft.Icon(ft.Icons.DARK_MODE_OUTLINED),
                     title=ft.Text("Theme Mode"),
-                    subtitle=ft.Text(
-                        self.saved_theme_mode
-                    ),  # e.g. "Light / Dark / System"
                     trailing=ft.PopupMenuButton(
                         icon=ft.Icons.ARROW_DROP_DOWN,
                         items=[
@@ -123,7 +132,6 @@ class MorePage(TemplatePage):
                 ft.ListTile(
                     leading=ft.Icon(ft.Icons.COLOR_LENS_OUTLINED),
                     title=ft.Text("Theme Color"),
-                    subtitle=ft.Text(self.saved_theme_color),  # e.g. "Blue"
                     trailing=ft.PopupMenuButton(
                         icon=ft.Icons.ARROW_DROP_DOWN,
                         items=[
