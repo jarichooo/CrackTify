@@ -38,6 +38,14 @@ class ImageGallery:
                     content="Date Ascending",
                     on_click=lambda _: self.change_sort("Date Ascending"),
                 ),
+                ft.PopupMenuItem(
+                    content="Name A-Z",
+                    on_click=lambda _: self.change_sort("Name A-Z"),
+                ),
+                ft.PopupMenuItem(
+                    content="Name Z-A",
+                    on_click=lambda _: self.change_sort("Name Z-A"),
+                ),
             ],
         )
 
@@ -128,6 +136,19 @@ class ImageGallery:
         self.current_sort = sort
         self.update_gallery()
 
+    # def sort_key(self):
+    #     """ Return sorting key function based on current selection. """
+    #     return {
+    #         "Date Descending": lambda f: f.stat().st_mtime,
+    #         "Date Ascending": lambda f: f.stat().st_mtime,
+    #         "Name A-Z": lambda f: f.name.lower(),
+    #         "Name Z-A": lambda f: f.name.lower(),
+    #     }.get(self.current_sort, lambda f: f.stat().st_mtime)
+    
+    # def sort_reverse(self):
+    #     """ Return whether sorting should be in reverse order. """
+    #     return self.current_sort in ("Date Descending", "Name Z-A")
+
     def update_gallery(self):
         """Update the gallery display based on current files, sort, and size."""
 
@@ -151,12 +172,15 @@ class ImageGallery:
             self.page.update()
             return
 
-        # Sort files based on detected_at timestamp
+        # Sort files based on detected_at timestamp or filename
         files = sorted(
-            self.files,
-            key=lambda f: f["detected_at"],
-            reverse=self.current_sort == "Date Descending",
+            self.files, key=lambda f: f.get("detected_at", 0) if "Date" in self.current_sort else f.get("filename", "").lower(), reverse=self.current_sort in ("Date Descending", "Name Z-A")
         )
+        # files = sorted(
+        #     self.files,
+        #     key=lambda f: f["detected_at"],
+        #     reverse=self.current_sort == "Date Descending",
+        # )
 
         # Update the body content with the top bar and gallery grid
         self.body.content = ft.Column(
