@@ -55,10 +55,10 @@ class EditUserPage(TemplatePage):
                 controls=[
                     self.avatar_image,
                     ft.Container(
-                        content=ft.Icon(ft.Icons.CAMERA_ALT, size=20, color=ft.Colors.WHITE),
+                        content=ft.Icon(ft.Icons.CAMERA_ALT, size=20, color=ft.Colors.ON_INVERSE_SURFACE),
                         width=30,
                         height=30,
-                        bgcolor=ft.Colors.BLACK_54,
+                        bgcolor=ft.Colors.INVERSE_SURFACE,
                         border_radius=20,
                         alignment=ft.Alignment.CENTER,
                         on_click=self.on_avatar_click
@@ -138,9 +138,23 @@ class EditUserPage(TemplatePage):
 
     async def on_verify_click(self):
         """Handle verify email button click to send OTP and show verification dialog."""
-        new_email = self.email_field.value.strip()
+        from services.auth_service import check_email_unique
         
         self.show_loading()
+
+        new_email = self.email_field.value.strip()
+
+        unique_resp = await check_email_unique(new_email)
+        if not unique_resp.get("success"):
+            self.hide_loading()
+            self.page.show_dialog(
+                AlertDialog(
+                    title="Email Already in Use",
+                    content="This email is already associated with another account."
+                )
+            )
+            return
+
         otp_response = await send_otp(new_email, self.user_first_name)
 
         self.otp_field = TextField(
@@ -182,7 +196,7 @@ class EditUserPage(TemplatePage):
             self.page.show_dialog(
                 AlertDialog(
                     title="Error Verifying Email",
-                    content=otp_response.get("message")
+                    content=otp_response.get("message", "Invalid email address. Please try again.")
                 )
             )
 
@@ -262,7 +276,7 @@ class EditUserPage(TemplatePage):
         # Required identifier
         updates["id"] = self.user_id
 
-        self.show_loading()
+        self.show_loading("Saving changes...")
         response = await update_profile(updates)
         self.hide_loading()
 

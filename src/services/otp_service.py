@@ -16,7 +16,6 @@ from .api_client import post_request
 #         print(f"Error in send_otp: {ex}")
 #         return {"success": False, "message": str(ex)}
 async def send_otp(email: str, name: str, resend: bool = False) -> Dict[str, Any]:
-    print(f"[DEBUG] send_otp called with: email={email}, name={name}, resend={resend}")
     try:
         response = await post_request(
             "/otp/send-otp",
@@ -26,10 +25,8 @@ async def send_otp(email: str, name: str, resend: bool = False) -> Dict[str, Any
                 "resend": resend
             }
         )
-        print(f"[DEBUG] OTP Response: {response}")
         return response
     except Exception as ex:
-        print(f"[DEBUG] send_otp exception: {repr(ex)}")
         return {"success": False, "message": str(ex)}
 
 
