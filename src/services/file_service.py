@@ -4,6 +4,7 @@ from config import Config
 
 API_BASE_URL = Config.API_BASE_URL
 
+
 async def upload_file(file_path: str | Path) -> dict:
     """
     Uploads a file to backend server (multipart/form-data).

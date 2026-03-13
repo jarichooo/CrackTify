@@ -291,7 +291,7 @@ class LoginPage(TemplatePage):
                 can_reveal_password=True,
             )
             self.page.pop_dialog()  # Close the email/OTP dialog before opening the reset password dialog
-            
+
             reset_password_dialog = ft.AlertDialog(
                 title=ft.Text("Reset Password"),
                 modal=True,

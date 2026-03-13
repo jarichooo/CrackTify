@@ -12,7 +12,6 @@ class TemplatePage:
         self.loading_text = ft.Text(
             "",
             text_align=ft.TextAlign.CENTER,
-            color=ft.Colors.INVERSE_SURFACE, # Use a color that contrasts well with the overlay background
         )
 
         self.loading_overlay = ft.Container(
@@ -62,19 +61,6 @@ class TemplatePage:
 
         self.page.window.height = 820
         self.page.window.width = 430
-
-    # def configure_page(self):
-    #     """Configure common page settings."""
-    #     self.page.title = Config.APP_TITLE
-    #     self.page.theme_mode = ft.ThemeMode.SYSTEM
-
-    #     self.is_light = True if self.page.theme_mode == ft.ThemeMode.LIGHT else False
-
-    #     self.page.overlay.append(self.loading_overlay)
-
-    #     # Set initial window size (can be adjusted as needed)
-    #     self.page.window.height = 820
-    #     self.page.window.width = 430
 
     def horizontal_divider(
         self, with_or: bool = False, height: int | None = None, opacity: float = 1.0

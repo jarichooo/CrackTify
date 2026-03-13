@@ -1,11 +1,12 @@
 import asyncio
 from typing import List
 import flet as ft
-import flet_lottie as ftl # type: ignore
+import flet_lottie as ftl  # type: ignore
 from services.crack_service import fetch_cracks_service
 from utils.file_utils import build_thumb
 from utils.page_utils import show_full
 from utils.time_utils import convert_to_utc8
+
 
 class HomeSection:
     async def get_cracks(self):
@@ -265,7 +266,9 @@ class HomeSection:
         new_stats = crack_resp.get("stats", {})
         new_recents = crack_resp.get("cracks", [])
 
-        top_new_recents = new_recents[:5]  # Limit to top 5 recent cracks for the home section
+        top_new_recents = new_recents[
+            :5
+        ]  # Limit to top 5 recent cracks for the home section
 
         if (
             new_stats == old_stats
@@ -330,7 +333,13 @@ class HomeSection:
                     leading=thumb_image,
                     title=ft.Column(
                         controls=[
-                            ft.Text(filename, size=16, weight="bold", max_lines=1, overflow=ft.TextOverflow.ELLIPSIS),
+                            ft.Text(
+                                filename,
+                                size=16,
+                                weight="bold",
+                                max_lines=1,
+                                overflow=ft.TextOverflow.ELLIPSIS,
+                            ),
                             ft.Text(
                                 f"Severity: {severity} ({probability*100:.1f}%)",
                                 size=14,
@@ -345,7 +354,7 @@ class HomeSection:
                     is_three_line=True,
                     bgcolor=ft.Colors.with_opacity(0.1, bgcolor),
                     shape=ft.RoundedRectangleBorder(radius=10),
-                    on_click=lambda _, file=crack: show_full(self.page, file)
+                    on_click=lambda _, file=crack: show_full(self.page, file),
                 )
             )
 

@@ -180,7 +180,6 @@ class MainPage(TemplatePage):
 
     def on_nav_change(self, e):
         """Handle navigation bar changes and update the active section accordingly."""
-        self.page.overlay.clear()  # Clear any overlays (like gallery full view) when navigating
         index = e.control.selected_index
 
         if index == 0:

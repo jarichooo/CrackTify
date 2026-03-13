@@ -1,12 +1,9 @@
 import re
 
+
 def validate_registration(
-        first_name: str,
-        last_name: str,
-        email: str,
-        password: str,
-        confirm_password: str
-    ) -> tuple[bool, dict]:
+    first_name: str, last_name: str, email: str, password: str, confirm_password: str
+) -> tuple[bool, dict]:
     """
     Validates registration fields.
     Returns:
@@ -62,6 +59,7 @@ def validate_registration(
 
     return is_valid, errors
 
+
 def validate_login(email: str, password: str) -> tuple[bool, dict]:
     """
     Validates login fields.
@@ -88,7 +86,10 @@ def validate_login(email: str, password: str) -> tuple[bool, dict]:
 
     return is_valid, errors
 
-def validate_password_change(current_password: str | None, new_password: str, confirm_password: str) -> tuple[bool, dict]:
+
+def validate_password_change(
+    current_password: str | None, new_password: str, confirm_password: str
+) -> tuple[bool, dict]:
     """
     Validates password change fields.
     Returns:
@@ -112,7 +113,9 @@ def validate_password_change(current_password: str | None, new_password: str, co
             is_valid = False
 
         elif not re.search(r"[A-Z]", new_password):
-            errors["new_password"] = "Password must contain at least one uppercase letter."
+            errors["new_password"] = (
+                "Password must contain at least one uppercase letter."
+            )
             is_valid = False
 
         elif not re.search(r"[0-9]", new_password):
@@ -128,6 +131,7 @@ def validate_password_change(current_password: str | None, new_password: str, co
         is_valid = False
 
     return is_valid, errors
+
 
 def validate_email(email: str) -> tuple[bool, dict]:
     """

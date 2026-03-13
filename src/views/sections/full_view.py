@@ -141,6 +141,7 @@ class FullViewPage(TemplatePage):
 
     async def confirm_delete(self, e, cid):
         from services.crack_service import delete_crack_service
+        self.show_loading("Deleting file...")
 
         res = await delete_crack_service(
             cid
@@ -154,10 +155,12 @@ class FullViewPage(TemplatePage):
                     ft.TextButton("OK", on_click=lambda e: self.page.pop_dialog())
                 ],
             )
+            self.hide_loading()  # Hide the loading indicator before showing the error dialog
             self.page.show_dialog(error_dialog)
             return
 
         self.page.pop_dialog()  # Close the confirmation dialog
+        self.hide_loading()  # Hide the loading indicator
         self.page.views.pop()  # Close the full view page to return to the gallery/history
 
     def display_properties(self, url):
@@ -168,7 +171,9 @@ class FullViewPage(TemplatePage):
                 controls=[
                     ft.Text(label, width=110),
                     ft.Text(":", width=10),
-                    ft.Text(value, overflow=ft.TextOverflow.FADE, max_lines=1, width=200),
+                    ft.Text(
+                        value, overflow=ft.TextOverflow.FADE, max_lines=1, width=200
+                    ),
                 ],
                 spacing=0,
             )

@@ -12,13 +12,20 @@ from views.template import TemplatePage
 from views.auth.otp_page import OTPVerificationPage
 
 from widgets.inputs import TextField
-from widgets.buttons import PrimaryButton, SecondaryButton, GoogleButton, CustomTextButton, BackButton
+from widgets.buttons import (
+    PrimaryButton,
+    SecondaryButton,
+    GoogleButton,
+    CustomTextButton,
+    BackButton,
+)
 from widgets.dialogs import AlertDialog
+
 
 class RegisterPage(TemplatePage):
     def __init__(self, page: ft.Page):
         super().__init__(page)
-        
+
     def build(self) -> ft.View:
         """Builds the registration Page layout."""
         self.first_name_field = TextField(
@@ -26,40 +33,40 @@ class RegisterPage(TemplatePage):
             hint_text="Enter your first name",
             autofocus=True,
             expand=1,
-            value=self.saved_user.get("first_name", "")
+            value=self.saved_user.get("first_name", ""),
         )
 
         self.last_name_field = TextField(
             label="Last Name",
             hint_text="Enter your last name",
             expand=1,
-            value=self.saved_user.get("last_name", "")
+            value=self.saved_user.get("last_name", ""),
         )
 
         self.email_field = TextField(
             label="Email",
             keyboard_type=ft.KeyboardType.EMAIL,
-            value=self.saved_user.get("email_address", "")
+            value=self.saved_user.get("email_address", ""),
         )
 
         self.password_field = TextField(
             label="Password",
             password=True,
             can_reveal_password=True,
-            value=self.saved_user.get("password_1", "")
+            value=self.saved_user.get("password_1", ""),
         )
 
         self.confirm_password_field = TextField(
             label="Confirm Password",
             password=True,
             can_reveal_password=True,
-            value=self.saved_user.get("password_2", "")
+            value=self.saved_user.get("password_2", ""),
         )
 
         continue_button = PrimaryButton(
             text="Continue",
             icon=ft.Icons.ARROW_FORWARD,
-            on_click=lambda _: self.page.run_task(self.on_continue_click)
+            on_click=lambda _: self.page.run_task(self.on_continue_click),
         )
 
         main_container = self.main_container(
@@ -76,23 +83,17 @@ class RegisterPage(TemplatePage):
                         spacing=0,
                         horizontal_alignment=ft.CrossAxisAlignment.CENTER,
                     ),
-                    
                     self.horizontal_divider(height=1, opacity=0),
-
                     ft.Row(
                         spacing=10,
-                        controls=[
-                            self.first_name_field,
-                            self.last_name_field
-                        ],
+                        controls=[self.first_name_field, self.last_name_field],
                     ),
-
                     self.email_field,
                     self.password_field,
                     self.confirm_password_field,
                     self.horizontal_divider(height=1, opacity=0),
                     continue_button,
-                ]
+                ],
             ),
         )
 
@@ -110,7 +111,7 @@ class RegisterPage(TemplatePage):
                         alignment=ft.Alignment.CENTER,
                     ),
                     ft.Column(height=20),  # Spacer
-                    main_container
+                    main_container,
                 ],
             ),
         )
@@ -124,7 +125,9 @@ class RegisterPage(TemplatePage):
         confirm_password = self.confirm_password_field.value.strip()
 
         # Validate input values
-        is_valid, errors = validate_registration(first_name, last_name, email, password, confirm_password)
+        is_valid, errors = validate_registration(
+            first_name, last_name, email, password, confirm_password
+        )
 
         if not is_valid:
             # Display validation errors
@@ -146,7 +149,7 @@ class RegisterPage(TemplatePage):
                 "last_name": last_name,
                 "email_address": email,
                 "password_1": password,
-                "password_2": confirm_password
+                "password_2": confirm_password,
             }
             await self.page.shared_preferences.set("saved_user", json.dumps(saved_user))
 
@@ -162,16 +165,17 @@ class RegisterPage(TemplatePage):
                 )
             )
 
-
     async def handle_send_otp(self, email, first_name):
         # Check if email is unique
         email_response = await check_email_unique(email)
         if not email_response.get("success"):
             self.hide_loading()
-            self.page.show_dialog(AlertDialog(
-                title="Email Already Exists",
-                content="The email address is already registered."
-            ))
+            self.page.show_dialog(
+                AlertDialog(
+                    title="Email Already Exists",
+                    content="The email address is already registered.",
+                )
+            )
             return
 
         # Send OTP and **await** response
@@ -179,15 +183,22 @@ class RegisterPage(TemplatePage):
         self.hide_loading()  # hide loading after response
 
         if not otp_response.get("success"):
-            self.page.show_dialog(AlertDialog(
-                title="OTP Failed",
-                content=otp_response.get("message", "Failed to send OTP"),
-            ))
+            self.page.show_dialog(
+                AlertDialog(
+                    title="OTP Failed",
+                    content=otp_response.get("message", "Failed to send OTP"),
+                )
+            )
             return
 
         # Navigate to OTP page only if OTP succeeded
         self.page.views.append(
-            OTPVerificationPage(self.page, email, first_name, self.last_name_field.value, self.password_field.value).build()
+            OTPVerificationPage(
+                self.page,
+                email,
+                first_name,
+                self.last_name_field.value,
+                self.password_field.value,
+            ).build()
         )
         self.page.update()
-

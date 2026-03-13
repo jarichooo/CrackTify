@@ -7,6 +7,7 @@ from utils.file_utils import build_thumb
 from utils.page_utils import show_full
 from utils.time_utils import convert_to_utc8
 
+
 class HistorySection(TemplatePage):
     async def get_cracks(self):
         res = await fetch_cracks_service(self.user.get("id"))
@@ -144,7 +145,13 @@ class HistorySection(TemplatePage):
                     leading=thumb_image,
                     title=ft.Column(
                         controls=[
-                            ft.Text(filename, size=16, weight="bold", max_lines=1, overflow=ft.TextOverflow.ELLIPSIS),
+                            ft.Text(
+                                filename,
+                                size=16,
+                                weight="bold",
+                                max_lines=1,
+                                overflow=ft.TextOverflow.ELLIPSIS,
+                            ),
                             ft.Text(
                                 f"Severity: {severity} ({probability*100:.1f}%)",
                                 size=14,
@@ -158,7 +165,7 @@ class HistorySection(TemplatePage):
                     is_three_line=True,
                     bgcolor=ft.Colors.with_opacity(0.1, bgcolor),
                     shape=ft.RoundedRectangleBorder(radius=10),
-                    on_click=lambda _, file=crack: show_full(self.page, file)
+                    on_click=lambda _, file=crack: show_full(self.page, file),
                 )
             )
 

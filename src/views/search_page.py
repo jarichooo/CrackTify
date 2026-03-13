@@ -94,9 +94,11 @@ class SearchPage(TemplatePage):
     def on_search_change(self, e):
         """Checks if there is text in the search bar and shows/hides the close button accordingly."""
         query = self.search_bar.value
-        self.search_body.content = ft.ProgressRing()  # Show loading indicator while filtering
+        self.search_body.content = (
+            ft.ProgressRing()
+        )  # Show loading indicator while filtering
         self.page.update()
-        
+
         if query:
             self.search_bar.bar_trailing.visible = True
             # perform search and display results as user types
@@ -164,7 +166,9 @@ class SearchPage(TemplatePage):
             time = date_str.split("T")[1].split(".")[0] if "T" in date_str else ""
 
             thumb_image = build_thumb(crack, with_playbtn=False)
-            thumb_image.on_click = lambda _, crack_file=crack: show_full(self.page, crack_file)
+            thumb_image.on_click = lambda _, crack_file=crack: show_full(
+                self.page, crack_file
+            )
 
             bgcolor = (
                 ft.Colors.GREEN
@@ -181,7 +185,13 @@ class SearchPage(TemplatePage):
                     leading=thumb_image,
                     title=ft.Column(
                         controls=[
-                            ft.Text(filename, size=16, weight="bold", max_lines=1, overflow=ft.TextOverflow.ELLIPSIS),
+                            ft.Text(
+                                filename,
+                                size=16,
+                                weight="bold",
+                                max_lines=1,
+                                overflow=ft.TextOverflow.ELLIPSIS,
+                            ),
                             ft.Text(
                                 f"Severity: {severity} ({probability*100:.1f}%)",
                                 size=14,

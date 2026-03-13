@@ -94,18 +94,6 @@ class MorePage(TemplatePage):
             ),
         )
 
-        # self.user_info = ft.Container(
-        #     bgcolor=ft.Colors.GREY_100,
-        #     border_radius=10,
-        #     on_click=self.on_infos_click,
-        #     content=ft.Row(
-        #         alignment=ft.MainAxisAlignment.CENTER,
-        #         vertical_alignment=ft.CrossAxisAlignment.CENTER,
-        #         spacing=20,
-        #         controls=[self.avatar_image, ft.Column(spacing=5, controls=[self.name_text, self.email_text])],
-        #     )
-        # )
-
         self.menu = ft.Column(
             spacing=8,
             controls=[
@@ -358,7 +346,9 @@ class MorePage(TemplatePage):
             f"{self.user.get('first_name', '')} {self.user.get('last_name', '')}"
         )
         self.email_text.value = self.user.get("email_address", "no email")
-        self.avatar_image.content.src = self.user.get("avatar_url", "")
+        self.avatar_image.content.controls[0].content.src = self.user.get(
+            "avatar_url", ""
+        )
 
         self.page.update()
 
@@ -373,9 +363,15 @@ class MorePage(TemplatePage):
 
     def change_password_click(self, e):
         """Open dialog to change password."""
-        self.cp_field = TextField(label="Current Password", value="", password=True, can_reveal_password=True)
-        self.np_field = TextField(label="New Password", password=True, can_reveal_password=True)
-        self.cnp_field = TextField(label="Confirm New Password", password=True, can_reveal_password=True)
+        self.cp_field = TextField(
+            label="Current Password", value="", password=True, can_reveal_password=True
+        )
+        self.np_field = TextField(
+            label="New Password", password=True, can_reveal_password=True
+        )
+        self.cnp_field = TextField(
+            label="Confirm New Password", password=True, can_reveal_password=True
+        )
 
         self.cp_dialog = AlertDialog(
             title="Change Password",
@@ -422,7 +418,9 @@ class MorePage(TemplatePage):
         self.page.update()
 
         # Verify user current password
-        verify_resp = await verify_user_password(self.user.get("id"), self.cp_field.value)
+        verify_resp = await verify_user_password(
+            self.user.get("id"), self.cp_field.value
+        )
 
         # If current password doesnt match, return an error
         if not verify_resp.get("success"):
@@ -494,7 +492,10 @@ class MorePage(TemplatePage):
         async def confirm_delete():
             # Here you would call the delete_account service and handle the response
             self.password_field = TextField(
-                label="Enter your password to confirm", password=True, can_reveal_password=True, value=""
+                label="Enter your password to confirm",
+                password=True,
+                can_reveal_password=True,
+                value="",
             )
             self.page.pop_dialog()  # Close the previous confirmation dialog
             self.page.show_dialog(
@@ -525,7 +526,7 @@ class MorePage(TemplatePage):
             )
 
             async def confirm_password(password):
-                # Here you would call the delete_account service with the password and handle the response    
+                # Here you would call the delete_account service with the password and handle the response
                 resp = await delete_account(self.user.get("id"), password)
 
                 if not resp.get("success"):

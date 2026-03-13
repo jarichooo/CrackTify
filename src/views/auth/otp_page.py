@@ -11,7 +11,14 @@ from widgets.buttons import BackButton, PrimaryButton, CustomTextButton
 
 
 class OTPVerificationPage(TemplatePage):
-    def __init__(self, page: ft.Page, email_address: str, first_name: str, last_name: str, password: str):
+    def __init__(
+        self,
+        page: ft.Page,
+        email_address: str,
+        first_name: str,
+        last_name: str,
+        password: str,
+    ):
         super().__init__(page)
 
         self.email_address = email_address
@@ -20,7 +27,7 @@ class OTPVerificationPage(TemplatePage):
         self.password = password
 
         self._is_processing = False  # guard flag
-    
+
     def build(self) -> ft.View:
         self.otp_field = TextField(
             label="One-Time PIN",
@@ -31,13 +38,13 @@ class OTPVerificationPage(TemplatePage):
 
         self.resend_button = CustomTextButton(
             text="Resend OTP",
-            on_tap=lambda e: asyncio.create_task(self.handle_resend_otp(e))
+            on_tap=lambda e: asyncio.create_task(self.handle_resend_otp(e)),
         )
 
         self.submit_button = PrimaryButton(
             text="Verify OTP",
             icon=ft.Icons.CHECK,
-            on_click=lambda e: asyncio.create_task(self.handle_verify_otp(e))
+            on_click=lambda e: asyncio.create_task(self.handle_verify_otp(e)),
         )
 
         main_container = ft.Container(
@@ -50,8 +57,15 @@ class OTPVerificationPage(TemplatePage):
                     ft.Column(
                         [
                             ft.Text("Verify your email", size=28, weight="bold"),
-                            ft.Text("A 6-digit authentication code has been sent to", size=14),
-                            ft.Text(self.email_address, size=14, color=ft.Colors.BLUE_ACCENT_100),
+                            ft.Text(
+                                "A 6-digit authentication code has been sent to",
+                                size=14,
+                            ),
+                            ft.Text(
+                                self.email_address,
+                                size=14,
+                                color=ft.Colors.BLUE_ACCENT_100,
+                            ),
                         ],
                         horizontal_alignment=ft.CrossAxisAlignment.CENTER,
                     ),
@@ -59,10 +73,7 @@ class OTPVerificationPage(TemplatePage):
                     self.otp_field,
                     self.submit_button,
                     ft.Row(
-                        [
-                            ft.Text("Didn't receive the OTP?"),
-                            self.resend_button
-                        ],
+                        [ft.Text("Didn't receive the OTP?"), self.resend_button],
                         alignment=ft.MainAxisAlignment.CENTER,
                         spacing=5,
                     ),
@@ -105,7 +116,9 @@ class OTPVerificationPage(TemplatePage):
         entered_otp = self.otp_field.value
         if not entered_otp or len(entered_otp) != 6:
             self.page.show_dialog(
-                AlertDialog(title="Invalid OTP", content="Please enter the 6-digit OTP.")
+                AlertDialog(
+                    title="Invalid OTP", content="Please enter the 6-digit OTP."
+                )
             )
             return
 
@@ -138,13 +151,17 @@ class OTPVerificationPage(TemplatePage):
                 self.page.show_dialog(
                     AlertDialog(
                         title="Registration Failed",
-                        content=reg_response.get("message", "Registration failed.")
+                        content=reg_response.get("message", "Registration failed."),
                     )
                 )
                 return
 
-            await self.page.shared_preferences.set("auth_token", reg_response.get("token"))
-            await self.page.shared_preferences.set("user", json.dumps(reg_response.get("user")))
+            await self.page.shared_preferences.set(
+                "auth_token", reg_response.get("token")
+            )
+            await self.page.shared_preferences.set(
+                "user", json.dumps(reg_response.get("user"))
+            )
 
             await self.page.push_route("/home")
 

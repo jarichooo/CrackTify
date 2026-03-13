@@ -93,7 +93,7 @@ class PreviewPage(TemplatePage):
         )
 
     async def handle_upload_file(self, e):
-        """Handles the upload button click event (sequential & cancellation-safe)."""
+        """Handles the upload button click event with automatic retry on failure."""
         from services.file_service import upload_file
         from services.crack_service import detect_crack, add_crack_service
 
@@ -105,65 +105,81 @@ class PreviewPage(TemplatePage):
         self.upload_btn.bgcolor = ft.Colors.GREY_400
         self.page.update()
 
-        try:
-            # STEP 1: UPLOAD (MUST FINISH)
-            self.show_loading("Uploading file...")
-            upload_result = await upload_file(self.selected_file.path)
+        MAX_RETRIES = 5
+        attempt = 0
+        success = False
 
-            if not upload_result:
-                raise RuntimeError("Upload failed: no response")
+        while attempt < MAX_RETRIES and not success:
+            attempt += 1
+            try:
+                # STEP 1: UPLOAD
+                self.show_loading(f"Uploading file... (Attempt {attempt})")
+                upload_result = await upload_file(self.selected_file.path)
 
-            # STEP 2: DETECT (MUST FINISH)
-            self.show_loading("Detecting cracks...")
-            detect_resp = await detect_crack(upload_result, confidence_threshold=0.5)
+                if not upload_result:
+                    raise RuntimeError("Upload failed: no response")
 
-            if not detect_resp or not detect_resp.get("success", True):
-                raise RuntimeError(
-                    detect_resp.get("message", "Crack detection failed")
-                    if detect_resp else "Crack detection returned no response"
+                # STEP 2: DETECT
+                self.show_loading(f"Detecting cracks... (Attempt {attempt})")
+                detect_resp = await detect_crack(
+                    upload_result, confidence_threshold=0.5
                 )
 
-            # STEP 3: SAVE TO DB (MUST FINISH)
-            user_id = self.user.get("id")
-            if not user_id:
-                raise RuntimeError("User not authenticated")
+                if not detect_resp or not detect_resp.get("success", True):
+                    raise RuntimeError(
+                        detect_resp.get("message", "Crack detection failed")
+                        if detect_resp
+                        else "Crack detection returned no response"
+                    )
 
-            crack_data = {
-                "user_id": user_id,
-                "file_url": detect_resp["file_url"],
-                "filename": os.path.splitext(self.selected_file.name)[0],
-                "severity": detect_resp.get("severity", "unknown"),
-                "probability": detect_resp.get("probability", 0),
-            }
+                # STEP 3: SAVE TO DB
+                user_id = self.user.get("id")
+                if not user_id:
+                    raise RuntimeError("User not authenticated")
 
-            await add_crack_service(user_id, crack_data)
+                crack_data = {
+                    "user_id": user_id,
+                    "file_url": detect_resp["file_url"],
+                    "filename": os.path.splitext(self.selected_file.name)[0],
+                    "severity": detect_resp.get("severity", "unknown"),
+                    "probability": detect_resp.get("probability", 0),
+                }
 
-            # SUCCESS UI
-            self.page.show_dialog(
-                ft.SnackBar(
-                    ft.Text("Uploaded and analyzed successfully!"),
-                    bgcolor=ft.Colors.GREEN_500,
+                await add_crack_service(user_id, crack_data)
+
+                # SUCCESS UI
+                self.page.show_dialog(
+                    ft.SnackBar(
+                        ft.Text("Uploaded and analyzed successfully!"),
+                        bgcolor=ft.Colors.GREEN_500,
+                    )
                 )
-            )
 
-            # Navigation ONLY after everything succeeded
-            self.page.views.pop()
+                # Navigation ONLY after everything succeeded
+                self.page.views.pop()
+                success = True
 
-        except asyncio.CancelledError:
-            # Do NOT swallow cancellations
-            print("Upload task cancelled")
-            raise
+            except asyncio.CancelledError:
+                print("Upload task cancelled")
+                raise
 
-        except Exception as err:
-            self.page.show_dialog(
-                ft.SnackBar(
-                    ft.Text(f"Process failed: {err}"),
-                    bgcolor=ft.Colors.RED_500,
-                )
-            )
+            except Exception as err:
+                print(f"Attempt {attempt} failed: {err}")
+                if attempt >= MAX_RETRIES:
+                    self.page.show_dialog(
+                        ft.SnackBar(
+                            ft.Text(
+                                f"Process failed after {MAX_RETRIES} attempts: {err}"
+                            ),
+                            bgcolor=ft.Colors.RED_500,
+                        )
+                    )
+                else:
+                    # Optional: wait a bit before retrying
+                    await asyncio.sleep(1)
 
-        finally:
-            self.hide_loading()
-            self.upload_btn.disabled = False
-            self.upload_btn.bgcolor = None
-            self.page.update()
+            finally:
+                self.hide_loading()
+                self.upload_btn.disabled = False
+                self.upload_btn.bgcolor = None
+                self.page.update()
