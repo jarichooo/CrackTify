@@ -102,7 +102,7 @@ class PreviewPage(TemplatePage):
 
         self.hide_loading()  # Ensure no loading from previous attempts
         self.upload_btn.disabled = True
-        self.upload_btn.bgcolor = ft.Colors.GRAY_400
+        self.upload_btn.bgcolor = ft.Colors.GREY_400
         self.page.update()
 
         try:

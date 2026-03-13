@@ -65,7 +65,7 @@ class FullViewPage(TemplatePage):
     def build(self) -> ft.View:
         """Builds the full view page view."""
         self.app_bar = ft.AppBar(
-            title=ft.Text(self.filename or "Unknown", overflow=ft.TextOverflow.FADE),
+            title=ft.Text(self.filename or "Unknown"),
             leading=self.cancel_btn,
             automatically_imply_leading=False,
             force_material_transparency=True,
@@ -168,7 +168,7 @@ class FullViewPage(TemplatePage):
                 controls=[
                     ft.Text(label, width=110),
                     ft.Text(":", width=10),
-                    ft.Text(value, overflow=ft.TextOverflow.ELLIPSIS, max_lines=1, width=160),
+                    ft.Text(value, overflow=ft.TextOverflow.FADE, max_lines=1, width=200),
                 ],
                 spacing=0,
             )

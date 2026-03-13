@@ -312,7 +312,7 @@ class HomeSection:
             date = date_str.split("T")[0] if "T" in date_str else date_str
             time = date_str.split("T")[1].split(".")[0] if "T" in date_str else ""
 
-            thumb_image = build_thumb(crack)
+            thumb_image = build_thumb(crack, with_playbtn=False)
             thumb_image.on_click = lambda _, file=crack: show_full(self.page, file)
 
             bgcolor = (
@@ -330,12 +330,13 @@ class HomeSection:
                     leading=thumb_image,
                     title=ft.Column(
                         controls=[
-                            ft.Text(filename, size=16, weight="bold", overflow=ft.TextOverflow.FADE),
+                            ft.Text(filename, size=16, weight="bold", max_line=1, overflow=ft.TextOverflow.FADE),
                             ft.Text(
                                 f"Severity: {severity} ({probability*100:.1f}%)",
                                 size=14,
                             ),
                         ],
+                        width=250,
                         spacing=2,
                     ),
                     subtitle=ft.Text(

@@ -13,7 +13,7 @@ def get_video_thumbnail(video_url: str) -> Optional[str]:
     )
 
 
-def build_thumb(file: dict, img_size: int = 100) -> ft.Control:
+def build_thumb(file: dict, img_size: int = 100, with_playbtn: bool = True) -> ft.Control:
     """Build a thumbnail control for a given file."""
     url = file.get(
         "file_url"
@@ -46,7 +46,7 @@ def build_thumb(file: dict, img_size: int = 100) -> ft.Control:
                             color=ft.Colors.WHITE,
                         ),
                         alignment=ft.Alignment.CENTER,
-                        visible=is_video,
+                        visible=is_video and with_playbtn,
                         bgcolor=ft.Colors.with_opacity(0.35, ft.Colors.BLACK),
                     ),
                 ]
