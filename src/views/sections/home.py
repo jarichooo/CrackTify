@@ -239,6 +239,10 @@ class HomeSection:
             self.lottie_container.offset = ft.Offset(0, 0)
             self.page.update()
 
+    def refresh(self):
+        """Public method to trigger data refresh on the home section."""
+        asyncio.create_task(self.lazy_load())
+
     async def lazy_load(self):
         """Load data for stats and recents."""
         self.recent_container.content = (
@@ -316,7 +320,7 @@ class HomeSection:
             time = date_str.split("T")[1].split(".")[0] if "T" in date_str else ""
 
             thumb_image = build_thumb(crack, with_playbtn=False)
-            thumb_image.on_click = lambda _, file=crack: show_full(self.page, file)
+            thumb_image.on_click = lambda _, file=crack: show_full(self.page, file, refresh_function=self.refresh)
 
             bgcolor = (
                 ft.Colors.GREEN
@@ -354,7 +358,7 @@ class HomeSection:
                     is_three_line=True,
                     bgcolor=ft.Colors.with_opacity(0.1, bgcolor),
                     shape=ft.RoundedRectangleBorder(radius=10),
-                    on_click=lambda _, file=crack: show_full(self.page, file),
+                    on_click=lambda _, file=crack: show_full(self.page, file, refresh_function=self.refresh),
                 )
             )
 

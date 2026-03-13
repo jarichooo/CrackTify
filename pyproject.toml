@@ -1,6 +1,6 @@
 [project]
 name = "cracktify-project"
-version = "2.0.1"
+version = "2.0.0"
 description = "A crack detection app built with Flet and PyJNIus."
 readme = "README.md"
 requires-python = ">=3.10"

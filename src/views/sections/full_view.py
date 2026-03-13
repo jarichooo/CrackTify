@@ -7,7 +7,7 @@ from services.crack_service import add_crack_service
 
 
 class FullViewPage(TemplatePage):
-    def __init__(self, page: ft.Page, file: dict):
+    def __init__(self, page: ft.Page, file: dict, on_close: callable=None):
         super().__init__(page)
         self.id = file.get("id")
         self.filename = file.get("filename")
@@ -15,6 +15,8 @@ class FullViewPage(TemplatePage):
         self.probability = file.get("probability")
         self.date_str = file.get("detected_at")
         self.file_url = file.get("file_url")
+
+        self.on_close = on_close  # Callback to refresh home/gallery/history after closing full view
 
         is_video = (
             get_file_type(self.file_url) == "video"
@@ -159,9 +161,12 @@ class FullViewPage(TemplatePage):
             self.page.show_dialog(error_dialog)
             return
 
-        self.page.pop_dialog()  # Close the confirmation dialog
         self.hide_loading()  # Hide the loading indicator
+        self.page.pop_dialog()  # Close the confirmation dialog
         self.page.views.pop()  # Close the full view page to return to the gallery/history
+
+        if self.on_close:
+            self.on_close()  # Trigger the callback to refresh the home/gallery/history page
 
     def display_properties(self, url):
         date, time = self.extract_time(self.date_str)

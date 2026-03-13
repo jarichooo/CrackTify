@@ -175,8 +175,20 @@ class MainPage(TemplatePage):
         # Create preview page with file and push it
         from .upload_preview import PreviewPage
 
-        preview_page = PreviewPage(self.page, file, self.state, self.user)
+        preview_page = PreviewPage(
+            self.page,
+            file,
+            self.state,
+            self.user,
+            on_close=self.refresh_current_section,  # Pass the refresh function to the preview page to call after upload completes
+        )
         self.page.views.append(preview_page.build())
+
+    def refresh_current_section(self):
+        """Refresh the current active section (home/gallery/history) after actions like upload or delete."""
+        self.active_section.refresh()  # Call the refresh method of the active section
+
+        self.body.update()
 
     def on_nav_change(self, e):
         """Handle navigation bar changes and update the active section accordingly."""

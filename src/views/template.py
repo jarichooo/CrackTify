@@ -30,12 +30,14 @@ class TemplatePage:
             ),
         )
 
-        self.page.run_task(self.configure_page)
+        # Add overlay immediately
+        self.page.overlay.append(self.loading_overlay)
 
         self.saved_theme: str | None = None
         self.saved_user: dict = {}
         self.auth_token: str | None = None
 
+        self.page.run_task(self.configure_page)
         self.page.run_task(self.load_shared_preferences)
 
     async def configure_page(self):

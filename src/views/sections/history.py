@@ -1,5 +1,6 @@
 import datetime
 import flet as ft
+import asyncio
 
 from views.template import TemplatePage
 from services.crack_service import fetch_cracks_service
@@ -46,6 +47,10 @@ class HistorySection(TemplatePage):
         )
 
         return [self.history_body]
+    
+    def refresh(self):
+        """Public method to trigger history refresh from outside (e.g. after upload)."""
+        asyncio.create_task(self.lazy_load())
 
     async def lazy_load(self):
         """Fetches and displays the user's crack history."""
@@ -128,7 +133,7 @@ class HistorySection(TemplatePage):
                 current_date = date
 
             thumb_image = build_thumb(crack, with_playbtn=False)
-            thumb_image.on_click = lambda _, file=crack: show_full(self.page, file)
+            thumb_image.on_click = lambda _, file=crack: show_full(self.page, file, refresh_function=self.refresh)
 
             bgcolor = (
                 ft.Colors.GREEN
@@ -165,7 +170,7 @@ class HistorySection(TemplatePage):
                     is_three_line=True,
                     bgcolor=ft.Colors.with_opacity(0.1, bgcolor),
                     shape=ft.RoundedRectangleBorder(radius=10),
-                    on_click=lambda _, file=crack: show_full(self.page, file),
+                    on_click=lambda _, file=crack: show_full(self.page, file, refresh_function=self.refresh),
                 )
             )
 

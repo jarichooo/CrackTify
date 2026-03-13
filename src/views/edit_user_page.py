@@ -270,11 +270,13 @@ class EditUserPage(TemplatePage):
         # Compare avatar (upload only if changed)
         if new_avatar and new_avatar != current_avatar:
             try:
+                self.show_loading("Uploading new avatar...")
                 upload_response = await upload_file(new_avatar)
                 updates["avatar_url"] = upload_response.get("url", current_avatar)
             except Exception:
                 pass  # Keep old avatar if upload fails
 
+        self.show_loading("Saving changes...")
         # If nothing changed, skip API call
         if not updates:
             self.page.views.pop()
@@ -290,7 +292,7 @@ class EditUserPage(TemplatePage):
             self.page.show_dialog(
                 AlertDialog(
                     title="Saving error",
-                    content="Error saving changes, please try again.",
+                    content=f"Failed to save changes: {response.get('message', 'Unknown error')}",
                 )
             )
             return

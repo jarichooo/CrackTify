@@ -9,11 +9,12 @@ from .template import TemplatePage
 
 
 class PreviewPage(TemplatePage):
-    def __init__(self, page: ft.Page, file: ft.FilePickerFile, state, user):
+    def __init__(self, page: ft.Page, file: ft.FilePickerFile, state, user, on_close: callable=None):
         super().__init__(page)
         self.selected_file = file
         self.state = state
         self.user = user
+        self.on_close = on_close
 
         # Determine file type
         ext = file.name.lower().rsplit(".", 1)[-1]
@@ -94,6 +95,13 @@ class PreviewPage(TemplatePage):
 
     async def handle_upload_file(self, e):
         """Handles the upload button click event with automatic retry on failure."""
+        do_cancel = False  # Set to True if you want to show a cancel button during upload
+
+        if do_cancel: # Cancel button logic
+            self.hide_loading()  # Ensure no loading from previous attempts
+            self.page.views.pop()
+            return
+
         from services.file_service import upload_file
         from services.crack_service import detect_crack, add_crack_service
 
@@ -105,6 +113,13 @@ class PreviewPage(TemplatePage):
         self.upload_btn.bgcolor = ft.Colors.GREY_400
         self.page.update()
 
+        # STEP 1: UPLOAD
+        self.show_loading("Uploading file...")
+        upload_result = await upload_file(self.selected_file.path)
+
+        if not upload_result:
+            raise RuntimeError("Upload failed: no response")
+
         MAX_RETRIES = 5
         attempt = 0
         success = False
@@ -112,13 +127,6 @@ class PreviewPage(TemplatePage):
         while attempt < MAX_RETRIES and not success:
             attempt += 1
             try:
-                # STEP 1: UPLOAD
-                self.show_loading(f"Uploading file... (Attempt {attempt})")
-                upload_result = await upload_file(self.selected_file.path)
-
-                if not upload_result:
-                    raise RuntimeError("Upload failed: no response")
-
                 # STEP 2: DETECT
                 self.show_loading(f"Detecting cracks... (Attempt {attempt})")
                 detect_resp = await detect_crack(
@@ -145,6 +153,7 @@ class PreviewPage(TemplatePage):
                     "probability": detect_resp.get("probability", 0),
                 }
 
+                self.show_loading(f"Saving results... (Attempt {attempt})")
                 await add_crack_service(user_id, crack_data)
 
                 # SUCCESS UI
@@ -156,8 +165,11 @@ class PreviewPage(TemplatePage):
                 )
 
                 # Navigation ONLY after everything succeeded
-                self.page.views.pop()
                 success = True
+                self.page.views.pop()
+
+                if self.on_close:
+                    self.on_close()  # Trigger the callback to refresh the home/gallery/history page
 
             except asyncio.CancelledError:
                 print("Upload task cancelled")
@@ -179,7 +191,8 @@ class PreviewPage(TemplatePage):
                     await asyncio.sleep(1)
 
             finally:
-                self.hide_loading()
+                do_cancel = True  # Show cancel button after first attempt if desired
+                self.upload_btn.content = "Cancel"
                 self.upload_btn.disabled = False
-                self.upload_btn.bgcolor = None
+                self.upload_btn.bgcolor = ft.Colors.RED_500
                 self.page.update()
