@@ -1,4 +1,5 @@
 import asyncio
+import random
 from typing import List
 import flet as ft
 import flet_lottie as ftl  # type: ignore
@@ -31,14 +32,9 @@ class HomeSection:
     def __init__(self, page: ft.Page, user):
         self.page = page
         self.user = user
-        self.header_index = 0  # Start with the first header state
 
         # Define header states with text and corresponding Lottie animation URLs
         self.header_states = [
-            {
-                "text": f"Hello,\n{self.user.get('first_name', 'User')}!",
-                "lottie": "https://lottie.host/70c56776-19ff-4847-b384-e93db9f84eff/jhhLCVXM5i.json",
-            },
             {
                 "text": "Crack the code.\nLevel up your skills.",
                 "lottie": "https://lottie.host/b9c2c1c3-251e-4429-84bd-7e01f5494881/04fQlqqIzI.json",
@@ -48,12 +44,24 @@ class HomeSection:
                 "lottie": "https://lottie.host/dd1339c6-836f-4233-885f-70642daa2a64/PQgmgLrzYI.json",
             },
             {
+                "text": "Bird sees cracks.\nYou see possibilities.",
+                "lottie": "https://lottie.host/c78f9f1f-dfc2-4a40-b479-ae2a98812a9d/GSFw0u6mJr.json"
+            },
+            {
+                "text": "Building a crack-free world,\none detection at a time.",
+                "lottie": "https://lottie.host/94d5a43e-6e6f-466d-b2a6-a44a0604bf37/vfgonGMYvk.json",
+            },
+            {
                 "text": "Cracktify\nyour curiosity.",
                 "lottie": "https://lottie.host/b7449fb3-0234-4294-8537-dd8da8863241/Q80p9HiW2S.json",
             },
             {
                 "text": "Break the limits.\nFind the crack.",
                 "lottie": "https://lottie.host/8949bf4b-3fb2-481c-8900-2a770573497d/d3H80coEST.json",
+            },
+            {
+                "text": "A frog looking for cracks.\nJoin the journey.",
+                "lottie": "https://lottie.host/cdc68723-c4e4-4453-8719-f8c892bc527c/ekpwJzFMJE.json"
             },
             {
                 "text": "Think deeper.\nCrack smarter.",
@@ -113,6 +121,14 @@ class HomeSection:
         # Initialize stats and recents data
         self.stats = {}
         self.recent_cracks = []
+
+
+        # Set initial header state
+        self.header_index = random.randint(0, len(self.header_states) - 1)
+
+        state = self.header_states[self.header_index]
+        self.text_control.value = state["text"]
+        self.lottie_control.src = state["lottie"]
 
         self.page.run_task(
             self.load_cracks
@@ -197,9 +213,8 @@ class HomeSection:
 
     async def rotate_header_loop(self):
         """Continuously rotate through header states with animation."""
-        again_count = 0
         while True:
-            await asyncio.sleep(7)  # Wait before rotating to the next header state
+            await asyncio.sleep(10)  # Wait before rotating to the next header state
             # Animate OUT
             self.text_container.opacity = 0
             self.text_container.offset = ft.Offset(0, -0.1)
@@ -213,17 +228,7 @@ class HomeSection:
             self.header_index = (self.header_index + 1) % len(self.header_states)
             state = self.header_states[self.header_index]
 
-            if state["text"] == self.header_states[0]["text"]:
-                if (
-                    again_count >= 5
-                ):  # Reset after 5 "again"s to prevent it from getting too long
-                    again_count = 0
-                    continue  # Skip updating text to original "Hello, User!" for one cycle to avoid it looking weird with "Hello again again again again again, User!"
-                again_count += 1
-
-            self.text_control.value = state["text"].replace(
-                "Hello", f"Hello{' again' * again_count}"
-            )
+            self.text_control.value = state["text"]
             self.lottie_control.src = state["lottie"]
 
             # Prepare IN

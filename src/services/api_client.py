@@ -4,8 +4,6 @@ from config import Config
 
 # Base API URL
 api_url = Config.API_BASE_URL
-print(f"[DEBUG] API Base URL: {api_url}")
-
 
 async def verify_connection() -> bool:
     """Check if the API server is reachable."""
