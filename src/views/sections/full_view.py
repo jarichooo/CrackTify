@@ -143,6 +143,8 @@ class FullViewPage(TemplatePage):
 
     async def confirm_delete(self, e, cid):
         from services.crack_service import delete_crack_service
+        
+        self.page.pop_dialog()  # Close the confirmation dialog
         self.show_loading("Deleting file...")
 
         res = await delete_crack_service(
@@ -162,7 +164,6 @@ class FullViewPage(TemplatePage):
             return
 
         self.hide_loading()  # Hide the loading indicator
-        self.page.pop_dialog()  # Close the confirmation dialog
         self.page.views.pop()  # Close the full view page to return to the gallery/history
 
         if self.on_close:

@@ -110,7 +110,7 @@ class PreviewPage(TemplatePage):
 
         self.hide_loading()  # Ensure no loading from previous attempts
         self.upload_btn.disabled = True
-        self.upload_btn.bgcolor = ft.Colors.GREY_400
+        self.upload_btn.bgcolor = ft.Colors.with_opacity(ft.Colors.GRAY_500, 0.5)
         self.page.update()
 
         # STEP 1: UPLOAD
@@ -191,8 +191,11 @@ class PreviewPage(TemplatePage):
                     await asyncio.sleep(1)
 
             finally:
+                self.hide_loading()
                 do_cancel = True  # Show cancel button after first attempt if desired
+                self.upload_btn.icon = ft.Icons.CANCEL
                 self.upload_btn.content = "Cancel"
+                self.upload_btn.tooltip = "Cancel Upload"
                 self.upload_btn.disabled = False
                 self.upload_btn.bgcolor = ft.Colors.RED_500
                 self.page.update()
