@@ -21,12 +21,31 @@ class ImageGallery:
 
         self.current_size = "Medium"
         self.current_sort = "Date Descending"
+        self.filter_view = "All"
 
         self.files: list[dict] = []  # cloud files
         # self.gallery_grid: ft.GridView | None = None
+        self.filtered_files: list[dict] = []  # files after applying filter/sort
 
     def build(self) -> List[ft.Control]:
         """Build the gallery section UI."""
+        filter_popup = ft.PopupMenuButton(
+            content=ft.Row([ft.Text("Filter By"), ft.Icon(ft.Icons.FILTER_LIST)]),
+            items=[
+                ft.PopupMenuItem(
+                    content="All", on_click=lambda _: self.change_filter("All")
+                ),
+                ft.PopupMenuItem(
+                    content="High", on_click=lambda _: self.change_filter("High")
+                ),
+                ft.PopupMenuItem(
+                    content="Mild", on_click=lambda _: self.change_filter("Mild")
+                ),
+                ft.PopupMenuItem(
+                    content="Low", on_click=lambda _: self.change_filter("Low")
+                ),
+            ],
+        )
         sort_popup = ft.PopupMenuButton(
             content=ft.Row([ft.Text("Sort By"), ft.Icon(ft.Icons.SORT)]),
             items=[
@@ -67,7 +86,7 @@ class ImageGallery:
 
         self.top_bar = ft.Container(
             content=ft.Row(
-                controls=[sort_popup, size_popup],
+                controls=[filter_popup, sort_popup, size_popup],
                 alignment=ft.MainAxisAlignment.END,
                 spacing=20,
             )
@@ -84,6 +103,10 @@ class ImageGallery:
         self.body = ft.Container(expand=True, content=ft.Column())
 
         return [self.body]
+
+    def refresh(self):
+        """Public method to trigger gallery refresh from outside (e.g. after upload)."""
+        asyncio.create_task(self.lazy_load())
 
     async def lazy_load(self):
         """Instant load using cached files, background refresh."""
@@ -121,7 +144,13 @@ class ImageGallery:
 
         # Update only if changed
         self.files = new_files
+        self.filtered_files = self.files  # Reset filter to show all new files
 
+        self.update_gallery()
+
+    def change_filter(self, filter_view: str):
+        """Change the filter view of the gallery."""
+        self.filtered_files = [f for f in self.files if filter_view == "All" or f.get("severity") == filter_view]
         self.update_gallery()
 
     def change_size(self, size: str):
@@ -158,10 +187,38 @@ class ImageGallery:
             )
             self.page.update()
             return
+        
+        if not self.filtered_files:  # If filter results in no files, show message
+            self.body.content = ft.Column(
+                controls=[
+                    self.top_bar,  # Show top bar even when no results to allow changing filter/sort/size
+                    ft.Container(
+                        expand=True,
+                        content=ft.Column(
+                            controls=[
+                                ft.Icon(ft.Icons.SEARCH_OFF, size=64, color=ft.Colors.GREY),
+                                ft.Text("No files match the filter.", size=16, color=ft.Colors.GREY),
+                                ft.Text(
+                                    "Try changing the filter or sort options.",
+                                    size=16,
+                                    color=ft.Colors.GREY,
+                                ),
+                            ],
+                            alignment=ft.MainAxisAlignment.CENTER,
+                            horizontal_alignment=ft.CrossAxisAlignment.CENTER,
+                        ),
+                    )
+                ],
+                alignment=ft.MainAxisAlignment.CENTER,
+                horizontal_alignment=ft.CrossAxisAlignment.CENTER,
+                expand=True,
+            )
+            self.page.update()
+            return
 
         # Sort files based on detected_at timestamp or filename
         files = sorted(
-            self.files,
+            self.filtered_files,
             key=lambda f: (
                 f.get("detected_at", 0)
                 if "Date" in self.current_sort
@@ -184,7 +241,7 @@ class ImageGallery:
         for f in files:
             # Build and add thumbnail for each file
             thumbnail = build_thumb(f, self.SIZE_MAP[self.current_size][0])
-            thumbnail.on_click = lambda _, file=f: show_full(self.page, file)
+            thumbnail.on_click = lambda _, file=f: show_full(self.page, file, refresh_function=self.refresh)  # Pass refresh function to full view
             self.gallery_grid.controls.append(
                 ft.Container(
                     content=ft.Column(
