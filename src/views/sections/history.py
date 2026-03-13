@@ -5,6 +5,7 @@ from views.template import TemplatePage
 from services.crack_service import fetch_cracks_service
 from utils.file_utils import build_thumb
 from utils.page_utils import show_full
+from utils.time_utils import convert_to_utc8
 
 class HistorySection(TemplatePage):
     async def get_cracks(self):
@@ -114,7 +115,7 @@ class HistorySection(TemplatePage):
             filename = crack.get("filename", "Unknown File")
             severity = crack.get("severity", "Unknown Severity")
             probability = crack.get("probability", 0)
-            date_str = crack.get("detected_at", "")
+            date_str = convert_to_utc8(crack.get("detected_at", ""))
 
             date = date_str.split("T")[0] if "T" in date_str else date_str
             time = date_str.split("T")[1].split(".")[0] if "T" in date_str else ""
