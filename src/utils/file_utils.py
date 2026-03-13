@@ -41,13 +41,13 @@ def build_thumb(file: dict, img_size: int = 100, with_playbtn: bool = True) -> f
                     thumbnail_img,
                     ft.Container(
                         content=ft.Icon(
-                            ft.Icons.PLAY_CIRCLE_FILL,
+                            ft.Icons.PLAY_CIRCLE,
                             size=48,
                             color=ft.Colors.WHITE,
                         ),
                         alignment=ft.Alignment.CENTER,
                         visible=is_video and with_playbtn,
-                        bgcolor=ft.Colors.with_opacity(0.35, ft.Colors.BLACK),
+                        bgcolor=ft.Colors.TRANSPARENT,
                     ),
                 ]
             )

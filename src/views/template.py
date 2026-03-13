@@ -12,6 +12,7 @@ class TemplatePage:
         self.loading_text = ft.Text(
             "",
             text_align=ft.TextAlign.CENTER,
+            color=ft.Colors.INVERSE_SURFACE, # Use a color that contrasts well with the overlay background
         )
 
         self.loading_overlay = ft.Container(

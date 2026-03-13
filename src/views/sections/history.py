@@ -125,7 +125,7 @@ class HistorySection(TemplatePage):
                 self.history_list.controls.append(ft.Text(date_in_words, size=16))
                 current_date = date
 
-            thumb_image = build_thumb(crack)
+            thumb_image = build_thumb(crack, with_playbtn=False)
             thumb_image.on_click = lambda _, file=crack: show_full(self.page, file)
 
             bgcolor = (
@@ -143,7 +143,7 @@ class HistorySection(TemplatePage):
                     leading=thumb_image,
                     title=ft.Column(
                         controls=[
-                            ft.Text(filename, size=16, weight="bold", max_line=1, overflow=ft.TextOverflow.FADE),
+                            ft.Text(filename, size=16, weight="bold", max_lines=1, overflow=ft.TextOverflow.ELLIPSIS),
                             ft.Text(
                                 f"Severity: {severity} ({probability*100:.1f}%)",
                                 size=14,
