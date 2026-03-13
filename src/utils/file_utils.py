@@ -36,6 +36,7 @@ def build_thumb(file: dict, img_size: int = 100) -> ft.Control:
     content = ft.Column(
         controls=[
             ft.Stack(
+                alignment=ft.Alignment.CENTER,
                 controls=[
                     thumbnail_img,
                     ft.Container(

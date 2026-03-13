@@ -133,7 +133,7 @@ class HistorySection(TemplatePage):
                 if severity == "Low"
                 else (
                     ft.Colors.YELLOW
-                    if severity == "Medium"
+                    if severity == "Mild"
                     else ft.Colors.RED if severity == "High" else ft.Colors.GREEN
                 )
             )

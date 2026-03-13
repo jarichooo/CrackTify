@@ -9,8 +9,7 @@ from utils.page_utils import show_full
 
 class HomeSection:
     async def get_cracks(self):
-        limit = 5  # Limit to top 5 recent cracks for the home section
-        res = await fetch_cracks_service(self.user.get("id"), limit)
+        res = await fetch_cracks_service(self.user.get("id"))
 
         if not res.get("success"):
             self.search_body.content = ft.Text(
@@ -250,7 +249,7 @@ class HomeSection:
             self.update_home()
 
         # Fetch in background
-        crack_resp = await fetch_cracks_service(self.user.get("id"), limit=5)
+        crack_resp = await fetch_cracks_service(self.user.get("id"))
 
         if not crack_resp.get("success"):
             self.recent_container.content = ft.Text(
@@ -266,9 +265,11 @@ class HomeSection:
         new_stats = crack_resp.get("stats", {})
         new_recents = crack_resp.get("cracks", [])
 
+        top_new_recents = new_recents[:5]  # Limit to top 5 recent cracks for the home section
+
         if (
             new_stats == old_stats
-            and new_recents == old_recents
+            and top_new_recents == old_recents
             and self.recent_cracks != []
         ):  # if both is equal but not empty, no changes and new feches is not empty
             self.recent_container.content = (
@@ -277,7 +278,7 @@ class HomeSection:
             return  # nothing changed → no UI update
 
         self.stats = new_stats
-        self.recent_cracks = new_recents
+        self.recent_cracks = top_new_recents
         self.update_home()
 
     def update_home(self):
@@ -319,7 +320,7 @@ class HomeSection:
                 if severity == "Low"
                 else (
                     ft.Colors.YELLOW
-                    if severity == "Medium"
+                    if severity == "Mild"
                     else ft.Colors.RED if severity == "High" else ft.Colors.GREEN
                 )
             )
