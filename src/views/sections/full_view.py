@@ -3,11 +3,10 @@ import flet_video as ftv
 
 from utils.file_utils import get_file_type, cloudinary_to_download_url
 from views.template import TemplatePage
-from services.crack_service import add_crack_service
 
 
 class FullViewPage(TemplatePage):
-    def __init__(self, page: ft.Page, file: dict, on_close: callable=None):
+    def __init__(self, page: ft.Page, file: dict, on_close: callable = None):
         super().__init__(page)
         self.id = file.get("id")
         self.filename = file.get("filename")
@@ -16,7 +15,9 @@ class FullViewPage(TemplatePage):
         self.date_str = file.get("detected_at")
         self.file_url = file.get("file_url")
 
-        self.on_close = on_close  # Callback to refresh home/gallery/history after closing full view
+        self.on_close = (
+            on_close  # Callback to refresh home/gallery/history after closing full view
+        )
 
         is_video = (
             get_file_type(self.file_url) == "video"
@@ -57,11 +58,16 @@ class FullViewPage(TemplatePage):
             height=self.page.height - 60,  # leave space for app bar
         )
 
+        def close_full_view(e):
+            self.page.views.pop()  # Close the full view page
+            if self.on_close:
+                self.on_close()  # Trigger the callback to refresh the home/gallery/history page
+
         # Close button
         self.cancel_btn = ft.IconButton(
             icon=ft.Icons.CLOSE,
             tooltip="Close Full View",
-            on_click=lambda _: self.page.views.pop(),
+            on_click=close_full_view,
         )
 
     def build(self) -> ft.View:
@@ -79,6 +85,11 @@ class FullViewPage(TemplatePage):
                             content="Download",
                             icon=ft.Icons.DOWNLOAD,
                             on_click=self.download_file,
+                        ),
+                        ft.PopupMenuItem(
+                            content="Rename",
+                            icon=ft.Icons.EDIT,
+                            on_click=self.rename_file,
                         ),
                         ft.PopupMenuItem(
                             content="Delete",
@@ -104,6 +115,53 @@ class FullViewPage(TemplatePage):
             route="/full_view",
             controls=[self.app_bar, self.body],
         )
+
+    def rename_file(self, e):
+        """Placeholder for rename functionality."""
+        self.rename_tf = ft.TextField(
+            label="Filename", value=self.filename, width=300, autofocus=True, selection=(ft.TextSelection(0, len(self.filename)))
+        )
+        rename_dialog = ft.AlertDialog(
+            title="Rename File",
+            modal=True,
+            content=self.rename_tf,
+            actions=[
+                ft.TextButton("Cancel", on_click=lambda e: self.page.pop_dialog()),
+                ft.TextButton(
+                    "Rename",
+                    on_click=lambda e: self.page.run_task(self.do_rename_file, self.rename_tf.value),
+                ),
+            ],
+        )
+        self.page.show_dialog(rename_dialog)
+
+    async def do_rename_file(self, new_name):
+        """Renames the file with the given new name."""
+        from services.crack_service import update_crack_service
+
+        self.page.pop_dialog()  # Close the rename dialog
+        self.show_loading("Renaming file...")
+        self.page.update()
+
+        resp = await update_crack_service(self.id, {"filename": new_name})
+
+        if not resp.get("success"):
+            error_dialog = ft.AlertDialog(
+                title="Rename Failed",
+                content=ft.Text("Failed to rename the file. Please try again."),
+                actions=[
+                    ft.TextButton("OK", on_click=lambda e: self.page.pop_dialog())
+                ],
+            )
+            self.hide_loading()  # Hide the loading indicator before showing the error dialog
+            self.page.show_dialog(error_dialog)
+            return
+        
+        self.filename = new_name  # Update the filename in the UI
+        self.app_bar.title = ft.Text(self.filename)  # Update the app bar title
+        self.hide_loading()  # Hide the loading indicator
+        self.page.update()  # Refresh the page to show the new filename
+
 
     def extract_time(self, date_str):
         if "T" in date_str:
@@ -142,11 +200,12 @@ class FullViewPage(TemplatePage):
         self.page.show_dialog(confirm_dialog)
 
     async def confirm_delete(self, e, cid):
-        self.page.pop_dialog()  # Close the confirmation dialog
-        
+
         from services.crack_service import delete_crack_service
-        
+
+        self.page.pop_dialog()  # Close the confirmation dialog
         self.show_loading("Deleting file...")
+        self.page.update()
 
         res = await delete_crack_service(
             cid

@@ -74,14 +74,12 @@ class HistorySection(TemplatePage):
 
         new_files = res.get("cracks", [])
 
-        #  Compare IDs
-        old_ids = {f["id"] for f in self.crack_files}
-        new_ids = {f["id"] for f in new_files}
+        #  Compare files
+        old_files = self.crack_files
 
         if (
-            new_ids == old_ids and self.crack_files != []
+            new_files == old_files and self.crack_files != []
         ):  # if both is equal but not empty, no changes and new feches is not empty
-            print("History: No changes in files.")
             return  # nothing changed → no UI update
 
         self.crack_files = new_files

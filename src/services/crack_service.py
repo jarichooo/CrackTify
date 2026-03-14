@@ -31,6 +31,16 @@ async def add_crack_service(user_id: int, crack_data: dict):
 
     except Exception as e:
         return {"success": False, "message": str(e)}
+    
+async def update_crack_service(crack_id: int, crack_data: dict):
+    """Service to update a crack file."""
+    try:
+        return await post_request(
+            "/cracks/update", {"crack_id": crack_id, "updated_data": crack_data}
+        )
+
+    except Exception as e:
+        return {"success": False, "message": str(e)}
 
 
 async def delete_crack_service(crack_id: int):

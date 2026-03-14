@@ -144,7 +144,7 @@ class MainPage(TemplatePage):
         """Navigate to the search page."""
         from views.search_page import SearchPage
 
-        search_page = SearchPage(self.page, self.user)
+        search_page = SearchPage(self.page, self.user, on_back=self.refresh_current_section)
         self.page.views.append(search_page.build())
 
     def on_upload_progress(self, e: ft.FilePickerUploadEvent):

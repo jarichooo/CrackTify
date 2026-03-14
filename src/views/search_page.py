@@ -11,6 +11,15 @@ from utils.time_utils import convert_to_utc8
 
 
 class SearchPage(TemplatePage):
+    def __init__(self, page: ft.Page, user: dict = None, on_back: callable = None):
+        super().__init__(page)
+
+        self.user = user
+        self.crack_files = []
+        self.on_back = on_back
+
+        # schedule async task
+        self.page.run_task(self.load_cracks)
 
     async def get_cracks(self):
         res = await fetch_cracks_service(self.user.get("id"))
@@ -30,15 +39,6 @@ class SearchPage(TemplatePage):
     async def load_cracks(self):
         self.crack_files = await self.get_cracks()
         self.page.update()
-
-    def __init__(self, page: ft.Page, user: dict = None):
-        super().__init__(page)
-
-        self.user = user
-        self.crack_files = []
-
-        # schedule async task
-        self.page.run_task(self.load_cracks)
 
     def build(self) -> ft.View:
         """Builds the search page view with app bar and body content."""
@@ -60,9 +60,20 @@ class SearchPage(TemplatePage):
             on_submit=self.on_search_submit,
         )
 
+        def on_back_click(e):
+            self.page.views.pop()  # Go back to previous view
+            if self.on_back:
+                self.on_back()
+            else:
+                self.page.go("/")
+
         self.app_bar = ft.Column(
             controls=[
                 ft.AppBar(
+                    leading=ft.IconButton(
+                        icon=ft.Icons.ARROW_BACK,
+                        on_click=on_back_click,
+                    ),
                     title=self.search_bar,
                     center_title=True,
                 ),
@@ -90,6 +101,12 @@ class SearchPage(TemplatePage):
             spacing=0,
             controls=[self.app_bar, self.search_body],
         )
+    
+    def refresh(self):
+        """Refreshes the search page by reloading cracks and clearing search results."""
+        self.page.run_task(self.load_cracks)
+        self.page.run_task(self.filter_content, self.search_bar.value)  # Re-apply search filter
+        self.page.update()
 
     def on_search_change(self, e):
         """Checks if there is text in the search bar and shows/hides the close button accordingly."""
@@ -102,7 +119,7 @@ class SearchPage(TemplatePage):
         if query:
             self.search_bar.bar_trailing.visible = True
             # perform search and display results as user types
-            _ = self.filter_content(query)
+            self.page.run_task(self.filter_content, query)
 
         else:
             self.search_bar.bar_trailing.visible = False
@@ -119,11 +136,13 @@ class SearchPage(TemplatePage):
     def on_search_submit(self, e):
         """Handles the search submission event."""
         query = self.search_bar.value
-        _ = self.filter_content(query)  # Filter content based on search query
+        self.page.run_task(self.filter_content, query)  # Filter content based on search query
 
-    def filter_content(self, keyword: str):
+    async def filter_content(self, keyword: str):
         """Filter images by keyword using cached files, without build_tile method."""
         # Filter files based on keyword (case-insensitive)
+        _ = await self.load_cracks()
+
         filtered_files = [
             f
             for f in self.crack_files
@@ -144,7 +163,7 @@ class SearchPage(TemplatePage):
                     expand=True,
                     controls=[
                         ft.Icon(ft.Icons.SEARCH_OFF, size=100, color=ft.Colors.GREY),
-                        ft.Text("No image found.", size=20, color=ft.Colors.GREY),
+                        ft.Text("No files found.", size=20, color=ft.Colors.GREY),
                     ],
                 ),
             )
@@ -206,7 +225,7 @@ class SearchPage(TemplatePage):
                     bgcolor=ft.Colors.with_opacity(0.1, bgcolor),
                     shape=ft.RoundedRectangleBorder(radius=10),
                     on_click=lambda _, crack_file=crack: show_full(
-                        self.page, crack_file
+                        self.page, crack_file, refresh_function=self.refresh
                     ),
                 )
             )

@@ -133,13 +133,12 @@ class ImageGallery:
         new_files = res.get("cracks", [])
 
         # Compare IDs
-        old_ids = {f["id"] for f in self.files}
-        new_ids = {f["id"] for f in new_files}
+        old_files = self.files
+        # new_ids = {f["id"] for f in new_files}
 
         if (
-            new_ids == old_ids
+            new_files == old_files
         ) and self.files != []:  # if both is equal but not empty, no changes and new feches is not empty
-            print("Gallery: No changes in files.")
             return  # nothing changed → no UI update
 
         # Update only if changed
@@ -199,7 +198,7 @@ class ImageGallery:
                                 ft.Icon(ft.Icons.SEARCH_OFF, size=64, color=ft.Colors.GREY),
                                 ft.Text("No files match the filter.", size=16, color=ft.Colors.GREY),
                                 ft.Text(
-                                    "Try changing the filter or sort options.",
+                                    "Try changing the filter options.",
                                     size=16,
                                     color=ft.Colors.GREY,
                                 ),
