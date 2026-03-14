@@ -9,7 +9,14 @@ from .template import TemplatePage
 
 
 class PreviewPage(TemplatePage):
-    def __init__(self, page: ft.Page, file: ft.FilePickerFile, state, user, on_close: callable=None):
+    def __init__(
+        self,
+        page: ft.Page,
+        file: ft.FilePickerFile,
+        state,
+        user,
+        on_close: callable = None,
+    ):
         super().__init__(page)
         self.selected_file = file
         self.state = state
@@ -107,6 +114,9 @@ class PreviewPage(TemplatePage):
         # UPLOAD MODE
         self.is_uploading = True
         self.upload_btn.disabled = True
+        self.upload_btn.bgcolor = ft.Colors.with_opacity(
+            ft.Colors.GREY_500, 0.5
+        )  # indicate processing
         self.page.update()
 
         self.upload_task = asyncio.create_task(self._upload_flow())
@@ -167,7 +177,7 @@ class PreviewPage(TemplatePage):
                     crack_data = {
                         "user_id": self.user["id"],
                         "file_url": detect_resp["file_url"],
-                        "filename": self.selected_file.name,
+                        "filename": os.path.splitext(self.selected_file.name)[0],
                         "severity": detect_resp.get("severity", "unknown"),
                         "probability": detect_resp.get("probability", 0),
                     }
@@ -178,15 +188,18 @@ class PreviewPage(TemplatePage):
                     # SUCCESS
                     self.page.show_dialog(
                         ft.SnackBar(
-                            ft.Text("Upload successful!"),
+                            ft.Text("Uploaded and analyzed successfully!"),
                             bgcolor=ft.Colors.GREEN_500,
                         )
                     )
+
+                    if self.on_close:
+                        self.on_close()
+
                     self.page.views.pop()
                     return
 
                 except Exception as err:
-                    print(f"Attempt {attempt} failed: {err}")
                     if attempt == MAX_RETRIES:
                         raise
                     await asyncio.sleep(1)

@@ -15,6 +15,8 @@ from views.sections.history import HistorySection
 
 from utils.themes import toggle_theme
 
+from model.user import User
+
 
 @dataclass
 class State:
@@ -22,17 +24,18 @@ class State:
     picked_file: list[ft.FilePickerFile] = field(default_factory=list)
 
 
-class MainPage(TemplatePage):
-    def __init__(self, page: ft.Page, user: dict = None):
+class MainPage(TemplatePage, User):
+    def __init__(self, page: ft.Page):
         super().__init__(page)
 
         # Initialize state
         self.state = State()
+        self.user: dict = User.to_dict()  # Initialize user data as an empty dictionary
 
         # Initialize page sections instances for navigation
-        self.home_page = HomeSection(page, user)
-        self.gallery_page = ImageGallery(page, user)
-        self.history_page = HistorySection(page, user)
+        self.home_page = HomeSection(page, self.user)
+        self.gallery_page = ImageGallery(page, self.user)
+        self.history_page = HistorySection(page, self.user)
 
         self.page.run_task(
             self.home_page.rotate_header_loop
@@ -46,8 +49,9 @@ class MainPage(TemplatePage):
             ft.FilePicker()
         )  # File picker instance for handling file selection
 
-        # User info for personalized features (like showing user-specific cracks in history)
-        self.user: dict = user
+        self.prev_index = (
+            0  # To track previous navigation index for any specific logic if needed
+        )
 
     def build(self) -> ft.View:
         """Builds the main page view with app bar, navigation, and body content."""
@@ -112,15 +116,22 @@ class MainPage(TemplatePage):
             )
 
             self.nav_bar = ft.NavigationBar(
-                selected_index=0,
+                selected_index=self.prev_index,
                 on_change=self.on_nav_change,
                 destinations=[
-                    ft.NavigationBarDestination(icon=ft.Icons.HOME, label="Home"),
                     ft.NavigationBarDestination(
-                        icon=ft.Icons.PHOTO_LIBRARY, label="Gallery"
+                        icon=ft.Icons.HOME_ROUNDED, label="Home"
                     ),
-                    ft.NavigationBarDestination(icon=ft.Icons.HISTORY, label="History"),
-                    ft.NavigationBarDestination(icon=ft.Icons.MORE_HORIZ, label="More"),
+                    ft.NavigationBarDestination(
+                        icon=ft.Icons.PHOTO_LIBRARY_ROUNDED, label="Gallery"
+                    ),
+                    ft.NavigationBarDestination(
+                        icon=ft.Icons.HISTORY_ROUNDED, label="History"
+                    ),
+                    ft.NavigationBarDestination(
+                        icon=ft.Icons.MORE_HORIZ,
+                        label="More",
+                    ),
                 ],
             )
 
@@ -144,7 +155,9 @@ class MainPage(TemplatePage):
         """Navigate to the search page."""
         from views.search_page import SearchPage
 
-        search_page = SearchPage(self.page, self.user, on_back=self.refresh_current_section)
+        search_page = SearchPage(
+            self.page, self.user, on_back=self.refresh_current_section
+        )
         self.page.views.append(search_page.build())
 
     def on_upload_progress(self, e: ft.FilePickerUploadEvent):
@@ -222,10 +235,11 @@ class MainPage(TemplatePage):
             self.app_bar.automatically_imply_leading = False
 
         elif index == 3:
-            more_page = MorePage(self.page, self.user)
+            more_page = MorePage(self.page)
             self.page.views.append(more_page.build())
             return
 
+        self.prev_index = index  # Update previous index
         self.app_bar.update()
         self.body.content = self.active_section.build()[0]
 

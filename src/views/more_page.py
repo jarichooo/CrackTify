@@ -5,23 +5,21 @@ import flet as ft
 from .template import TemplatePage
 from .edit_user_page import EditUserPage
 
-from widgets.buttons import PrimaryButton, SecondaryButton
 from widgets.inputs import TextField
 from widgets.dialogs import AlertDialog
 
 from services.profile_service import (
     verify_user_password,
-    update_profile,
     update_password,
     delete_account,
 )
-from services.otp_service import send_otp, verify_otp
+from model.user import User
 
 
 class MorePage(TemplatePage):
-    def __init__(self, page: ft.Page, user):
+    def __init__(self, page: ft.Page):
         super().__init__(page)
-        self.user = user
+        self.user = User.to_dict()  # Convert the user dict to a User instance
 
         self.saved_theme_mode = None
         self.saved_theme_color = None
@@ -38,7 +36,6 @@ class MorePage(TemplatePage):
     def build(self) -> ft.View:
         app_bar = ft.AppBar(
             title=ft.Text("Settings"),
-            automatically_imply_leading=True,
             force_material_transparency=True,
         )
 
@@ -356,7 +353,6 @@ class MorePage(TemplatePage):
         """Navigates to the EditUserPage when the user info section is clicked."""
         edit_page = EditUserPage(
             self.page,
-            self.user,
             on_save=lambda updated_user: self.refresh_user(updated_user),
         )
         self.page.views.append(edit_page.build())
@@ -375,6 +371,7 @@ class MorePage(TemplatePage):
 
         self.cp_dialog = AlertDialog(
             title="Change Password",
+            modal=True,
             content=ft.Column(
                 height=270,
                 controls=[
@@ -461,6 +458,7 @@ class MorePage(TemplatePage):
                     ft.TextButton("Cancel", on_click=lambda _: self.page.pop_dialog()),
                     ft.TextButton(
                         "Logout",
+                        style=ft.ButtonStyle(color=ft.Colors.RED),
                         on_click=lambda _: self.page.run_task(self.confirm_logout),
                     ),
                 ],

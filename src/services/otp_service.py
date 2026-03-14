@@ -18,7 +18,6 @@ async def verify_otp(email: str, entered_otp: str) -> Dict[str, Any]:
             "/otp/verify-otp", {"email_address": email, "entered_otp": entered_otp}
         )
     except Exception as ex:
-        print(f"Error in verify_otp: {ex}")
         return {"success": False, "message": str(ex)}
 
 

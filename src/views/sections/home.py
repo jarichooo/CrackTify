@@ -276,8 +276,8 @@ class HomeSection:
         new_recents = crack_resp.get("cracks", [])
 
         top_new_recents = new_recents[
-            :5
-        ]  # Limit to top 5 recent cracks for the home section
+            :4
+        ]  # Limit to top 4 recent cracks for the home section
 
         if (
             new_stats == old_stats

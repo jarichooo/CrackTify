@@ -11,12 +11,11 @@ import flet as ft
 from widgets.dialogs import AlertDialog
 from views.auth.login_page import LoginPage
 from views.main_page import MainPage
-from views.more_page import MorePage
 
 from views.not_found import NotFoundPage
+from model.user import User
 
 from services.api_client import verify_connection
-from services.profile_service import get_current_user
 
 
 async def main(page: ft.Page):
@@ -29,8 +28,27 @@ async def main(page: ft.Page):
         sys.exit(0)
 
     # Verify API connection before proceeding
+    page.overlay.append(
+        ft.Container(
+            visible=False,
+            expand=True,
+            bgcolor=ft.Colors.with_opacity(0.6, ft.Colors.BLACK),
+            alignment=ft.Alignment.CENTER,
+            content=ft.Column(
+                controls=[
+                    ft.Image(src="splash_android.png", width=100, height=100),
+                    ft.Text("Cracktify", size=20, weight=ft.FontWeight.BOLD),
+                    ft.Column(height=10),  # Spacer
+                    ft.ProgressRing(),
+                ],
+                horizontal_alignment=ft.CrossAxisAlignment.CENTER,
+                alignment=ft.MainAxisAlignment.CENTER,
+            ),
+        )
+    )
     connection_ok = await verify_connection()
     if not connection_ok:
+        page.overlay.pop()  # Remove the loading overlay
         conn_error_dialog = AlertDialog(
             title="Connection Error",
             content="Unable to connect to the API server. Please check your internet connection and try again.",
@@ -45,6 +63,9 @@ async def main(page: ft.Page):
         try:
             raw_user = await page.shared_preferences.get("user")
             user = json.loads(raw_user) if raw_user else {}
+
+            User.from_dict(user)  # Update the User model with the loaded data
+
         except RuntimeError:
             error_dialog = AlertDialog(
                 title="Runtime Error",
@@ -56,16 +77,12 @@ async def main(page: ft.Page):
 
         page.views.clear()
         if page.route == "/home" or page.route == "/":
-            main_page = MainPage(page, user)
+            main_page = MainPage(page)
             page.views.append(main_page.build())
 
         elif page.route == "/login":
             login_page = LoginPage(page)
             page.views.append(login_page.build())
-
-        elif page.route == "/more":
-            more_page = MorePage(page, user)
-            page.views.append(more_page.build())
 
         else:
             page.views.append(NotFoundPage(page).build())

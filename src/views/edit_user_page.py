@@ -1,6 +1,8 @@
 import json
 import flet as ft
 
+from model.user import User
+
 from .template import TemplatePage
 
 from widgets.buttons import PrimaryButton, SecondaryButton
@@ -12,19 +14,19 @@ from services.otp_service import send_otp, verify_otp
 from services.file_service import upload_file
 
 
-class EditUserPage(TemplatePage):
-    def __init__(self, page: ft.Page, user, on_save=None):
+class EditUserPage(TemplatePage, User):
+    def __init__(self, page: ft.Page, on_save=None):
         super().__init__(page)
 
         # Store user data for editing
-        self.user = user
+        self.user = User.to_dict()  # Convert the user dict to a User instance
         self.on_save = on_save
 
-        self.user_id = user.get("id")
-        self.user_avatar_url = user.get("avatar_url")
-        self.user_first_name = user.get("first_name")
-        self.user_last_name = user.get("last_name")
-        self.user_email = user.get("email_address")
+        self.user_id = self.user.get("id")
+        self.user_avatar_url = self.user.get("avatar_url")
+        self.user_first_name = self.user.get("first_name")
+        self.user_last_name = self.user.get("last_name")
+        self.user_email = self.user.get("email_address")
 
         self.verified_email = (
             self.user_email
@@ -279,6 +281,7 @@ class EditUserPage(TemplatePage):
         self.show_loading("Saving changes...")
         # If nothing changed, skip API call
         if not updates:
+            self.hide_loading()
             self.page.views.pop()
             return
 
@@ -301,10 +304,8 @@ class EditUserPage(TemplatePage):
         updated_user = {**self.user, **response.get("user", {})}
         await self.page.shared_preferences.set("user", json.dumps(updated_user))
 
+        User.from_dict(updated_user)  # Update the User model with the new data
+
         if hasattr(self, "on_save"):
             self.on_save(updated_user)
-            print(
-                "Updated user data passed to on_save callback:", updated_user
-            )  # Debug print to check updated user data
-
         self.page.views.pop()
