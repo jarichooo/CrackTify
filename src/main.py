@@ -28,16 +28,22 @@ async def main(page: ft.Page):
         sys.exit(0)
 
     # Verify API connection before proceeding
+    # Show a loading overlay while checking the connection
     page.overlay.append(
         ft.Container(
-            visible=False,
+            visible=True,
             expand=True,
-            bgcolor=ft.Colors.with_opacity(0.6, ft.Colors.BLACK),
             alignment=ft.Alignment.CENTER,
             content=ft.Column(
                 controls=[
-                    ft.Image(src="splash_android.png", width=100, height=100),
-                    ft.Text("Cracktify", size=20, weight=ft.FontWeight.BOLD),
+                    ft.Column(
+                        controls=[
+                            ft.Image(src="splash_android.png", width=230, height=230),
+                            ft.Text("Cracktify", size=28, weight=ft.FontWeight.BOLD),
+                        ],
+                        spacing=-30,
+                        horizontal_alignment=ft.CrossAxisAlignment.CENTER,
+                    ),
                     ft.Column(height=10),  # Spacer
                     ft.ProgressRing(),
                 ],
@@ -46,6 +52,7 @@ async def main(page: ft.Page):
             ),
         )
     )
+    page.update()
     connection_ok = await verify_connection()
     if not connection_ok:
         page.overlay.pop()  # Remove the loading overlay
@@ -58,8 +65,34 @@ async def main(page: ft.Page):
         page.show_dialog(conn_error_dialog)
         return
 
+    page.overlay.pop()  # Remove the loading overlay
+
     async def route_change():
         # Clear existing views and push the new view based on the current route
+        # Show a loading overlay while changing routes
+        page.overlay.append(
+            ft.Container(
+                visible=True,
+                expand=True,
+                alignment=ft.Alignment.CENTER,
+                bgcolor=ft.Colors.with_opacity(0.6, ft.Colors.BLACK),
+                content=ft.Column(
+                    controls=[
+                        ft.ProgressRing(),
+                        ft.Column(height=10),  # Spacer
+                        ft.Text(
+                            "Loading...",
+                            text_align=ft.TextAlign.CENTER,
+                            color=ft.Colors.WHITE,
+                        ),
+                    ],
+                    horizontal_alignment=ft.CrossAxisAlignment.CENTER,
+                    alignment=ft.MainAxisAlignment.CENTER,
+                ),
+            )
+        )
+        page.update()
+
         try:
             raw_user = await page.shared_preferences.get("user")
             user = json.loads(raw_user) if raw_user else {}
@@ -72,10 +105,13 @@ async def main(page: ft.Page):
                 content="An error occurred while loading user data. Please restart the application.",
                 actions=[ft.TextButton("OK", on_click=lambda e: pop_return())],
             )
+            page.overlay.pop()  # Remove the loading overlay
             page.show_dialog(error_dialog)
             return
 
         page.views.clear()
+        page.overlay.pop()  # Remove the loading overlay
+
         if page.route == "/home" or page.route == "/":
             main_page = MainPage(page)
             page.views.append(main_page.build())

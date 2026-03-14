@@ -1,5 +1,6 @@
 import asyncio
 import json
+import time
 import flet as ft
 
 from services.auth_service import register_user
@@ -20,7 +21,6 @@ class OTPVerificationPage(TemplatePage):
         password: str,
     ):
         super().__init__(page)
-
         self.email_address = email_address
         self.first_name = first_name
         self.last_name = last_name
@@ -38,12 +38,14 @@ class OTPVerificationPage(TemplatePage):
 
         self.resend_button = CustomTextButton(
             text="Resend OTP",
+            color=ft.Colors.BLUE,
             on_tap=lambda e: asyncio.create_task(self.handle_resend_otp(e)),
         )
 
         self.submit_button = PrimaryButton(
             text="Verify OTP",
             icon=ft.Icons.CHECK,
+            disabled=self._is_processing,
             on_click=lambda e: asyncio.create_task(self.handle_verify_otp(e)),
         )
 
@@ -92,7 +94,7 @@ class OTPVerificationPage(TemplatePage):
                 title=ft.Text("OTP Verification"),
                 center_title=True,
                 force_material_transparency=True,
-                leading=BackButton(on_click=self._on_back),
+                leading=BackButton(on_click=lambda e: self.page.views.pop()),
             ),
             controls=[
                 ft.Column(
@@ -104,15 +106,7 @@ class OTPVerificationPage(TemplatePage):
             ],
         )
 
-    def _on_back(self, e):
-        if self._is_processing:
-            return
-        self.page.views.pop()
-
     async def handle_verify_otp(self, e):
-        if self._is_processing:
-            return
-
         entered_otp = self.otp_field.value
         if not entered_otp or len(entered_otp) != 6:
             self.page.show_dialog(
@@ -122,7 +116,6 @@ class OTPVerificationPage(TemplatePage):
             )
             return
 
-        self._is_processing = True
         self.submit_button.disabled = True
         self.resend_button.disabled = True
         self.page.update()
@@ -135,7 +128,7 @@ class OTPVerificationPage(TemplatePage):
                 self.page.show_dialog(
                     AlertDialog(
                         title="Invalid OTP",
-                        content=response.get("message", "Failed to verify OTP."),
+                        content="The OTP you entered is incorrect. Please try again.",
                     )
                 )
                 return
@@ -167,7 +160,6 @@ class OTPVerificationPage(TemplatePage):
 
         finally:
             self.hide_loading()
-            self._is_processing = False
             self.submit_button.disabled = False
             self.resend_button.disabled = False
             self.page.update()
@@ -177,29 +169,48 @@ class OTPVerificationPage(TemplatePage):
             return
 
         self._is_processing = True
-        self.resend_button.disabled = True
         self.page.update()
         self.show_loading()
 
-        try:
-            response = await send_otp(self.email_address, self.first_name, resend=True)
+        response = await send_otp(self.email_address, self.first_name, resend=True)
 
-            if response.get("success"):
-                self.page.show_dialog(
-                    AlertDialog(
-                        title="OTP Sent",
-                        content="A new OTP has been sent to your email address.",
-                    )
+        if response.get("success"):
+
+            self.page.show_dialog(
+                AlertDialog(
+                    title="OTP Sent",
+                    content="A new OTP has been sent to your email address.",
                 )
-            else:
-                self.page.show_dialog(
-                    AlertDialog(
-                        title="Error",
-                        content=response.get("message", "Failed to resend OTP."),
-                    )
-                )
-        finally:
-            self.hide_loading()
+            )
+            asyncio.create_task(self.countdown(300))
+        else:
             self._is_processing = False
-            self.resend_button.disabled = False
-            self.page.update()
+            self.page.show_dialog(
+                AlertDialog(
+                    title="Error",
+                    content=response.get("message", "Failed to resend OTP."),
+                )
+            )
+            
+        self.hide_loading()
+        self.page.update()
+
+    async def countdown(self, seconds):
+        """ Disables the resend button and shows a countdown until it can be used again. """
+        self.resend_button.disabled = True
+        self.resend_button.content.color = ft.Colors.GREY
+        self.resend_button.update()
+
+        while seconds > 0:
+            mins, secs = divmod(seconds, 60)
+            self.resend_button.content.value = f"Wait {mins:02d}:{secs:02d}"
+            self.resend_button.update()
+            await asyncio.sleep(1)
+            seconds -= 1
+
+        # Reset button
+        self.resend_button.content.value = "Resend OTP"
+        self.resend_button.content.color = ft.Colors.BLUE
+        self.resend_button.disabled = False
+        self._is_processing = False
+        self.resend_button.update()

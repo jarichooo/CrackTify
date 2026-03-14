@@ -119,7 +119,11 @@ class FullViewPage(TemplatePage):
     def rename_file(self, e):
         """Placeholder for rename functionality."""
         self.rename_tf = ft.TextField(
-            label="Filename", value=self.filename, width=300, autofocus=True, selection=(ft.TextSelection(0, len(self.filename)))
+            label="Filename",
+            value=self.filename,
+            width=300,
+            autofocus=True,
+            selection=(ft.TextSelection(0, len(self.filename))),
         )
         rename_dialog = ft.AlertDialog(
             title="Rename File",
@@ -129,7 +133,9 @@ class FullViewPage(TemplatePage):
                 ft.TextButton("Cancel", on_click=lambda e: self.page.pop_dialog()),
                 ft.TextButton(
                     "Rename",
-                    on_click=lambda e: self.page.run_task(self.do_rename_file, self.rename_tf.value),
+                    on_click=lambda e: self.page.run_task(
+                        self.do_rename_file, self.rename_tf.value
+                    ),
                 ),
             ],
         )
@@ -156,12 +162,11 @@ class FullViewPage(TemplatePage):
             self.hide_loading()  # Hide the loading indicator before showing the error dialog
             self.page.show_dialog(error_dialog)
             return
-        
+
         self.filename = new_name  # Update the filename in the UI
         self.app_bar.title = ft.Text(self.filename)  # Update the app bar title
         self.hide_loading()  # Hide the loading indicator
         self.page.update()  # Refresh the page to show the new filename
-
 
     def extract_time(self, date_str):
         if "T" in date_str:

@@ -18,23 +18,32 @@ class LoginPage(TemplatePage):
 
     def build(self) -> ft.View:
         """Builds the authentication Page layout."""
+
+        #  Form Inputs
         self.email_field = TextField(
             label="Email",
             value="",
-            prefix_icon=ft.Icons.EMAIL,
+            prefix_icon=ft.Icons.EMAIL_OUTLINED,
             keyboard_type=ft.KeyboardType.EMAIL,
         )
 
         self.password_field = TextField(
             label="Password",
             value="",
-            prefix_icon=ft.Icons.LOCK,
+            prefix_icon=ft.Icons.LOCK_OUTLINE,
             password=True,
             can_reveal_password=True,
         )
 
+        #  Buttons
         forgot_button = CustomTextButton(
             text="Forgot Password?", on_tap=self.on_forgot_password_click
+        )
+
+        # Right-align the forgot password button for mobile convention
+        forgot_container = ft.Container(
+            content=forgot_button,
+            alignment=ft.Alignment.CENTER,
         )
 
         login_button = PrimaryButton(
@@ -55,49 +64,70 @@ class LoginPage(TemplatePage):
             spacing=5,
         )
 
+        # Header Section (Logo + Branding)
+        header_section = ft.Container(
+            content=ft.Column(
+                controls=[
+                    ft.Image(
+                        src="splash_android.png",
+                        width=100,
+                        height=100,
+                        fit=ft.BoxFit.CONTAIN,
+                    ),
+                    ft.Text("Cracktify", size=32, weight=ft.FontWeight.BOLD),
+                    ft.Text(
+                        "Detect cracks, prevent risks, ensure safety.",
+                        size=14,
+                        text_align=ft.TextAlign.CENTER,
+                    ),
+                ],
+                horizontal_alignment=ft.CrossAxisAlignment.CENTER,
+                spacing=5,
+            ),
+            alignment=ft.Alignment.CENTER,
+            padding=ft.padding.only(top=50, bottom=30),
+        )
+
+        # Main container for the form and buttons
         main_container = self.main_container(
             content=ft.ListView(
-                padding=ft.Padding.only(left=20, right=20),
+                padding=ft.padding.symmetric(horizontal=20),
                 spacing=15,
                 auto_scroll=False,
                 controls=[
-                    ft.Column(
-                        [
-                            ft.Text("Let’s Sign You In", size=28, weight="bold"),
-                            ft.Text("Welcome back, you've been missed!", size=14),
-                        ],
-                        spacing=0,
-                        horizontal_alignment=ft.CrossAxisAlignment.CENTER,
+                    ft.Text(
+                        "Let's Sign You In",
+                        size=24,
+                        weight=ft.FontWeight.BOLD,
+                        text_align=ft.TextAlign.CENTER,
                     ),
-                    self.horizontal_divider(opacity=0),
+                    self.horizontal_divider(opacity=0, height=5),
                     self.email_field,
                     self.password_field,
-                    forgot_button,
-                    self.horizontal_divider(height=1, opacity=0),
+                    forgot_container,
+                    self.horizontal_divider(opacity=0, height=5),
                     login_button,
                     register_button,
-                    self.horizontal_divider(height=5, opacity=0),
+                    self.horizontal_divider(opacity=0, height=20),
                 ],
-            ),
+            )
         )
 
+        # Final Layout Assembly
         return self.layout(
             route="/",
-            controls=ft.Column(
-                expand=True,
-                alignment=ft.MainAxisAlignment.START,
-                horizontal_alignment=ft.CrossAxisAlignment.CENTER,
-                controls=[
-                    ft.Column(height=50),  # Spacer
-                    ft.Container(
-                        ft.Text("Cracktify", size=32, weight="bold"),
-                        alignment=ft.Alignment.CENTER,
-                        padding=ft.Padding.only(top=50, bottom=50),
-                    ),
-                    ft.Column(height=20),  # Spacer
-                    main_container,
-                ],
-            ),
+            # Fixed: Wrapped the main Column in a list so ft.View renders it correctly
+            controls=[
+                ft.Column(
+                    expand=True,
+                    alignment=ft.MainAxisAlignment.START,
+                    horizontal_alignment=ft.CrossAxisAlignment.CENTER,
+                    controls=[
+                        header_section,
+                        main_container,
+                    ],
+                )
+            ],
         )
 
     def on_login_click(self, e):

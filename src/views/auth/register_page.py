@@ -69,19 +69,40 @@ class RegisterPage(TemplatePage):
             on_click=lambda _: self.page.run_task(self.on_continue_click),
         )
 
+        header_section = ft.Container(
+            content=ft.Column(
+                controls=[
+                    ft.Image(
+                        src="splash_android.png",
+                        width=100,
+                        height=100,
+                        fit=ft.BoxFit.CONTAIN,
+                    ),
+                    ft.Text("Cracktify", size=32, weight=ft.FontWeight.BOLD),
+                    ft.Text(
+                        "Detect cracks, prevent risks, ensure safety.",
+                        size=14,
+                        text_align=ft.TextAlign.CENTER,
+                    ),
+                ],
+                horizontal_alignment=ft.CrossAxisAlignment.CENTER,
+                spacing=5,
+            ),
+            alignment=ft.Alignment.CENTER,
+            padding=ft.padding.only(top=-50, bottom=30),
+        )
+
         main_container = self.main_container(
             content=ft.ListView(
                 padding=ft.Padding.only(left=20, right=20),
                 spacing=15,
                 auto_scroll=False,
                 controls=[
-                    ft.Column(
-                        [
-                            ft.Text("Let’s Register", size=28, weight="bold"),
-                            ft.Text("Create a new account", size=14),
-                        ],
-                        spacing=0,
-                        horizontal_alignment=ft.CrossAxisAlignment.CENTER,
+                    ft.Text(
+                        "Create Your Account",
+                        size=24,
+                        weight=ft.FontWeight.BOLD,
+                        text_align=ft.TextAlign.CENTER,
                     ),
                     self.horizontal_divider(height=1, opacity=0),
                     ft.Row(
@@ -93,27 +114,31 @@ class RegisterPage(TemplatePage):
                     self.confirm_password_field,
                     self.horizontal_divider(height=1, opacity=0),
                     continue_button,
+                    self.horizontal_divider(height=20, opacity=0),
                 ],
             ),
         )
 
         return self.layout(
             route="/register",
-            appbar=ft.AppBar(force_material_transparency=True),
-            controls=ft.Column(
-                expand=True,
-                alignment=ft.MainAxisAlignment.START,
-                horizontal_alignment=ft.CrossAxisAlignment.CENTER,
-                controls=[
-                    ft.Column(height=20),  # Spacer
-                    ft.Container(
-                        ft.Text("Cracktify", size=32, weight="bold"),
-                        alignment=ft.Alignment.CENTER,
-                    ),
-                    ft.Column(height=20),  # Spacer
-                    main_container,
-                ],
+            appbar=ft.AppBar(
+                leading=BackButton(
+                    on_click=lambda _: self.page.views.pop(),
+                ),
+                force_material_transparency=True
             ),
+            controls=[
+                ft.Column(
+                    expand=True,
+                    alignment=ft.MainAxisAlignment.START,
+                    horizontal_alignment=ft.CrossAxisAlignment.CENTER,
+                    controls=[
+                        header_section,
+                        main_container,
+                    ],
+                ),
+            ]
+        
         )
 
     async def on_continue_click(self):

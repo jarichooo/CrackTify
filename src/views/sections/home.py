@@ -101,6 +101,7 @@ class HomeSection:
             src=self.header_states[0]["lottie"],
             animate=True,
             repeat=True,
+            error_content=ft.Icon(ft.Icons.SIGNAL_WIFI_BAD, color=ft.Colors.RED),
             fit=ft.BoxFit.CONTAIN,
         )
 
