@@ -8,16 +8,12 @@ api_url = Config.API_BASE_URL
 
 
 async def get_avatar_url(user_id: int) -> Dict[str, str]:
-    return await get_request(f"/profile/avatar/{user_id}")
+    return await get_request(f"/profile/avatar/", {"user_id": user_id})
 
 
-async def update_profile(
-    profile_data: Dict[str, Any], new_password: str = None
-) -> Dict[str, Any]:
-    user_id = profile_data.get("id")
-
+async def update_profile(profile_data: Dict[str, Any]) -> Dict[str, Any]:
     return await post_request(
-        f"/profile/update/{user_id}",
+        f"/profile/update/",
         {
             "profile_data": profile_data,
         },

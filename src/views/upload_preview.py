@@ -115,7 +115,7 @@ class PreviewPage(TemplatePage):
         self.is_uploading = True
         self.upload_btn.disabled = True
         self.upload_btn.bgcolor = ft.Colors.with_opacity(
-            ft.Colors.GREY_500, 0.5
+            0.5, ft.Colors.GREY_500
         )  # indicate processing
         self.page.update()
 
@@ -164,9 +164,9 @@ class PreviewPage(TemplatePage):
                 try:
                     # Detect (retry if needed)
                     if not detect_resp:
-                        self.show_loading(f"Detecting cracks... (Attempt {attempt})")
+                        self.show_loading(f"Detecting cracks...")
                         detect_resp = await detect_crack(
-                            upload_result, confidence_threshold=0.5
+                            upload_result, confidence_threshold=0.5, timeout=60
                         )
 
                         if not detect_resp or not detect_resp.get("success", True):
@@ -182,7 +182,7 @@ class PreviewPage(TemplatePage):
                         "probability": detect_resp.get("probability", 0),
                     }
 
-                    self.show_loading(f"Saving results... (Attempt {attempt})")
+                    self.show_loading(f"Saving results...")
                     await add_crack_service(self.user["id"], crack_data)
 
                     # SUCCESS

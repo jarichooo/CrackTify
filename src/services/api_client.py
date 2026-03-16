@@ -5,6 +5,7 @@ from config import Config
 # Base API URL
 api_url = Config.API_BASE_URL
 
+
 async def verify_connection() -> bool:
     """Check if the API server is reachable."""
     try:
@@ -16,11 +17,11 @@ async def verify_connection() -> bool:
 
 
 async def post_request(
-    endpoint: str, data: Dict[str, Any], headers: Dict[str, str] = None
+    endpoint: str, data: Dict[str, Any], headers: Dict[str, str] = None, timeout: int = 10
 ) -> Dict[str, Any]:
     url = f"{api_url.rstrip('/')}/{endpoint.lstrip('/')}"  # Ensure no double slash
 
-    async with httpx.AsyncClient(timeout=10) as client:
+    async with httpx.AsyncClient(timeout=timeout) as client:
         try:
             response = await client.post(url, json=data, headers=headers)
             response.raise_for_status()
@@ -43,14 +44,16 @@ async def post_request(
             }
 
 
-async def get_request(endpoint: str, headers: Dict[str, str] = None) -> Dict[str, Any]:
+async def get_request(
+    endpoint: str, headers: Dict[str, str] = None, timeout: int = 10
+) -> Dict[str, Any]:
     """
     Reusable GET request helper that preserves backend 'success' field.
     """
-    url = f"{api_url}{endpoint}"
+    url = f"{api_url.rstrip('/')}/{endpoint.lstrip('/')}"  # Ensure no double slash
 
     try:
-        async with httpx.AsyncClient(timeout=10) as client:
+        async with httpx.AsyncClient(timeout=timeout) as client:
             response = await client.get(url, headers=headers)
             json_response = response.json()
             return json_response

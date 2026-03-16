@@ -10,12 +10,15 @@ async def fetch_cracks_service(user_id: int, limit=0):
         return {"success": False, "message": str(e)}
 
 
-async def detect_crack(file_info: dict[str, any], confidence_threshold: float = 0.5):
+async def detect_crack(
+    file_info: dict[str, any], confidence_threshold: float = 0.5, timeout: int = 60
+):
     """Service to detect cracks in an image."""
     try:
         return await post_request(
             "/cracks/detect",
             {"file_info": file_info, "confidence_threshold": confidence_threshold},
+            timeout=timeout,
         )
 
     except Exception as e:
@@ -31,7 +34,8 @@ async def add_crack_service(user_id: int, crack_data: dict):
 
     except Exception as e:
         return {"success": False, "message": str(e)}
-    
+
+
 async def update_crack_service(crack_id: int, crack_data: dict):
     """Service to update a crack file."""
     try:
