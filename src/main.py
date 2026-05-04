@@ -4,6 +4,7 @@ import os
 import sys
 
 from model import user
+from views import notification_page
 
 # Ensure vendor packages are in sys.path
 sys.path.append(os.path.join(os.path.dirname(__file__), "vendor"))
@@ -19,11 +20,28 @@ from model.user import User
 
 from services.api_client import verify_connection
 
+from services.ws_client import WSClient
+from views.notification_page import NotificationPage
+from config import Config
 
 async def main(page: ft.Page):
     # page.shared_preferences.clear()
     """Main function to initialize the Flet application."""
     page.title = "Cracktify"  # Set the window title
+
+    # Initialize WebSocket client for real-time notifications
+    ws = WSClient(base_url=Config.API_BASE_URL)
+
+    notification_page = NotificationPage(page)
+
+    def on_login_success(user_id: str):
+        ws.start(user_id, lambda data: asyncio.create_task(
+            notification_page.handle_notification(data)
+        ))
+    
+    # call this on logout
+    def on_logout():
+        ws.stop()
 
     def pop_return():
         page.pop_dialog()
@@ -116,11 +134,16 @@ async def main(page: ft.Page):
             main_page = MainPage(page)
             page.views.append(main_page.build())
 
+            # If user is logged in, start WebSocket connection for notifications
+            if user.get("id"):
+                on_login_success(str(user["id"]))
+
             if user.get("is_engineer") and not user.get("verified"):
                 from views.verify_engineer import VerifyEngineerPage
                 page.views.append(VerifyEngineerPage(page).build())
 
         elif page.route == "/login":
+            on_logout()
             login_page = LoginPage(page)
             page.views.append(login_page.build())
 
@@ -150,6 +173,8 @@ async def main(page: ft.Page):
         page.route = "/login"
 
     await route_change()  # Manually trigger route change to load the initial view
+
+
 
 if __name__ == "__main__":
     ft.run(main, upload_dir="uploads")

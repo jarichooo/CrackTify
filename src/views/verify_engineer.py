@@ -1,6 +1,7 @@
 import flet as ft
 from dataclasses import dataclass, field
 
+from services.file_service import upload_file
 from views.template import TemplatePage
 from widgets.buttons import BackButton
 from widgets.inputs import TextField
@@ -59,7 +60,7 @@ class VerifyEngineerPage(TemplatePage):
 
         self.upload_container = ft.Container(
             on_click=self.handle_file_pick,
-            height=300,
+            height=250,
             width=400,
             alignment=ft.Alignment.CENTER,
             border=ft.border.all(1, ft.Colors.GREY),
@@ -67,7 +68,7 @@ class VerifyEngineerPage(TemplatePage):
             content=ft.InteractiveViewer(
                 ft.Container(
                     width=400,
-                    height=300,
+                    height=250,
                     content=self.preview_image,
                 ),
                 clip_behavior=ft.ClipBehavior.HARD_EDGE,
@@ -76,7 +77,7 @@ class VerifyEngineerPage(TemplatePage):
 
         self.verify_button = PrimaryButton(
             text="Submit Verification",
-            on_click=self.verify_engineer,
+            on_click=self.do_verify_engineer,
         )
 
         self.body = ft.Column(
@@ -90,8 +91,8 @@ class VerifyEngineerPage(TemplatePage):
                         spacing=16,  # consistent gap between each element
                         controls=[
                             ft.Text(
-                                "As an engineer, you need to upload additional verification "
-                                "documents. Please follow the instructions to complete your registration.",
+                                "As an structural engineer, you need to upload additional verification "
+                                "documents. Please provide the supporting documentation to complete your registration.",
                                 size=14,
                             ),
                             ft.Divider(),
@@ -142,7 +143,7 @@ class VerifyEngineerPage(TemplatePage):
 
         self.page.update()
 
-    async def verify_engineer(self, e):
+    async def do_verify_engineer(self, e):
         """Handles the verification process for engineers, including validating the license number and uploaded document."""
         if not self.license_field.value or not self.state.picked_file:
             self.error_dialog = ft.AlertDialog(
@@ -157,17 +158,45 @@ class VerifyEngineerPage(TemplatePage):
             self.page.show_dialog(self.error_dialog)
             return
 
+        self.show_loading("Submitting...")
+
+        resp = await upload_file(self.state.picked_file.path)
+        if not resp.get("success"):
+            error_dialog = ft.AlertDialog(
+                title=ft.Text("Upload Failed"),
+                content=ft.Text(f"Failed to upload document: {resp.get('message', 'Unknown error')}"),
+                actions=[ft.TextButton("OK", on_click=lambda e: (
+                    setattr(error_dialog, "open", False), self.page.update()
+                ))],
+            )
+            self.page.show_dialog(error_dialog)
+            return
+
+        ve_resp = await verify_engineer(
+            user_id=self.user.get("id"),
+            license_number=self.license_field.value,
+            document_url=resp.get("url"), 
+        )
+
+        if not ve_resp.get("success"):
+            error_dialog = ft.AlertDialog(
+                title=ft.Text("Verification Failed"),
+                content=ft.Text(f"Verification failed: {ve_resp.get('message', 'Unknown error')}"),
+                actions=[ft.TextButton("OK", on_click=lambda e: (
+                    setattr(error_dialog, "open", False), self.page.update()
+                ))],
+            )
+            self.hide_loading()
+            self.page.show_dialog(error_dialog)
+            return
+
         submitted_dialog = ft.AlertDialog(
             title=ft.Text("Verification Submitted"),
             content=ft.Text(
                 "Your verification documents have been submitted successfully. We will review your information and get back to you shortly."
             ),
-            actions=[ft.TextButton("OK", on_click=self.go_to_home)],
+            actions=[ft.TextButton("OK", on_click=lambda e: self.page.views.pop())],
         )
-        self.page.show_dialog(submitted_dialog)
 
-        await verify_engineer(
-            user_id=self.user["id"],
-            license_number=self.license_field.value,
-            document_path=self.state.picked_file.path,
-        )
+        self.hide_loading()
+        self.page.show_dialog(submitted_dialog)

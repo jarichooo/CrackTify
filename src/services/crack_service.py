@@ -9,6 +9,13 @@ async def fetch_cracks_service(user_id: int, limit=0):
     except Exception as e:
         return {"success": False, "message": str(e)}
 
+async def fetch_one_crack(crack_id: int):
+    """Service to fetch details of a specific crack."""
+    try:
+        return await post_request("/cracks/get-one", {"crack_id": crack_id})
+
+    except Exception as e:
+        return {"success": False, "message": str(e)}
 
 async def detect_crack(
     file_info: dict[str, any], confidence_threshold: float = 0.5, timeout: int = 60

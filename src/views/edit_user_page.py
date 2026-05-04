@@ -307,5 +307,5 @@ class EditUserPage(TemplatePage, User):
         User.from_dict(updated_user)  # Update the User model with the new data
 
         if hasattr(self, "on_save"):
-            self.on_save(updated_user)
+            self.on_save()
         self.page.views.pop()

@@ -45,12 +45,24 @@ async def delete_account(user_id: int, password: str) -> Dict[str, Any]:
         f"/profile/delete_account", {"user_id": user_id, "password": password}
     )
 
-async def verify_engineer(user_id: int, license_number: str, document_path: str) -> Dict[str, Any]:
+async def verify_engineer(user_id: int, license_number: str, document_url: str) -> Dict[str, Any]:
     return await post_request(
         f"/profile/verify_engineer",
         {
             "user_id": user_id,
             "license_number": license_number,
-            "document_path": document_path,
+            "document_url": document_url,
+        },
+    )
+
+async def get_all_engineer_usernames() -> Dict[str, Any]:
+    return await get_request(f"/profile/engineers")
+
+async def assign_engineer(user_id: int, engineer_id: int) -> Dict[str, Any]:
+    return await post_request(
+        f"/profile/assign_engineer",
+        {
+            "user_id": user_id,
+            "engineer_id": engineer_id,
         },
     )

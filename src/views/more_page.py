@@ -145,7 +145,7 @@ class MorePage(TemplatePage):
                     on_click=self.verify_engineer_click,
                 ),
                 ft.ListTile(
-                    leading=ft.Icon(ft.Icons.ASSIGNMENT_OUTLINE),
+                    leading=ft.Icon(ft.Icons.ASSIGNMENT_IND),
                     title=ft.Text("Assign an Engineer"),
                     subtitle=ft.Text("Assign an engineer to verify your detection results"),
                     on_click=self.assign_engineer_click,
@@ -348,7 +348,7 @@ class MorePage(TemplatePage):
 
     def refresh_user(self, updated_user):
         """Updates the user information displayed on the MorePage after editing."""
-        self.user = updated_user
+        self.user = User.to_dict(updated_user)  # Update the user instance with new data
 
         # Update the controls directly
         self.name_text.value = (
@@ -365,7 +365,7 @@ class MorePage(TemplatePage):
         """Navigates to the EditUserPage when the user info section is clicked."""
         edit_page = EditUserPage(
             self.page,
-            on_save=lambda updated_user: self.refresh_user(updated_user),
+            on_save=self.refresh_user,
         )
         self.page.views.append(edit_page.build())
 
@@ -387,6 +387,130 @@ class MorePage(TemplatePage):
 
         verify_page = VerifyEngineerPage(self.page)
         self.page.views.append(verify_page.build())
+
+    def assign_engineer_click(self, e):
+        from services.profile_service import assign_engineer
+        from services.profile_service import get_all_engineer_usernames
+
+        selected_username = {"value": ""}
+        all_usernames = {"list": []}
+
+        def handle_change(e):
+            search_field.error = None  # Clear previous errors on new input
+            query = e.data.lower()
+            filtered = [u for u in all_usernames["list"] if query in u.lower()]
+            results_list.controls.clear()
+            results_list.controls.extend([
+                ft.ListTile(
+                    title=ft.Text(username),
+                    on_click=lambda e, u=username: select_engineer(u),
+                )
+                for username in filtered
+            ])
+            results_list.update()
+
+        search_field = ft.TextField(
+            hint_text="Search engineer username...",
+            autofocus=True,
+            on_change=handle_change,
+        )
+
+        results_list = ft.ListView(
+            height=150,
+            controls=[],
+        )
+
+        def select_engineer(username):
+            selected_username["value"] = username
+            search_field.value = username          # show selection in the text field
+            results_list.controls.clear()          # hide dropdown after selection
+            search_field.update()
+            results_list.update()
+
+        async def load_engineers():
+            result = await get_all_engineer_usernames()
+            all_usernames["list"] = result.get("engineers", [])
+            # Show all on open
+            results_list.controls.extend([
+                ft.ListTile(
+                    title=ft.Text(username),
+                    on_click=lambda e, u=username: select_engineer(u),
+                )
+                for username in all_usernames["list"]
+            ])
+            results_list.update()
+
+        
+        async def confirm_assign(id, username):
+            if not username:
+                search_field.error = "Please select an engineer to assign"
+                search_field.update()
+                return
+            resp = await assign_engineer(id, username)
+            self.page.pop_dialog()
+
+        async def assign_click(e):
+            await confirm_assign(self.user.get("id"), selected_username["value"])
+
+        assign_dialog = ft.AlertDialog(
+            title=ft.Text("Assign an Engineer"),
+            on_dismiss=lambda e: None,
+            content=ft.Column(
+                width=300,
+                height=280,
+                controls=[
+                    ft.Text(
+                        "Search for available engineers in your area and assign them "
+                        "to verify your detection results.",
+                        size=12,
+                    ),
+                    search_field,
+                    ft.Divider(height=1),
+                    results_list,
+                ]
+            ),
+            actions=[
+                ft.TextButton("Cancel", on_click=lambda e: self.page.pop_dialog()),
+                ft.TextButton(
+                    "Assign",
+                    on_click=assign_click,  # async def, not a lambda
+                ),
+            ]
+        )
+
+        self.page.show_dialog(assign_dialog)
+        self.page.run_task(load_engineers)  # fetch after dialog is shown
+
+
+
+    # def assign_engineer_click(self, e):
+    #     from services.profile_service import assign_engineer
+    #     from services.profile_service import search_engineers
+
+    #     username_field = TextField(label="Engineer Username", value="", autofocus=True)
+
+
+    #     assign_dialog = AlertDialog(
+    #         title=ft.Text("Assign an Engineer"),
+    #         content=ft.Column(
+    #             height=150,
+    #             controls=[
+    #                 ft.Text(
+    #                     "Search for available engineers in your area and assign them to verify your detection results. This will help ensure that you receive accurate feedback and guidance based on your specific situation."
+    #                 ),
+    #                 username_field
+    #             ]
+    #         ),
+    #         actions=[
+    #             ft.TextButton("Assign", on_click=lambda e: confirm_assign(self.user.get("id"), username_field.value)),
+    #             ft.TextButton("Cancel", on_click=lambda e: self.page.pop_dialog()),
+    #         ]
+    #     )
+    #     self.page.show_dialog(assign_dialog)
+
+    #     def confirm_assign(id, username):
+    #         # Here you would call the assign_engineer service with the username and handle the response
+    #         pass
 
     def change_password_click(self, e):
         """Open dialog to change password."""
