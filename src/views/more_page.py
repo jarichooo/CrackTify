@@ -139,6 +139,18 @@ class MorePage(TemplatePage):
                 # Account & Security
                 ft.Text("Account & Security", theme_style="titleSmall"),
                 ft.ListTile(
+                    leading=ft.Icon(ft.Icons.PERSON_OUTLINE),
+                    title=ft.Text("Verify Engineer" if self.user.get("is_engineer") and not self.user.get("is_verified") else "Are you an engineer?"),
+                    subtitle=ft.Text("Submit documentation to verify your status"),
+                    on_click=self.verify_engineer_click,
+                ),
+                ft.ListTile(
+                    leading=ft.Icon(ft.Icons.ASSIGNMENT_OUTLINE),
+                    title=ft.Text("Assign an Engineer"),
+                    subtitle=ft.Text("Assign an engineer to verify your detection results"),
+                    on_click=self.assign_engineer_click,
+                ),
+                ft.ListTile(
                     leading=ft.Icon(ft.Icons.LOCK_OUTLINE),
                     title=ft.Text("Change Password"),
                     subtitle=ft.Text("Update your account password"),
@@ -356,6 +368,25 @@ class MorePage(TemplatePage):
             on_save=lambda updated_user: self.refresh_user(updated_user),
         )
         self.page.views.append(edit_page.build())
+
+    async def verify_engineer_click(self, e):
+        """Navigates to the VerifyEngineerPage when the verify engineer option is clicked."""
+        if self.user.get("verified"):
+            self.page.show_dialog(
+                AlertDialog(
+                    title="Already Verified",
+                    content="Your engineer status has already been verified. Thank you!",
+                    actions=[ft.TextButton("OK", on_click=lambda e: (
+                        setattr(self.page.dialog, "open", False), self.page.update()
+                    ))],
+                )
+            )
+            return
+        
+        from .verify_engineer import VerifyEngineerPage
+
+        verify_page = VerifyEngineerPage(self.page)
+        self.page.views.append(verify_page.build())
 
     def change_password_click(self, e):
         """Open dialog to change password."""

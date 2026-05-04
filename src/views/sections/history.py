@@ -8,6 +8,7 @@ from utils.file_utils import build_thumb
 from utils.page_utils import show_full
 from utils.time_utils import convert_to_utc8
 
+from model.user import User
 
 class HistorySection(TemplatePage):
     async def get_cracks(self):
@@ -29,9 +30,9 @@ class HistorySection(TemplatePage):
         self.crack_files = await self.get_cracks()
         self.page.update()
 
-    def __init__(self, page: ft.Page, user):
+    def __init__(self, page: ft.Page):
         super().__init__(page)
-        self.user = user
+        self.user = User.to_dict()  # Get user data as a dictionary
 
         self.crack_files = []
 

@@ -1,12 +1,14 @@
 import asyncio
 import random
-from typing import List
+from typing import Generator, List
 import flet as ft
 import flet_lottie as ftl  # type: ignore
 from services.crack_service import fetch_cracks_service
 from utils.file_utils import build_thumb
 from utils.page_utils import show_full
 from utils.time_utils import convert_to_utc8
+
+from model.user import User
 
 
 class HomeSection:
@@ -29,9 +31,9 @@ class HomeSection:
         self.recent_cracks = await self.get_cracks()
         self.page.update()
 
-    def __init__(self, page: ft.Page, user):
+    def __init__(self, page: ft.Page):
         self.page = page
-        self.user = user
+        self.user = User.to_dict()  # Get user data as a dictionary
 
         # Define header states with text and corresponding Lottie animation URLs
         self.header_states = [
@@ -135,7 +137,7 @@ class HomeSection:
             self.load_cracks
         )  # Load recent cracks when section is initialized
 
-    def build(self) -> List[ft.Control]:
+    def build(self):
         """Build the home section UI."""
         self.header = ft.Container(
             width=self.page.width,
@@ -211,7 +213,7 @@ class HomeSection:
         )
 
         return [self.body]
-
+            
     async def rotate_header_loop(self):
         """Continuously rotate through header states with animation."""
         while True:

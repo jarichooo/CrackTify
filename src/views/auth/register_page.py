@@ -4,7 +4,7 @@ from urllib import response
 
 import flet as ft
 
-from services.auth_service import check_email_unique
+from services.auth_service import check_uniqueness
 from services.otp_service import send_otp
 from utils.input_validation import validate_registration
 
@@ -43,6 +43,12 @@ class RegisterPage(TemplatePage):
             value=self.saved_user.get("last_name", ""),
         )
 
+        self.username_field = TextField(
+            label="Username",
+            hint_text="Choose a username",
+            value=self.saved_user.get("username", ""),
+        )
+
         self.email_field = TextField(
             label="Email",
             keyboard_type=ft.KeyboardType.EMAIL,
@@ -61,6 +67,16 @@ class RegisterPage(TemplatePage):
             password=True,
             can_reveal_password=True,
             value=self.saved_user.get("password_2", ""),
+        )
+
+        self.role_group = ft.RadioGroup(
+            content=ft.Row(
+                controls=[
+                    ft.Radio(label="Civilian", value="civilian"),
+                    ft.Radio(label="Structural Engineer", value="engineer"),
+                ]
+            ),
+            value=self.saved_user.get("is_engineer", False) and "engineer" or "civilian", # Set default value based on saved_user else default to "civilian"
         )
 
         continue_button = PrimaryButton(
@@ -109,9 +125,21 @@ class RegisterPage(TemplatePage):
                         spacing=10,
                         controls=[self.first_name_field, self.last_name_field],
                     ),
+                    self.username_field,
                     self.email_field,
                     self.password_field,
                     self.confirm_password_field,
+                    ft.Text(
+                        "Select Your Role",
+                        size=16,
+                        weight=ft.FontWeight.BOLD,
+                    ),
+                    ft.Row(
+                        spacing=10,
+                        controls=[
+                            self.role_group,
+                        ],
+                    ),
                     self.horizontal_divider(height=1, opacity=0),
                     continue_button,
                     self.horizontal_divider(height=20, opacity=0),
@@ -145,19 +173,21 @@ class RegisterPage(TemplatePage):
         """Handle continue button click"""
         first_name = self.first_name_field.value.strip()
         last_name = self.last_name_field.value.strip()
+        username = self.username_field.value.strip()
         email = self.email_field.value.strip()
         password = self.password_field.value.strip()
         confirm_password = self.confirm_password_field.value.strip()
 
         # Validate input values
         is_valid, errors = validate_registration(
-            first_name, last_name, email, password, confirm_password
+            first_name, last_name, username, email, password, confirm_password
         )
 
         if not is_valid:
             # Display validation errors
             self.first_name_field.error = errors.get("first_name")
             self.last_name_field.error = errors.get("last_name")
+            self.username_field.error = errors.get("username")
             self.email_field.error = errors.get("email")
             self.password_field.error = errors.get("password")
             self.confirm_password_field.error = errors.get("confirm_password")
@@ -172,14 +202,16 @@ class RegisterPage(TemplatePage):
             saved_user = {
                 "first_name": first_name,
                 "last_name": last_name,
+                "username": username,
                 "email_address": email,
                 "password_1": password,
                 "password_2": confirm_password,
+                "is_engineer": self.role_group.value == "engineer",
             }
             await self.page.shared_preferences.set("saved_user", json.dumps(saved_user))
 
-            # Run OTP sending safely
-            await self.handle_send_otp(email, first_name)
+            # Verify email and username uniqueness and send OTP in parallel to reduce wait time
+            await self.handle_send_otp(email, username, first_name)
 
         except Exception as ex:
             self.hide_loading()
@@ -190,15 +222,27 @@ class RegisterPage(TemplatePage):
                 )
             )
 
-    async def handle_send_otp(self, email, first_name):
+    async def handle_send_otp(self, email, username, first_name):
         # Check if email is unique
-        email_response = await check_email_unique(email)
+        email_response = await check_uniqueness(email, "email")
         if not email_response.get("success"):
             self.hide_loading()
             self.page.show_dialog(
                 AlertDialog(
                     title="Email Already Exists",
                     content="The email address is already registered.",
+                )
+            )
+            return
+        
+        # Check if username is unique
+        username_response = await check_uniqueness(username, "username")
+        if not username_response.get("success"):
+            self.hide_loading()
+            self.page.show_dialog(
+                AlertDialog(
+                    title="Username Already Exists",
+                    content="The username is already taken.",
                 )
             )
             return
@@ -216,14 +260,17 @@ class RegisterPage(TemplatePage):
             )
             return
 
+
         # Navigate to OTP page only if OTP succeeded
         self.page.views.append(
             OTPVerificationPage(
                 self.page,
                 email,
+                username,
                 first_name,
                 self.last_name_field.value,
                 self.password_field.value,
+                is_engineer=self.role_group.value == "engineer",
             ).build()
         )
         self.page.update()

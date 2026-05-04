@@ -6,6 +6,8 @@ import os
 import flet as ft
 import flet_video as ftv
 
+from views.verify_engineer import VerifyEngineerPage
+
 from .template import TemplatePage
 from .more_page import MorePage
 
@@ -31,11 +33,12 @@ class MainPage(TemplatePage, User):
         # Initialize state
         self.state = State()
         self.user: dict = User.to_dict()  # Initialize user data as an empty dictionary
+        self.ver_counter = 0  # Counter to track how many times the verification page has been shown in the session
 
         # Initialize page sections instances for navigation
-        self.home_page = HomeSection(page, self.user)
-        self.gallery_page = ImageGallery(page, self.user)
-        self.history_page = HistorySection(page, self.user)
+        self.home_page = HomeSection(page)
+        self.gallery_page = ImageGallery(page)
+        self.history_page = HistorySection(page)
 
         self.page.run_task(
             self.home_page.rotate_header_loop
@@ -63,6 +66,12 @@ class MainPage(TemplatePage, User):
                 on_click=lambda _: self.open_search_page(),
             )
 
+            self.notification_icon = ft.IconButton(
+                icon=ft.Icons.NOTIFICATIONS,
+                tooltip="Notifications",
+                on_click=lambda _: self.open_notifications_page(),
+            )
+
             self.appbar_upload_button = ft.IconButton(
                 icon=ft.Icons.ADD,
                 tooltip="Select File",
@@ -87,6 +96,7 @@ class MainPage(TemplatePage, User):
                 actions=[
                     self.appbar_upload_button,
                     self.search_icon,
+                    self.notification_icon,
                     self.toggle_theme_button,
                 ],
             )
@@ -117,7 +127,7 @@ class MainPage(TemplatePage, User):
 
             self.nav_bar = ft.NavigationBar(
                 selected_index=self.prev_index,
-                on_change=self.on_nav_change,
+                on_change=self.on_nav_change_engineer if self.user.get("is_engineer") else self.on_nav_change,
                 destinations=[
                     ft.NavigationBarDestination(
                         icon=ft.Icons.HOME_ROUNDED, label="Home"
@@ -126,7 +136,11 @@ class MainPage(TemplatePage, User):
                         icon=ft.Icons.PHOTO_LIBRARY_ROUNDED, label="Gallery"
                     ),
                     ft.NavigationBarDestination(
-                        icon=ft.Icons.HISTORY_ROUNDED, label="History"
+                        icon=ft.Icons.HISTORY_ROUNDED, label="History",
+                    ),
+                    ft.NavigationBarDestination(
+                        icon=ft.Icons.FOLDER_SHARED, label="Report",
+                        visible=True if self.user.get("is_engineer") else False # Only show Report tab for verified engineers
                     ),
                     ft.NavigationBarDestination(
                         icon=ft.Icons.MORE_HORIZ,
@@ -150,6 +164,10 @@ class MainPage(TemplatePage, User):
         finally:
             # Trigger initial view manually
             self.page.run_task(self.home_page.lazy_load)
+            from .verify_engineer import VerifyEngineerPage
+
+            verify_page = VerifyEngineerPage(self.page)
+            self.page.views.append(verify_page.build())
 
     def open_search_page(self):
         """Navigate to the search page."""
@@ -159,6 +177,15 @@ class MainPage(TemplatePage, User):
             self.page, self.user, on_back=self.refresh_current_section
         )
         self.page.views.append(search_page.build())
+
+    def open_notifications_page(self):
+        """Navigate to the notifications page."""
+        from views.notification_page import NotificationPage
+
+        notification_page = NotificationPage(
+            self.page, self.user, on_back=self.refresh_current_section
+        )
+        self.page.views.append(notification_page.build())
 
     def on_upload_progress(self, e: ft.FilePickerUploadEvent):
         """Handle file upload progress events and update the progress bar accordingly."""
@@ -182,7 +209,7 @@ class MainPage(TemplatePage, User):
         if not files:
             return
 
-        file = files[0]
+        file = files[0] 
         self.state.picked_file = [file]
 
         # Create preview page with file and push it
@@ -202,6 +229,56 @@ class MainPage(TemplatePage, User):
         self.active_section.refresh()  # Call the refresh method of the active section
 
         self.body.update()
+    
+    
+    def on_nav_change_engineer(self, e):
+        """Handle navigation bar changes for engineers and update the active section accordingly, including showing the verification page if the user is not verified and tries to access the Report tab."""
+        index = e.control.selected_index
+
+        if index == 0:
+            self.active_section = self.home_page
+            self.app_bar.title = ft.Text("Cracktify")
+            self.pick_file_button.visible = True
+            self.appbar_upload_button.visible = (
+                False  # Hide upload button in app bar for home page
+            )
+            self.app_bar.automatically_imply_leading = False
+
+        elif index == 1:
+            self.active_section = self.gallery_page
+            self.app_bar.title = ft.Text("Gallery")
+            self.pick_file_button.visible = False
+            self.appbar_upload_button.visible = (
+                True  # Show upload button in app bar for gallery page
+            )
+            self.app_bar.automatically_imply_leading = False
+
+        elif index == 2:
+            self.active_section = self.history_page
+            self.app_bar.title = ft.Text("History")
+            self.pick_file_button.visible = False
+            self.appbar_upload_button.visible = (
+                True  # Show upload button in app bar for history page
+            )
+            self.app_bar.automatically_imply_leading = False
+
+        elif index == 3:
+            ... # Report tab - only accessible to verified engineers
+
+        elif index == 4:
+            more_page = MorePage(self.page)
+            self.page.views.append(more_page.build())
+            return
+
+        self.prev_index = index  # Update previous index
+        self.app_bar.update()
+        self.body.content = self.active_section.build()[0]
+
+        if hasattr(self.active_section, "lazy_load"):
+            asyncio.create_task(self.active_section.lazy_load())
+
+        self.body.update()
+
 
     def on_nav_change(self, e):
         """Handle navigation bar changes and update the active section accordingly."""

@@ -6,6 +6,8 @@ from services.crack_service import fetch_cracks_service
 from utils.file_utils import build_thumb
 from utils.page_utils import show_full
 
+from model.user import User
+
 
 class ImageGallery:
     # (Image size, text size) for each view size
@@ -15,9 +17,9 @@ class ImageGallery:
         "Large": (200, 16),
     }
 
-    def __init__(self, page: ft.Page, user: dict):
+    def __init__(self, page):
         self.page = page
-        self.user = user
+        self.user = User.to_dict()  # Get user data as a dictionary
 
         self.current_size = "Medium"
         self.current_sort = "Date Descending"

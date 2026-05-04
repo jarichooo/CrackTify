@@ -4,11 +4,14 @@ import time
 import flet as ft
 
 from services.auth_service import register_user
+from views.verify_engineer import VerifyEngineerPage
 from views.template import TemplatePage
 from services.otp_service import verify_otp, send_otp
 from widgets.inputs import TextField
 from widgets.dialogs import AlertDialog
 from widgets.buttons import BackButton, PrimaryButton, CustomTextButton
+
+from model.user import User
 
 
 class OTPVerificationPage(TemplatePage):
@@ -16,13 +19,17 @@ class OTPVerificationPage(TemplatePage):
         self,
         page: ft.Page,
         email_address: str,
+        username: str,
         first_name: str,
         last_name: str,
         password: str,
+        is_engineer: bool = False,
     ):
         super().__init__(page)
         self.email_address = email_address
+        self.username = username
         self.first_name = first_name
+        self.is_engineer = is_engineer
         self.last_name = last_name
         self.password = password
 
@@ -136,10 +143,13 @@ class OTPVerificationPage(TemplatePage):
             reg_response = await register_user(
                 self.first_name,
                 self.last_name,
+                self.username,
                 self.email_address,
                 self.password,
+                self.is_engineer,
             )
 
+            # Check registration response
             if not reg_response.get("success"):
                 self.page.show_dialog(
                     AlertDialog(
@@ -149,14 +159,25 @@ class OTPVerificationPage(TemplatePage):
                 )
                 return
 
+            user_data = reg_response.get("user", {}) # Extract user data from registration response
+
             await self.page.shared_preferences.set(
                 "auth_token", reg_response.get("token")
             )
             await self.page.shared_preferences.set(
-                "user", json.dumps(reg_response.get("user"))
+                "user", json.dumps(user_data)
             )
 
-            await self.page.push_route("/home")
+            User.from_dict(user_data)  # Update User model with new data
+
+            # if self.is_engineer:
+            #     """If user is an engineer, upload extra verification documents and """
+            #     from views.auth.verify_engineer import VerifyEngineerPage
+                
+            #     await self.page.push_view(VerifyEngineerPage(self.page))
+            #     return
+            
+            await self.page.push_route("/home") # Navigate to home after successful registration
 
         finally:
             self.hide_loading()

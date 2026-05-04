@@ -3,6 +3,8 @@ import json
 import os
 import sys
 
+from model import user
+
 # Ensure vendor packages are in sys.path
 sys.path.append(os.path.join(os.path.dirname(__file__), "vendor"))
 
@@ -26,6 +28,16 @@ async def main(page: ft.Page):
     def pop_return():
         page.pop_dialog()
         sys.exit(0)
+
+    async def safe_get(key: str, retries: int = 3, delay: float = 0.5):
+        """Retries shared_preferences.get on timeout to handle Android platform channel not being ready."""
+        for attempt in range(retries):
+            try:
+                return await page.shared_preferences.get(key)
+            except RuntimeError:
+                if attempt < retries - 1:
+                    await asyncio.sleep(delay)
+        return None  # give up after retries
 
     # Verify API connection before proceeding
     # Show a loading overlay while checking the connection
@@ -93,21 +105,9 @@ async def main(page: ft.Page):
         )
         page.update()
 
-        try:
-            raw_user = await page.shared_preferences.get("user")
-            user = json.loads(raw_user) if raw_user else {}
-
-            User.from_dict(user)  # Update the User model with the loaded data
-
-        except RuntimeError:
-            error_dialog = AlertDialog(
-                title="Runtime Error",
-                content="An error occurred while loading user data. Please restart the application.",
-                actions=[ft.TextButton("OK", on_click=lambda e: pop_return())],
-            )
-            page.overlay.pop()  # Remove the loading overlay
-            page.show_dialog(error_dialog)
-            return
+        raw_user = await safe_get("user")
+        user = json.loads(raw_user) if raw_user else {}
+        User.from_dict(user)  # Update the User model with the loaded data
 
         page.views.clear()
         page.overlay.pop()  # Remove the loading overlay
@@ -115,6 +115,10 @@ async def main(page: ft.Page):
         if page.route == "/home" or page.route == "/":
             main_page = MainPage(page)
             page.views.append(main_page.build())
+
+            if user.get("is_engineer") and not user.get("verified"):
+                from views.verify_engineer import VerifyEngineerPage
+                page.views.append(VerifyEngineerPage(page).build())
 
         elif page.route == "/login":
             login_page = LoginPage(page)
@@ -137,15 +141,15 @@ async def main(page: ft.Page):
     page.on_view_pop = view_pop
 
     # Check for auth token in shared preferences to determine initial route
-    auth_token = await page.shared_preferences.get("auth_token")
+    auth_token = await safe_get("auth_token")
 
     if auth_token:
         page.route = "/home"
+    
     else:
         page.route = "/login"
 
     await route_change()  # Manually trigger route change to load the initial view
-
 
 if __name__ == "__main__":
     ft.run(main, upload_dir="uploads")

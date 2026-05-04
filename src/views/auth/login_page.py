@@ -4,6 +4,7 @@ import flet as ft
 
 from config import Config
 
+from model.user import User
 from services.auth_service import login_user
 from utils.input_validation import validate_login, validate_email
 from views.template import TemplatePage
@@ -20,10 +21,10 @@ class LoginPage(TemplatePage):
         """Builds the authentication Page layout."""
 
         #  Form Inputs
-        self.email_field = TextField(
-            label="Email",
+        self.user_field = TextField(
+            label="Username or Email",
             value="",
-            prefix_icon=ft.Icons.EMAIL_OUTLINED,
+            prefix_icon=ft.Icons.PERSON_OUTLINE,
             keyboard_type=ft.KeyboardType.EMAIL,
         )
 
@@ -102,7 +103,7 @@ class LoginPage(TemplatePage):
                         text_align=ft.TextAlign.CENTER,
                     ),
                     self.horizontal_divider(opacity=0, height=5),
-                    self.email_field,
+                    self.user_field,
                     self.password_field,
                     forgot_container,
                     self.horizontal_divider(opacity=0, height=5),
@@ -132,27 +133,27 @@ class LoginPage(TemplatePage):
 
     def on_login_click(self, e):
         """Handles the login button click event."""
-        email = self.email_field.value
+        user = self.user_field.value
         password = self.password_field.value
 
         # Validate inputs
-        is_valid, errors = validate_login(email, password)
+        is_valid, errors = validate_login(user, password)
 
         if is_valid:
             self.show_loading()
             self.page.run_task(
-                self.user_login, email, password
+                self.user_login, user, password
             )  # Perform login asynchronously
 
         else:
             # Display errors
-            self.email_field.error = errors.get("email")
+            self.user_field.error = errors.get("user")
             self.password_field.error = errors.get("password")
             self.page.update()
 
-    async def user_login(self, email, password):
+    async def user_login(self, user, password):
         """Perform user login asynchronously"""
-        response = await login_user(email, password)
+        response = await login_user(user, password)
         self.hide_loading()
 
         if response.get("success"):
@@ -162,7 +163,8 @@ class LoginPage(TemplatePage):
 
             await self.page.shared_preferences.set("auth_token", token)
             await self.page.shared_preferences.set("user", json.dumps(user))
-
+            
+            User.from_dict(user)  # Update User model with new data
             await self.page.push_route("/home")
 
         else:
@@ -180,7 +182,7 @@ class LoginPage(TemplatePage):
         """Handles the forgot password button click event."""
         self.fp_email_field = TextField(
             label="Email",
-            value=self.email_field.value,
+            value=self.user_field.value.strip() if "@" in self.user_field.value.strip() else "", # Pre-fill email if the user entered an email in the username field
             prefix_icon=ft.Icons.EMAIL,
             keyboard_type=ft.KeyboardType.EMAIL,
             autofocus=True,
