@@ -146,9 +146,9 @@ class MorePage(TemplatePage):
                 ),
                 ft.ListTile(
                     leading=ft.Icon(ft.Icons.ASSIGNMENT_IND),
-                    title=ft.Text("Assign an Engineer"),
-                    subtitle=ft.Text("Assign an engineer to verify your detection results"),
-                    on_click=self.assign_engineer_click,
+                    title=ft.Text("Invite an Engineer"),
+                    subtitle=ft.Text("Invite an engineer to verify your detection results"),
+                    on_click=self.invite_engineer_click,
                 ),
                 ft.ListTile(
                     leading=ft.Icon(ft.Icons.LOCK_OUTLINE),
@@ -388,8 +388,8 @@ class MorePage(TemplatePage):
         verify_page = VerifyEngineerPage(self.page)
         self.page.views.append(verify_page.build())
 
-    def assign_engineer_click(self, e):
-        from services.profile_service import assign_engineer
+    def invite_engineer_click(self, e):
+        from services.profile_service import invite_engineer
         from services.profile_service import get_all_engineer_usernames
 
         selected_username = {"value": ""}
@@ -441,26 +441,26 @@ class MorePage(TemplatePage):
             results_list.update()
 
         
-        async def confirm_assign(id, username):
+        async def confirm_invite(id, username):
             if not username:
-                search_field.error = "Please select an engineer to assign"
+                search_field.error = "Please select an engineer to invite."
                 search_field.update()
                 return
-            resp = await assign_engineer(id, username)
+            resp = await invite_engineer(id, username)
             self.page.pop_dialog()
 
-        async def assign_click(e):
-            await confirm_assign(self.user.get("id"), selected_username["value"])
+        async def invite_click(e):
+            await confirm_invite(self.user.get("id"), selected_username["value"])
 
-        assign_dialog = ft.AlertDialog(
-            title=ft.Text("Assign an Engineer"),
+        invite_dialog = ft.AlertDialog(
+            title=ft.Text("Invite an Engineer"),
             on_dismiss=lambda e: None,
             content=ft.Column(
                 width=300,
                 height=280,
                 controls=[
                     ft.Text(
-                        "Search for available engineers in your area and assign them "
+                        "Search for available engineers in your area and invite them "
                         "to verify your detection results.",
                         size=12,
                     ),
@@ -472,13 +472,13 @@ class MorePage(TemplatePage):
             actions=[
                 ft.TextButton("Cancel", on_click=lambda e: self.page.pop_dialog()),
                 ft.TextButton(
-                    "Assign",
-                    on_click=assign_click,  # async def, not a lambda
+                    "Invite",
+                    on_click=invite_click,  # async def, not a lambda
                 ),
             ]
         )
 
-        self.page.show_dialog(assign_dialog)
+        self.page.show_dialog(invite_dialog)
         self.page.run_task(load_engineers)  # fetch after dialog is shown
 
 

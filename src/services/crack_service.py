@@ -9,6 +9,7 @@ async def fetch_cracks_service(user_id: int, limit=0):
     except Exception as e:
         return {"success": False, "message": str(e)}
 
+
 async def fetch_one_crack(crack_id: int):
     """Service to fetch details of a specific crack."""
     try:
@@ -16,6 +17,7 @@ async def fetch_one_crack(crack_id: int):
 
     except Exception as e:
         return {"success": False, "message": str(e)}
+
 
 async def detect_crack(
     file_info: dict[str, any], confidence_threshold: float = 0.5, timeout: int = 60
@@ -50,6 +52,15 @@ async def update_crack_service(crack_id: int, crack_data: dict):
             "/cracks/update", {"crack_id": crack_id, "updated_data": crack_data}
         )
 
+    except Exception as e:
+        return {"success": False, "message": str(e)}
+
+
+async def can_edit_crack(user_id: int, crack_id: int):
+    try:
+        return await post_request(
+            f"/cracks/can_edit_by", {"crack_id": crack_id, "user_id": user_id}
+        )
     except Exception as e:
         return {"success": False, "message": str(e)}
 

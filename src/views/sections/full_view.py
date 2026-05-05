@@ -2,7 +2,13 @@ import flet as ft
 import flet_video as ftv
 
 from utils.file_utils import get_file_type, cloudinary_to_download_url
+from services.crack_service import can_edit_crack
 from views.template import TemplatePage
+
+from model.user import User
+
+from widgets.inputs import TextField
+from widgets.buttons import PrimaryButton
 
 
 class FullViewPage(TemplatePage):
@@ -12,8 +18,13 @@ class FullViewPage(TemplatePage):
         self.filename = file.get("filename")
         self.severity = file.get("severity")
         self.probability = file.get("probability")
+        self.remark = file.get("remark")
         self.date_str = file.get("detected_at")
         self.file_url = file.get("file_url")
+
+        self.user = User.to_dict()  # Get user data as a dictionary
+
+        self.has_edit_access = False  # Will be set after checking permissions
 
         self.on_close = (
             on_close  # Callback to refresh home/gallery/history after closing full view
@@ -72,6 +83,10 @@ class FullViewPage(TemplatePage):
 
     def build(self) -> ft.View:
         """Builds the full view page view."""
+        self.page.run_task(
+            self.run_permission_check
+        )  # Check if user has edit access to this crack
+
         self.app_bar = ft.AppBar(
             title=ft.Text(self.filename or "Unknown"),
             leading=self.cancel_btn,
@@ -106,6 +121,67 @@ class FullViewPage(TemplatePage):
             ],
         )
 
+        self.edit_properties_fab = ft.FloatingActionButton(
+            icon=ft.Icons.INFO_OUTLINED if not self.has_edit_access else ft.Icons.EDIT,
+            on_click=lambda _: self.page.show_dialog(self.bottom_sheet),
+        )
+
+        self.save_remark = PrimaryButton("Save", icon=ft.Icons.SAVE, on_click=self.save_remark_changes, expand=True)
+
+        self.remark_field = TextField(
+            label="Remark",
+            multiline=True,
+            value=self.remark,
+            width=400,
+            read_only=not self.has_edit_access,  # Make read-only if user doesn't have edit access
+        )
+
+        self.severity_dropdown = ft.Dropdown(
+            label="Severity",
+            options=[
+                ft.dropdown.Option(key="Low", text="Low"),
+                ft.dropdown.Option(key="Medium", text="Medium"),
+                ft.dropdown.Option(key="High", text="High"),
+            ],
+            value=self.severity,
+            expand=1,
+            visible=self.has_edit_access,  # Disable if user doesn't have edit access
+        )
+        self.probability_field = TextField(
+            label="Probability",
+            hint_text="Enter probability (0-1)",
+            value=str(self.probability),
+            expand=1,
+            visible=self.has_edit_access,  # Make read-only if user doesn't have edit access
+        )
+
+        self.bottom_sheet = ft.BottomSheet(
+            draggable=True,
+            show_drag_handle=True,
+            content=ft.Container(
+                content=ft.Column(
+                    spacing=20,
+                    scroll=ft.ScrollMode.AUTO,  # ← makes Column scrollable
+                    controls=[
+                        ft.Text("Remark", size=20),
+                        self.remark_field,
+                        ft.Text("Edit Severity and Probability", size=20, visible=self.has_edit_access),  # Show section header only if user has edit access
+                        ft.Row(
+                            spacing=10,
+                            controls=[
+                                self.severity_dropdown,
+                                self.probability_field,
+                            ]
+                        ),
+                        ft.Row(self.save_remark, visible=self.has_edit_access),  # Show save button only if user has edit access
+                    ],
+                    alignment=ft.MainAxisAlignment.START,
+                ),
+                padding=20,
+                expand=True,  # ← let container fill available space
+            ),
+        )
+
         self.body = ft.Column(
             controls=[self.full_view_content],
             expand=True,
@@ -113,6 +189,7 @@ class FullViewPage(TemplatePage):
 
         return self.layout(
             route="/full_view",
+            floating_action_button=self.edit_properties_fab,
             controls=[self.app_bar, self.body],
         )
 
@@ -265,3 +342,59 @@ class FullViewPage(TemplatePage):
         )
 
         self.page.show_dialog(info_dialog)
+
+    async def run_permission_check(self):
+        """Checks if the current user has permission to edit this crack's remark."""
+        from services.crack_service import can_edit_crack
+
+        resp = await can_edit_crack(self.user.get("id"), self.id)
+
+        self.has_edit_access = resp.get("can_edit", False)
+
+    async def save_remark_changes(self, e):
+        """Saves the changes made to the crack's remark and severity."""
+        from services.crack_service import update_crack_service
+
+        new_remark = self.remark_field.value
+        new_severity = self.severity_dropdown.value
+        new_probability = self.probability_field.value
+
+
+        if not new_probability:
+            error_dialog = ft.AlertDialog(
+                title="Invalid Input",
+                content=ft.Text("Probability cannot be empty. Please enter a value between 0 and 1."),
+                actions=[ft.TextButton("OK", on_click=lambda e: self.page.pop_dialog())],
+            )
+            self.page.show_dialog(error_dialog)
+            return
+
+        self.show_loading("Saving changes...")
+        self.page.update()
+
+        resp = await update_crack_service(
+            self.id,
+            {
+                "remark": new_remark,
+                "severity": new_severity,
+                "probability": float(new_probability),
+            },
+        )
+
+        if not resp.get("success"):
+            error_dialog = ft.AlertDialog(
+                title="Update Failed",
+                content=ft.Text("Failed to update the crack. Please try again."),
+                actions=[
+                    ft.TextButton("OK", on_click=lambda e: self.page.pop_dialog())
+                ],
+            )
+            self.hide_loading()  # Hide the loading indicator before showing the error dialog
+            self.page.show_dialog(error_dialog)
+            return
+
+        self.remark = new_remark  # Update the remark in the UI
+        self.severity = new_severity  # Update the severity in the UI
+        self.probability = float(new_probability)  # Update the probability in the UI
+        self.hide_loading()  # Hide the loading indicator
+        self.page.pop_dialog()  # Close the bottom sheet after saving changes

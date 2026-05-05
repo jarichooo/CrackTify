@@ -4,7 +4,6 @@ import os
 import sys
 
 from model import user
-from views import notification_page
 
 # Ensure vendor packages are in sys.path
 sys.path.append(os.path.join(os.path.dirname(__file__), "vendor"))
@@ -22,7 +21,6 @@ from services.api_client import verify_connection
 
 from services.ws_client import WSClient
 from views.notification_page import NotificationPage
-from config import Config
 
 async def main(page: ft.Page):
     # page.shared_preferences.clear()
@@ -30,7 +28,7 @@ async def main(page: ft.Page):
     page.title = "Cracktify"  # Set the window title
 
     # Initialize WebSocket client for real-time notifications
-    ws = WSClient(base_url=Config.API_BASE_URL)
+    ws = WSClient()
 
     notification_page = NotificationPage(page)
 

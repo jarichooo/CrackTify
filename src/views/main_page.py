@@ -14,6 +14,7 @@ from .more_page import MorePage
 from views.sections.home import HomeSection
 from views.sections.gallery import ImageGallery
 from views.sections.history import HistorySection
+from views.notification_page import NotificationPage
 
 from utils.themes import toggle_theme
 
@@ -39,6 +40,9 @@ class MainPage(TemplatePage, User):
         self.home_page = HomeSection(page)
         self.gallery_page = ImageGallery(page)
         self.history_page = HistorySection(page)
+        self.notification_page = NotificationPage(
+            page, on_back=self.refresh_current_section
+        )
 
         self.page.run_task(
             self.home_page.rotate_header_loop
@@ -178,14 +182,12 @@ class MainPage(TemplatePage, User):
         )
         self.page.views.append(search_page.build())
 
-    def open_notifications_page(self):
+    async def open_notifications_page(self):
         """Navigate to the notifications page."""
-        from views.notification_page import NotificationPage
+        
+        self.page.views.append(self.notification_page.build())
+        await self.notification_page.load_notifications()  # Load notifications after navigating to the page
 
-        notification_page = NotificationPage(
-            self.page, self.user, on_back=self.refresh_current_section
-        )
-        self.page.views.append(notification_page.build())
 
     def on_upload_progress(self, e: ft.FilePickerUploadEvent):
         """Handle file upload progress events and update the progress bar accordingly."""

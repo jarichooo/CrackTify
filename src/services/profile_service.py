@@ -58,11 +58,20 @@ async def verify_engineer(user_id: int, license_number: str, document_url: str) 
 async def get_all_engineer_usernames() -> Dict[str, Any]:
     return await get_request(f"/profile/engineers")
 
-async def assign_engineer(user_id: int, engineer_id: int) -> Dict[str, Any]:
+async def invite_engineer(user_id: int, engineer_id: int) -> Dict[str, Any]:
     return await post_request(
-        f"/profile/assign_engineer",
+        f"/profile/invite_engineer",
         {
             "user_id": user_id,
+            "engineer_id": engineer_id,
+        },
+    )
+
+async def accept_invitation(inviter_id: str, engineer_id: int) -> Dict[str, Any]:
+    return await post_request(
+        f"/profile/accept_invitation",
+        {
+            "inviter_id": inviter_id,
             "engineer_id": engineer_id,
         },
     )

@@ -1,10 +1,11 @@
 import asyncio
 import json
 import websockets
+from config import Config
 
 class WSClient:
-    def __init__(self, base_url: str):
-        self.base_url = base_url.replace("http", "ws")
+    def __init__(self):
+        self.base_url = Config.API_BASE_URL.replace("http", "ws")
         self._task = None
 
     def start(self, user_id: str, on_message):
