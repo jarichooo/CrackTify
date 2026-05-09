@@ -336,8 +336,10 @@ class NotificationPage(TemplatePage):
             return
 
         from services.engineer_service import accept_engineer_invitation
+        from services.notification_service import delete_notification
 
         res = await accept_engineer_invitation(inviter_id, self.user.get("id"))
+        del_res = await delete_notification(notif_id)
 
         if res.get("success"):
             self.special_notification_ids.pop(notif_id, None)
@@ -353,6 +355,7 @@ class NotificationPage(TemplatePage):
             if delete_result.get("success") and index is not None:
                 self.notifications.pop(index)
                 self._rebuild_list()
+
 
     async def view_crack_details(self, notification: dict):
         from services.crack_service import fetch_one_crack

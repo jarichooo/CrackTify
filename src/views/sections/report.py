@@ -20,11 +20,6 @@ class ReportSection:
         # List of {id, name} dicts the engineer can access
         self.assigned_users: list[dict] = []
 
-        get_users_task = asyncio.create_task(
-            get_associated_user(self.user.get("id", 0))
-        )
-        get_users_task.add_done_callback(self._on_user_ready)
-
         self.all_cracks: list[dict] = []
         self.filtered_cracks: list[dict] = []
 
@@ -107,12 +102,20 @@ class ReportSection:
         asyncio.create_task(self.lazy_load())
 
     async def lazy_load(self):
-        self.body.content = ft.ProgressRing()
-        self.page.update()
-
-        # Show stale data immediately while re-fetching
+        # Show stale data immediately on revisit instead of blank spinner
         if self.all_cracks:
             self.update_report()
+        else:
+            self.body.content = ft.ProgressRing()
+            self.page.update()
+
+        # Only fetch assigned users once
+        if not self.assigned_users:
+            try:
+                result = await get_associated_user(self.user.get("id", 0))
+                self.assigned_users = result.get("associated_users", [])
+            except Exception as e:
+                self.assigned_users = []
 
         if not self.assigned_users:
             self.body.content = ft.Column(
@@ -127,7 +130,7 @@ class ReportSection:
             self.page.update()
             return
 
-        # Fetch all assigned users concurrently
+        # Fetch cracks concurrently
         results = await asyncio.gather(
             *[fetch_cracks_service(u["id"]) for u in self.assigned_users],
             return_exceptions=True,
@@ -140,9 +143,7 @@ class ReportSection:
             for crack in res.get("cracks", []):
                 firstname = user.get("first_name", "")
                 lastname = user.get("last_name", "")
-                crack["_username"] = f"{firstname} {lastname}".strip() or user.get(
-                    "id", ""
-                )
+                crack["_username"] = f"{firstname} {lastname}".strip() or user.get("id", "")
                 merged.append(crack)
 
         if merged == self.all_cracks and self.all_cracks:
@@ -346,7 +347,3 @@ class ReportSection:
             expand=True,
         )
         self.page.update()
-
-    def _on_user_ready(self, t: asyncio.Task):
-        self.assigned_users = t.result().get("associated_users", [])
-        self.refresh()

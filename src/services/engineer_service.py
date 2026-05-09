@@ -43,8 +43,5 @@ async def accept_engineer_invitation(
 
 async def get_associated_user(user_id: int) -> Dict[str, Any]:
     return await get_request(
-        f"/engineers/get_associated_user",
-        {
-            "user_id": user_id,
-        },
+        f"/engineers/get_associated_users/{user_id}",
     )

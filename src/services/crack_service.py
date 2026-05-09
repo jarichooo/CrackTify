@@ -56,7 +56,7 @@ async def update_crack_service(crack_id: int, crack_data: dict):
         return {"success": False, "message": str(e)}
 
 
-async def can_edit_crack(user_id: int, crack_id: int):
+async def can_edit_crack(crack_id: int, user_id: int):
     try:
         return await post_request(
             f"/cracks/can_edit_by", {"crack_id": crack_id, "user_id": user_id}
