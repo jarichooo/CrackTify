@@ -18,7 +18,7 @@ class FullViewPage(TemplatePage):
         self.filename = file.get("filename")
         self.severity = file.get("severity")
         self.probability = file.get("probability")
-        self.remark = file.get("remark")
+        self.remark = file.get("remark", "")
         self.date_str = file.get("detected_at")
         self.file_url = file.get("file_url")
 
@@ -132,6 +132,7 @@ class FullViewPage(TemplatePage):
             label="Remark",
             multiline=True,
             value=self.remark,
+            hint_text="No remark provided.",
             width=400,
             read_only=not self.has_edit_access,  # Make read-only if user doesn't have edit access
         )

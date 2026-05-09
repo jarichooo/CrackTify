@@ -1,3 +1,4 @@
+from utils.time_utils import convert_to_utc8
 from widgets.buttons import PrimaryButton, SecondaryButton
 from .template import TemplatePage
 from services.notification_service import (
@@ -157,6 +158,10 @@ class NotificationPage(TemplatePage):
             else:
                 self.page.run_task(self.toggle_read, index)
 
+        date_str = convert_to_utc8(notification.get("created_at", ""))
+        date = date_str.split("T")[0] if "T" in date_str else date_str
+        time = date_str.split("T")[1].split(".")[0] if "T" in date_str else ""
+
         return ft.Card(
             data=notif_id,
             variant=ft.CardVariant.FILLED,
@@ -183,7 +188,7 @@ class NotificationPage(TemplatePage):
                                 notification.get("message", "No Message"), max_lines=3
                             ),
                             ft.Text(
-                                notification.get("created_at", "Just now"),
+                                f"{date} at {time}",
                                 size=13,
                                 color=ft.Colors.GREY,
                             ),
@@ -262,14 +267,11 @@ class NotificationPage(TemplatePage):
         """
         try:
             data = await get_notifications(user_id)
-            print(f"[NotificationPage] API response: {data}")
 
         except Exception as e:
-            print(f"[NotificationPage] load_notifications error: {e}")
             return
 
         self.notifications = data.get("notifications", [])
-        print(f"[NotificationPage] loaded {len(self.notifications)} notifications")
 
         for n in self.notifications:
             if n.get("crack_id"):
@@ -302,7 +304,6 @@ class NotificationPage(TemplatePage):
 
             result = await get_notification_by_id(notif_id)
         except Exception as e:
-            print(f"[NotificationPage] handle_notification fetch error: {e}")
             return
 
         notif = result.get("notification")

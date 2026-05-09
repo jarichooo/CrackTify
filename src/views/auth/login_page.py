@@ -117,7 +117,6 @@ class LoginPage(TemplatePage):
         # Final Layout Assembly
         return self.layout(
             route="/",
-            # Fixed: Wrapped the main Column in a list so ft.View renders it correctly
             controls=[
                 ft.Column(
                     expand=True,
@@ -141,34 +140,41 @@ class LoginPage(TemplatePage):
 
         if is_valid:
             self.show_loading()
-            self.page.run_task(
-                self.user_login, user, password
-            )  # Perform login asynchronously
-
+            self.page.run_task(self.user_login, user, password)
         else:
-            # Display errors
             self.user_field.error = errors.get("user")
             self.password_field.error = errors.get("password")
             self.page.update()
 
     async def user_login(self, user, password):
-        """Perform user login asynchronously"""
+        """Perform user login asynchronously."""
         response = await login_user(user, password)
         self.hide_loading()
 
         if response.get("success"):
-            # If login is successful, save the token and navigate to the home page
             token = response.get("token")
-            user = response.get("user")
 
+            # ── Admin path ──────────────────────────────────────────
+            if response.get("is_admin"):
+                # Persist the admin flag so the router can recognise the
+                # session on next cold-start / route change.
+                await self.page.shared_preferences.set("auth_token", token)
+                await self.page.shared_preferences.set("is_admin", "true")
+                # Admin has no User model profile — clear any stale user blob.
+                await self.page.shared_preferences.set("user", "")
+                await self.page.push_route("/admin")
+                return
+
+            # ── Regular user path ───────────────────────────────────
+            user_data = response.get("user")
             await self.page.shared_preferences.set("auth_token", token)
-            await self.page.shared_preferences.set("user", json.dumps(user))
-            
-            User.from_dict(user)  # Update User model with new data
+            await self.page.shared_preferences.set("user", json.dumps(user_data))
+            await self.page.shared_preferences.set("is_admin", "")
+
+            User.from_dict(user_data)
             await self.page.push_route("/home")
 
         else:
-            # If login fails, show an error dialog with the message from the response
             error_dialog = ft.AlertDialog(
                 title=ft.Text("Login Failed"),
                 content=ft.Text(response.get("message", "An unknown error occurred.")),
@@ -178,11 +184,15 @@ class LoginPage(TemplatePage):
             )
             self.page.show_dialog(error_dialog)
 
+    # ------------------------------------------------------------------
+    # Forgot-password flow  (unchanged from original)
+    # ------------------------------------------------------------------
+
     def on_forgot_password_click(self, e):
         """Handles the forgot password button click event."""
         self.fp_email_field = TextField(
             label="Email",
-            value=self.user_field.value.strip() if "@" in self.user_field.value.strip() else "", # Pre-fill email if the user entered an email in the username field
+            value=self.user_field.value.strip() if "@" in self.user_field.value.strip() else "",
             prefix_icon=ft.Icons.EMAIL,
             keyboard_type=ft.KeyboardType.EMAIL,
             autofocus=True,
@@ -235,58 +245,44 @@ class LoginPage(TemplatePage):
         self.page.show_dialog(self.email_dialog)
 
     def validate_fp_email(self, e):
-        """Validates the email input in the forgot password dialog."""
         is_valid, error = validate_email(self.fp_email_field.value)
-        self.fp_email_field.error = None  # Clear previous error
+        self.fp_email_field.error = None
 
         if not is_valid:
             self.fp_email_field.suffix_icon.visible = False
             self.fp_email_field.helper = error["email"]
             self.page.update()
-
         else:
             self.fp_email_field.suffix_icon.visible = True
             self.fp_email_field.helper = None
             self.page.update()
 
     async def send_reset_code(self, e):
-        """ "Handles sending the password reset code to the user's email."""
         from services.otp_service import send_forgot_password_otp
 
-        email = (
-            self.fp_email_field.value.strip()
-        )  # Get the email from the forgot password email field and strip any leading/trailing whitespace
-
-        # Hide the send button and show a loading indicator while sending the OTP
+        email = self.fp_email_field.value.strip()
         self.fp_email_field.suffix_icon.visible = False
         self.fp_email_field.helper = "Sending OTP..."
         self.page.update()
 
-        response = await send_forgot_password_otp(
-            email
-        )  # Call the service function to send the forgot password OTP to the user's email
+        response = await send_forgot_password_otp(email)
 
         if response.get("success"):
-            # If the OTP was sent successfully, enable the OTP input field and show a success message
             self.fp_otp_field.disabled = False
             self.fp_email_field.disabled = True
             self.fp_email_field.suffix_icon.visible = False
-
             self.fp_email_field.helper = "An OTP has been sent to your email address."
             self.fp_email_field.helper_style = ft.TextStyle(color=ft.Colors.GREEN_500)
-
             self.page.update()
         else:
-            # If there was an error sending the OTP, show an error message and re-enable the send button
             self.fp_email_field.error = response.get(
                 "message", "Failed to send OTP. Please try again."
             )
             self.page.update()
 
     def enable_send_button(self, e):
-        """Enables the send reset link button when the OTP input field has a valid 6-digit code."""
         otp_value = self.fp_otp_field.value.strip()
-        self.fp_otp_field.error = None  # Clear previous error
+        self.fp_otp_field.error = None
 
         if len(otp_value) == 6 and otp_value.isdigit():
             self.email_dialog.actions[1].disabled = False
@@ -306,7 +302,6 @@ class LoginPage(TemplatePage):
         response = await verify_otp(email, otp)
 
         if response.get("success"):
-            # Opens the reset password dialog if the OTP is verified successfully
             self.new_password_field = TextField(
                 label="New Password",
                 value="",
@@ -322,7 +317,7 @@ class LoginPage(TemplatePage):
                 password=True,
                 can_reveal_password=True,
             )
-            self.page.pop_dialog()  # Close the email/OTP dialog before opening the reset password dialog
+            self.page.pop_dialog()
 
             reset_password_dialog = ft.AlertDialog(
                 title=ft.Text("Reset Password"),
@@ -346,9 +341,7 @@ class LoginPage(TemplatePage):
                 ],
             )
             self.page.show_dialog(reset_password_dialog)
-
         else:
-            # Show error message
             self.fp_otp_field.helper = None
             self.fp_otp_field.error = response.get(
                 "message", "Invalid OTP. Please try again."
@@ -356,14 +349,12 @@ class LoginPage(TemplatePage):
             self.page.update()
 
     async def reset_password(self, e):
-        """Handles the password reset process after OTP verification."""
         from services.auth_service import forgot_password
         from utils.input_validation import validate_password_change
 
         new_password = self.new_password_field.value
         confirm_new_password = self.confirm_new_password_field.value
 
-        # Validate the new password and confirm password fields
         is_valid, error = validate_password_change(
             current_password=None,
             new_password=new_password,
@@ -377,7 +368,6 @@ class LoginPage(TemplatePage):
             return
 
         email = self.fp_email_field.value.strip()
-
         self.confirm_new_password_field.helper = "Resetting password..."
         self.page.update()
 

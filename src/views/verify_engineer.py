@@ -51,7 +51,7 @@ class VerifyEngineerPage(TemplatePage):
                         horizontal_alignment=ft.CrossAxisAlignment.CENTER,
                         controls=[
                             ft.Icon(ft.Icons.UPLOAD_FILE, size=40, color=ft.Colors.GREY),
-                            ft.Text("Upload your verification document", color=ft.Colors.GREY, size=12),
+                            ft.Text("Upload your verification document", color=ft.Colors.INVERSE_SURFACE, size=12),
                         ],
                     ),
                 ),

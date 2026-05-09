@@ -11,6 +11,7 @@ import flet as ft
 from widgets.dialogs import AlertDialog
 from views.auth.login_page import LoginPage
 from views.main_page import MainPage
+from views.admin_page import AdminPage          # ← new
 
 from views.not_found import NotFoundPage
 from model.user import User
@@ -21,9 +22,8 @@ from services.ws_client import WSClient
 
 
 async def main(page: ft.Page):
-    # page.shared_preferences.clear()
     """Main function to initialize the Flet application."""
-    page.title = "Cracktify"  # Set the window title
+    page.title = "Cracktify"
 
     # Initialize WebSocket client for real-time notifications
     ws = WSClient()
@@ -31,12 +31,10 @@ async def main(page: ft.Page):
     def on_login_success(user_id: str, notification_handler):
         if not user_id:
             return
-        
         ws.start(user_id, lambda data: asyncio.create_task(
             notification_handler(data)
         ))
-    
-    # call this on logout
+
     def on_logout():
         ws.stop()
 
@@ -45,17 +43,17 @@ async def main(page: ft.Page):
         sys.exit(0)
 
     async def safe_get(key: str, retries: int = 3, delay: float = 0.5):
-        """Retries shared_preferences.get on timeout to handle Android platform channel not being ready."""
+        """Retries shared_preferences.get on timeout."""
         for attempt in range(retries):
             try:
                 return await page.shared_preferences.get(key)
             except RuntimeError:
                 if attempt < retries - 1:
                     await asyncio.sleep(delay)
-        return None  # give up after retries
+        return None
 
     async def safe_set(key: str, value: str, retries: int = 3, delay: float = 0.5):
-        """Retries shared_preferences.set on timeout to handle Android platform channel not being ready."""
+        """Retries shared_preferences.set on timeout."""
         for attempt in range(retries):
             try:
                 await page.shared_preferences.set(key, value)
@@ -63,10 +61,9 @@ async def main(page: ft.Page):
             except RuntimeError:
                 if attempt < retries - 1:
                     await asyncio.sleep(delay)
-        return False  # give up after retries
+        return False
 
-    # Verify API connection before proceeding
-    # Show a loading overlay while checking the connection
+    # ── Splash / connection check ─────────────────────────────────────
     page.overlay.append(
         ft.Container(
             visible=True,
@@ -82,7 +79,7 @@ async def main(page: ft.Page):
                         spacing=-30,
                         horizontal_alignment=ft.CrossAxisAlignment.CENTER,
                     ),
-                    ft.Column(height=10),  # Spacer
+                    ft.Column(height=10),
                     ft.ProgressRing(),
                 ],
                 horizontal_alignment=ft.CrossAxisAlignment.CENTER,
@@ -95,7 +92,7 @@ async def main(page: ft.Page):
     connection_ok = await verify_connection()
 
     if not connection_ok:
-        page.overlay.pop()  # Remove the loading overlay
+        page.overlay.pop()
         conn_error_dialog = AlertDialog(
             title="Connection Error",
             content="Unable to connect to the API server. Please check your internet connection and try again.",
@@ -105,11 +102,11 @@ async def main(page: ft.Page):
         page.show_dialog(conn_error_dialog)
         return
 
-    page.overlay.pop()  # Remove the loading overlay
+    page.overlay.pop()
 
+    # ── Route handler ─────────────────────────────────────────────────
     async def route_change():
-        # Clear existing views and push the new view based on the current route
-        # Show a loading overlay while changing routes
+        # Loading overlay while switching routes
         page.overlay.append(
             ft.Container(
                 visible=True,
@@ -119,7 +116,7 @@ async def main(page: ft.Page):
                 content=ft.Column(
                     controls=[
                         ft.ProgressRing(),
-                        ft.Column(height=10),  # Spacer
+                        ft.Column(height=10),
                         ft.Text(
                             "Loading...",
                             text_align=ft.TextAlign.CENTER,
@@ -133,9 +130,13 @@ async def main(page: ft.Page):
         )
         page.update()
 
-        raw_user = await safe_get("user")
+        # ── Determine session type ────────────────────────────────────
+        is_admin_flag = await safe_get("is_admin")       # "true" | "" | None
+        auth_token    = await safe_get("auth_token")
+        is_admin      = is_admin_flag == "true" and bool(auth_token)
 
-        user = {}
+        raw_user = await safe_get("user")
+        user: dict = {}
         if raw_user:
             try:
                 parsed = json.loads(raw_user)
@@ -144,63 +145,78 @@ async def main(page: ft.Page):
             except Exception:
                 user = {}
 
-        try:
-            u_resp = await get_current_user(str(user.get("id", 0)))
-            if u_resp.get("success"):
-                user = u_resp.get("user", {})
-                await safe_set("user", json.dumps(user))  # Update stored user data
-            
-            User.from_dict(user)  # Update the User model with the loaded data
-        except Exception as e:
-            print(f"Error updating User model: {e}")
+        # Only refresh the User model for non-admin sessions
+        if not is_admin:
+            try:
+                u_resp = await get_current_user(str(user.get("id", 0)))
+                if u_resp.get("success"):
+                    user = u_resp.get("user", {})
+                    await safe_set("user", json.dumps(user))
+                User.from_dict(user)
+            except Exception as e:
+                print(f"Error updating User model: {e}")
 
         page.views.clear()
-        page.overlay.pop()  # Remove the loading overlay
+        page.overlay.pop()
 
-        if page.route == "/home" or page.route == "/":
+        # ── /admin ───────────────────────────────────────────────────
+        if page.route == "/admin":
+            if not is_admin:
+                # Safety guard: redirect to login if session is not admin
+                await page.push_route("/login")
+                return
+            admin_page = AdminPage(page)
+            page.views.append(admin_page.build())
+
+        # ── /home or / ───────────────────────────────────────────────
+        elif page.route == "/home" or page.route == "/":
             main_page = MainPage(page)
             page.views.append(main_page.build())
 
-            # If user is logged in, start WebSocket connection for notifications
-       
             if user.get("id"):
-                on_login_success(user.get("id"), main_page.notification_page.handle_notification)
+                on_login_success(
+                    user.get("id"),
+                    main_page.notification_page.handle_notification,
+                )
 
             if user.get("is_engineer") and not user.get("verified"):
                 from views.verify_engineer import VerifyEngineerPage
                 page.views.append(VerifyEngineerPage(page).build())
 
+        # ── /login ───────────────────────────────────────────────────
         elif page.route == "/login":
             on_logout()
             login_page = LoginPage(page)
             page.views.append(login_page.build())
 
+        # ── 404 ──────────────────────────────────────────────────────
         else:
             page.views.append(NotFoundPage(page).build())
 
         page.update()
 
     async def view_pop(e):
-        # When a view is popped, check if there are any views left.
         if e.view is not None:
             page.views.remove(e.view)
             top_view = page.views[-1]
             await page.push_route(top_view.route)
 
-    # Attach the route change and view pop handlers
     page.on_route_change = route_change
     page.on_view_pop = view_pop
 
-    # Check for auth token in shared preferences to determine initial route
-    auth_token = await safe_get("auth_token")
-    current_user = await safe_get("user")
+    # ── Initial route decision ────────────────────────────────────────
+    auth_token    = await safe_get("auth_token")
+    is_admin_flag = await safe_get("is_admin")
+    current_user  = await safe_get("user")
 
-    if auth_token and current_user:
+    if auth_token and is_admin_flag == "true":
+        page.route = "/admin"
+    elif auth_token and current_user:
         page.route = "/home"
     else:
         page.route = "/login"
-   
-    await route_change()  # Manually trigger route change to load the initial view
+
+    await route_change()
 
 
 if __name__ == "__main__":
