@@ -1,14 +1,5 @@
 from typing import Dict, Any
-from config import Config
-
 from .api_client import get_request, post_request
-
-# Base API URL
-api_url = Config.API_BASE_URL
-
-
-async def get_avatar_url(user_id: int) -> Dict[str, str]:
-    return await get_request(f"/profile/avatar", {"user_id": user_id})
 
 
 async def update_profile(profile_data: Dict[str, Any]) -> Dict[str, Any]:
@@ -43,35 +34,4 @@ async def update_password(user_id: int, new_password: str) -> Dict[str, Any]:
 async def delete_account(user_id: int, password: str) -> Dict[str, Any]:
     return await post_request(
         f"/profile/delete_account", {"user_id": user_id, "password": password}
-    )
-
-async def verify_engineer(user_id: int, license_number: str, document_url: str) -> Dict[str, Any]:
-    return await post_request(
-        f"/profile/verify_engineer",
-        {
-            "user_id": user_id,
-            "license_number": license_number,
-            "document_url": document_url,
-        },
-    )
-
-async def get_all_engineer_usernames() -> Dict[str, Any]:
-    return await get_request(f"/profile/engineers")
-
-async def invite_engineer(user_id: int, engineer_id: int) -> Dict[str, Any]:
-    return await post_request(
-        f"/profile/invite_engineer",
-        {
-            "user_id": user_id,
-            "engineer_id": engineer_id,
-        },
-    )
-
-async def accept_invitation(inviter_id: str, engineer_id: int) -> Dict[str, Any]:
-    return await post_request(
-        f"/profile/accept_invitation",
-        {
-            "inviter_id": inviter_id,
-            "engineer_id": engineer_id,
-        },
     )
