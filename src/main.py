@@ -3,8 +3,6 @@ import json
 import os
 import sys
 
-from model import user
-
 # Ensure vendor packages are in sys.path
 sys.path.append(os.path.join(os.path.dirname(__file__), "vendor"))
 
@@ -18,9 +16,9 @@ from views.not_found import NotFoundPage
 from model.user import User
 
 from services.api_client import verify_connection
-
+from services.profile_service import get_current_user
 from services.ws_client import WSClient
-from views.notification_page import NotificationPage
+
 
 async def main(page: ft.Page):
     # page.shared_preferences.clear()
@@ -30,11 +28,12 @@ async def main(page: ft.Page):
     # Initialize WebSocket client for real-time notifications
     ws = WSClient()
 
-    notification_page = NotificationPage(page)
-
-    def on_login_success(user_id: str):
+    def on_login_success(user_id: str, notification_handler):
+        if not user_id:
+            return
+        
         ws.start(user_id, lambda data: asyncio.create_task(
-            notification_page.handle_notification(data)
+            notification_handler(data)
         ))
     
     # call this on logout
@@ -54,6 +53,17 @@ async def main(page: ft.Page):
                 if attempt < retries - 1:
                     await asyncio.sleep(delay)
         return None  # give up after retries
+
+    async def safe_set(key: str, value: str, retries: int = 3, delay: float = 0.5):
+        """Retries shared_preferences.set on timeout to handle Android platform channel not being ready."""
+        for attempt in range(retries):
+            try:
+                await page.shared_preferences.set(key, value)
+                return True
+            except RuntimeError:
+                if attempt < retries - 1:
+                    await asyncio.sleep(delay)
+        return False  # give up after retries
 
     # Verify API connection before proceeding
     # Show a loading overlay while checking the connection
@@ -81,7 +91,9 @@ async def main(page: ft.Page):
         )
     )
     page.update()
+
     connection_ok = await verify_connection()
+
     if not connection_ok:
         page.overlay.pop()  # Remove the loading overlay
         conn_error_dialog = AlertDialog(
@@ -122,8 +134,25 @@ async def main(page: ft.Page):
         page.update()
 
         raw_user = await safe_get("user")
-        user = json.loads(raw_user) if raw_user else {}
-        User.from_dict(user)  # Update the User model with the loaded data
+
+        user = {}
+        if raw_user:
+            try:
+                parsed = json.loads(raw_user)
+                if isinstance(parsed, dict):
+                    user = parsed
+            except Exception:
+                user = {}
+
+        try:
+            u_resp = await get_current_user(str(user.get("id", 0)))
+            if u_resp.get("success"):
+                user = u_resp.get("user", {})
+                await safe_set("user", json.dumps(user))  # Update stored user data
+            
+            User.from_dict(user)  # Update the User model with the loaded data
+        except Exception as e:
+            print(f"Error updating User model: {e}")
 
         page.views.clear()
         page.overlay.pop()  # Remove the loading overlay
@@ -133,8 +162,9 @@ async def main(page: ft.Page):
             page.views.append(main_page.build())
 
             # If user is logged in, start WebSocket connection for notifications
+       
             if user.get("id"):
-                on_login_success(str(user["id"]))
+                on_login_success(user.get("id"), main_page.notification_page.handle_notification)
 
             if user.get("is_engineer") and not user.get("verified"):
                 from views.verify_engineer import VerifyEngineerPage
@@ -163,15 +193,14 @@ async def main(page: ft.Page):
 
     # Check for auth token in shared preferences to determine initial route
     auth_token = await safe_get("auth_token")
+    current_user = await safe_get("user")
 
-    if auth_token:
+    if auth_token and current_user:
         page.route = "/home"
-    
     else:
         page.route = "/login"
-
+   
     await route_change()  # Manually trigger route change to load the initial view
-
 
 
 if __name__ == "__main__":

@@ -78,16 +78,48 @@ class MorePage(TemplatePage):
             weight=ft.FontWeight.BOLD,
         )
 
+        # Text control for username
+        self.username_text = ft.Text(
+            f"@{self.user.get('username', '')}" if self.user.get("username") else "",
+            size=13,
+            opacity=0.6,
+        )
+
         # Text control for email
-        self.email_text = ft.Text(self.user.get("email_address", "no email"), size=16)
+        self.email_text = ft.Text(self.user.get("email_address", "no email"), size=14)
+
+        # Assigned engineer indicator (only for non-engineers)
+        assigned_engineer = self.user.get("assigned_engineer")
+        self.engineer_chip = ft.Container(
+            visible=not self.user.get("is_engineer", False) and assigned_engineer is not None,
+            margin=ft.Margin(top=4, bottom=0, left=0, right=0),
+            content=ft.Row(
+                alignment=ft.MainAxisAlignment.CENTER,
+                spacing=6,
+                controls=[
+                    ft.Icon(ft.Icons.ENGINEERING_OUTLINED, size=14),
+                    ft.Text(
+                        f"Engineer assigned",
+                        size=12,
+                        weight=ft.FontWeight.W_500,
+                    ),
+                ],
+            ),
+        )
 
         self.user_info = ft.Container(
             on_click=self.on_infos_click,
             content=ft.Column(
                 alignment=ft.MainAxisAlignment.CENTER,
                 horizontal_alignment=ft.CrossAxisAlignment.CENTER,
-                spacing=5,
-                controls=[self.avatar_image, self.name_text, self.email_text],
+                spacing=4,
+                controls=[
+                    self.avatar_image,
+                    self.name_text,
+                    self.username_text,
+                    self.email_text,
+                    self.engineer_chip,
+                ],
             ),
         )
 
@@ -140,14 +172,30 @@ class MorePage(TemplatePage):
                 ft.Text("Account & Security", theme_style="titleSmall"),
                 ft.ListTile(
                     leading=ft.Icon(ft.Icons.PERSON_OUTLINE),
-                    title=ft.Text("Verify Engineer" if self.user.get("is_engineer") and not self.user.get("is_verified") else "Are you an engineer?"),
+                    title=ft.Text(
+                        "Verify Engineer"
+                        if self.user.get("is_engineer")
+                        and not self.user.get("is_verified")
+                        else "Are you an engineer?"
+                    ),
                     subtitle=ft.Text("Submit documentation to verify your status"),
                     on_click=self.verify_engineer_click,
+                    visible=not self.user.get(
+                        "verified", False
+                    ),  # If already verified, hide the option to verify engineer status
                 ),
                 ft.ListTile(
                     leading=ft.Icon(ft.Icons.ASSIGNMENT_IND),
-                    title=ft.Text("Invite an Engineer"),
-                    subtitle=ft.Text("Invite an engineer to verify your detection results"),
+                    title=ft.Text(
+                        "Change your engineer"
+                        if self.user.get("assigned_engineer") is not None
+                        else "Invite an Engineer"
+                    ),
+                    subtitle=ft.Text(
+                        "Replace your currently assigned engineer"
+                        if self.user.get("assigned_engineer") is not None
+                        else "Invite an engineer to verify your detection results"
+                    ),
                     on_click=self.invite_engineer_click,
                 ),
                 ft.ListTile(
@@ -354,9 +402,18 @@ class MorePage(TemplatePage):
         self.name_text.value = (
             f"{self.user.get('first_name', '')} {self.user.get('last_name', '')}"
         )
+        self.username_text.value = (
+            f"@{self.user.get('username', '')}" if self.user.get("username") else ""
+        )
         self.email_text.value = self.user.get("email_address", "no email")
         self.avatar_image.content.controls[0].content.src = self.user.get(
             "avatar_url", ""
+        )
+
+        # Update engineer chip visibility
+        assigned_engineer = self.user.get("assigned_engineer")
+        self.engineer_chip.visible = (
+            not self.user.get("is_engineer", False) and assigned_engineer is not None
         )
 
         self.page.update()
@@ -376,21 +433,27 @@ class MorePage(TemplatePage):
                 AlertDialog(
                     title="Already Verified",
                     content="Your engineer status has already been verified. Thank you!",
-                    actions=[ft.TextButton("OK", on_click=lambda e: (
-                        setattr(self.page.dialog, "open", False), self.page.update()
-                    ))],
+                    actions=[
+                        ft.TextButton(
+                            "OK",
+                            on_click=lambda e: (
+                                setattr(self.page.dialog, "open", False),
+                                self.page.update(),
+                            ),
+                        )
+                    ],
                 )
             )
             return
-        
+
         from .verify_engineer import VerifyEngineerPage
 
         verify_page = VerifyEngineerPage(self.page)
         self.page.views.append(verify_page.build())
 
     def invite_engineer_click(self, e):
-        from services.profile_service import invite_engineer
-        from services.profile_service import get_all_engineer_usernames
+        from services.engineer_service import invite_engineer
+        from services.engineer_service import get_all_engineer_usernames
 
         selected_username = {"value": ""}
         all_usernames = {"list": []}
@@ -400,13 +463,15 @@ class MorePage(TemplatePage):
             query = e.data.lower()
             filtered = [u for u in all_usernames["list"] if query in u.lower()]
             results_list.controls.clear()
-            results_list.controls.extend([
-                ft.ListTile(
-                    title=ft.Text(username),
-                    on_click=lambda e, u=username: select_engineer(u),
-                )
-                for username in filtered
-            ])
+            results_list.controls.extend(
+                [
+                    ft.ListTile(
+                        title=ft.Text(username),
+                        on_click=lambda e, u=username: select_engineer(u),
+                    )
+                    for username in filtered
+                ]
+            )
             results_list.update()
 
         search_field = ft.TextField(
@@ -422,8 +487,8 @@ class MorePage(TemplatePage):
 
         def select_engineer(username):
             selected_username["value"] = username
-            search_field.value = username          # show selection in the text field
-            results_list.controls.clear()          # hide dropdown after selection
+            search_field.value = username  # show selection in the text field
+            results_list.controls.clear()  # hide dropdown after selection
             search_field.update()
             results_list.update()
 
@@ -431,22 +496,40 @@ class MorePage(TemplatePage):
             result = await get_all_engineer_usernames()
             all_usernames["list"] = result.get("engineers", [])
             # Show all on open
-            results_list.controls.extend([
-                ft.ListTile(
-                    title=ft.Text(username),
-                    on_click=lambda e, u=username: select_engineer(u),
-                )
-                for username in all_usernames["list"]
-            ])
+            results_list.controls.extend(
+                [
+                    ft.ListTile(
+                        title=ft.Text(username),
+                        on_click=lambda e, u=username: select_engineer(u),
+                    )
+                    for username in all_usernames["list"]
+                ]
+            )
             results_list.update()
 
-        
         async def confirm_invite(id, username):
             if not username:
                 search_field.error = "Please select an engineer to invite."
                 search_field.update()
                 return
             resp = await invite_engineer(id, username)
+            if resp.get("success"):
+                self.page.pop_dialog()
+                self.page.show_dialog(
+                    AlertDialog(
+                        title="Invitation Sent",
+                        content=f"An invitation has been sent to {username}. Please wait for them to accept.",
+                        actions=[
+                            ft.TextButton(
+                                "OK",
+                                on_click=lambda e: (
+                                    setattr(self.page.dialog, "open", False),
+                                    self.page.update(),
+                                ),
+                            )
+                        ],
+                    )
+                )
             self.page.pop_dialog()
 
         async def invite_click(e):
@@ -467,7 +550,7 @@ class MorePage(TemplatePage):
                     search_field,
                     ft.Divider(height=1),
                     results_list,
-                ]
+                ],
             ),
             actions=[
                 ft.TextButton("Cancel", on_click=lambda e: self.page.pop_dialog()),
@@ -475,20 +558,17 @@ class MorePage(TemplatePage):
                     "Invite",
                     on_click=invite_click,  # async def, not a lambda
                 ),
-            ]
+            ],
         )
 
         self.page.show_dialog(invite_dialog)
         self.page.run_task(load_engineers)  # fetch after dialog is shown
-
-
 
     # def assign_engineer_click(self, e):
     #     from services.profile_service import assign_engineer
     #     from services.profile_service import search_engineers
 
     #     username_field = TextField(label="Engineer Username", value="", autofocus=True)
-
 
     #     assign_dialog = AlertDialog(
     #         title=ft.Text("Assign an Engineer"),

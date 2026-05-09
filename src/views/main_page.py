@@ -6,13 +6,12 @@ import os
 import flet as ft
 import flet_video as ftv
 
-from views.verify_engineer import VerifyEngineerPage
-
 from .template import TemplatePage
 from .more_page import MorePage
 
 from views.sections.home import HomeSection
 from views.sections.gallery import ImageGallery
+from views.sections.report import ReportSection
 from views.sections.history import HistorySection
 from views.notification_page import NotificationPage
 
@@ -31,39 +30,31 @@ class MainPage(TemplatePage, User):
     def __init__(self, page: ft.Page):
         super().__init__(page)
 
-        # Initialize state
         self.state = State()
-        self.user: dict = User.to_dict()  # Initialize user data as an empty dictionary
-        self.ver_counter = 0  # Counter to track how many times the verification page has been shown in the session
+        self.user: dict = User.to_dict()
+        self.ver_counter = 0
 
-        # Initialize page sections instances for navigation
         self.home_page = HomeSection(page)
         self.gallery_page = ImageGallery(page)
         self.history_page = HistorySection(page)
+        if self.user.get("is_engineer"):
+            self.report_page = ReportSection(page)
+
         self.notification_page = NotificationPage(
-            page, on_back=self.refresh_current_section
+            page,
+            on_back=self.refresh_current_section,
+            on_unread_count=self._update_badge,
         )
 
-        self.page.run_task(
-            self.home_page.rotate_header_loop
-        )  # Start header rotation loop for home page
+        self.page.run_task(self.home_page.rotate_header_loop)
 
-        self.active_section = (
-            self.home_page
-        )  # Start with home page as the active section
-
-        self.file_picker = (
-            ft.FilePicker()
-        )  # File picker instance for handling file selection
-
-        self.prev_index = (
-            0  # To track previous navigation index for any specific logic if needed
-        )
+        self.active_section = self.home_page
+        self.file_picker = ft.FilePicker()
+        self.prev_index = 0
 
     def build(self) -> ft.View:
         """Builds the main page view with app bar, navigation, and body content."""
         try:
-            # App bar with title and actions
             self.search_icon = ft.IconButton(
                 icon=ft.Icons.SEARCH,
                 tooltip="Search",
@@ -73,13 +64,20 @@ class MainPage(TemplatePage, User):
             self.notification_icon = ft.IconButton(
                 icon=ft.Icons.NOTIFICATIONS,
                 tooltip="Notifications",
-                on_click=lambda _: self.open_notifications_page(),
+                on_click=self.open_notifications_page,
+                badge=ft.Badge(
+                    label="",
+                    offset=ft.Offset(-5, 5),
+                    bgcolor=ft.Colors.TRANSPARENT,
+                    small_size=8,
+                    text_color=ft.Colors.TRANSPARENT,
+                ),
             )
 
             self.appbar_upload_button = ft.IconButton(
                 icon=ft.Icons.ADD,
                 tooltip="Select File",
-                visible=False,  # Initially hidden, only show on Gallery page
+                visible=False,
                 on_click=self.handle_files_pick,
             )
             self.toggle_theme_button = ft.IconButton(
@@ -105,7 +103,6 @@ class MainPage(TemplatePage, User):
                 ],
             )
 
-            # Upload progress bar container
             self.upload_progress = ft.Container(
                 content=ft.ProgressBar(value=0),
                 visible=False,
@@ -120,7 +117,6 @@ class MainPage(TemplatePage, User):
                 content=self.active_section.build()[0],
             )
 
-            # Floating button to trigger picker
             self.pick_file_button = ft.FloatingActionButton(
                 content=ft.Text("New Detection"),
                 mini=True,
@@ -133,23 +129,15 @@ class MainPage(TemplatePage, User):
                 selected_index=self.prev_index,
                 on_change=self.on_nav_change_engineer if self.user.get("is_engineer") else self.on_nav_change,
                 destinations=[
+                    ft.NavigationBarDestination(icon=ft.Icons.HOME_ROUNDED, label="Home"),
+                    ft.NavigationBarDestination(icon=ft.Icons.PHOTO_LIBRARY_ROUNDED, label="Gallery"),
+                    ft.NavigationBarDestination(icon=ft.Icons.HISTORY_ROUNDED, label="History"),
                     ft.NavigationBarDestination(
-                        icon=ft.Icons.HOME_ROUNDED, label="Home"
+                        icon=ft.Icons.FOLDER_SHARED,
+                        label="Report",
+                        visible=True if self.user.get("is_engineer") else False,
                     ),
-                    ft.NavigationBarDestination(
-                        icon=ft.Icons.PHOTO_LIBRARY_ROUNDED, label="Gallery"
-                    ),
-                    ft.NavigationBarDestination(
-                        icon=ft.Icons.HISTORY_ROUNDED, label="History",
-                    ),
-                    ft.NavigationBarDestination(
-                        icon=ft.Icons.FOLDER_SHARED, label="Report",
-                        visible=True if self.user.get("is_engineer") else False # Only show Report tab for verified engineers
-                    ),
-                    ft.NavigationBarDestination(
-                        icon=ft.Icons.MORE_HORIZ,
-                        label="More",
-                    ),
+                    ft.NavigationBarDestination(icon=ft.Icons.MORE_HORIZ, label="More"),
                 ],
             )
 
@@ -166,43 +154,35 @@ class MainPage(TemplatePage, User):
                 ),
             )
         finally:
-            # Trigger initial view manually
             self.page.run_task(self.home_page.lazy_load)
-            from .verify_engineer import VerifyEngineerPage
-
-            verify_page = VerifyEngineerPage(self.page)
-            self.page.views.append(verify_page.build())
+            # Load notifications in background on startup.
+            # _is_mounted is False here, so only the badge will update — no list render yet.
+            self.page.run_task(self.notification_page.load_notifications, self.user.get("id"))
 
     def open_search_page(self):
-        """Navigate to the search page."""
         from views.search_page import SearchPage
-
-        search_page = SearchPage(
-            self.page, self.user, on_back=self.refresh_current_section
-        )
+        search_page = SearchPage(self.page, self.user, on_back=self.refresh_current_section)
         self.page.views.append(search_page.build())
 
-    async def open_notifications_page(self):
+    async def open_notifications_page(self, e=None):
         """Navigate to the notifications page."""
-        
+        # IMPORTANT: build() first so _is_mounted = True, THEN load so the list
+        # renders with fresh data. The previous order (load → build) caused the
+        # list to always appear empty because _is_mounted was still False during load.
         self.page.views.append(self.notification_page.build())
-        await self.notification_page.load_notifications()  # Load notifications after navigating to the page
-
+        self.page.update()
+        await self.notification_page.load_notifications(self.user.get("id"))
 
     def on_upload_progress(self, e: ft.FilePickerUploadEvent):
-        """Handle file upload progress events and update the progress bar accordingly."""
         self.upload_progress.visible = True
         self.upload_progress.content.value = e.progress
         self.upload_progress.update()
-
         if e.progress == 1:
             self.upload_progress.visible = False
             self.preview_content.update()
 
     async def handle_files_pick(self, e: ft.Event[ft.Button]):
-        """Handle file picking and navigate to preview page with the selected file."""
         self.state.file_picker = ft.FilePicker()
-
         files = await self.state.file_picker.pick_files(
             allow_multiple=False,
             file_type=ft.FilePickerFileType.MEDIA,
@@ -211,68 +191,82 @@ class MainPage(TemplatePage, User):
         if not files:
             return
 
-        file = files[0] 
+        file = files[0]
         self.state.picked_file = [file]
 
-        # Create preview page with file and push it
         from .upload_preview import PreviewPage
-
         preview_page = PreviewPage(
             self.page,
             file,
             self.state,
             self.user,
-            on_close=self.refresh_current_section,  # Pass the refresh function to the preview page to call after upload completes
+            on_close=self.refresh_current_section,
         )
         self.page.views.append(preview_page.build())
 
-    def refresh_current_section(self):
-        """Refresh the current active section (home/gallery/history) after actions like upload or delete."""
-        self.active_section.refresh()  # Call the refresh method of the active section
+    def _update_badge(self, unread_count: int):
+        """
+        Update the notification badge.
+        Shows a red badge with count when unread_count > 0.
+        Hides it completely when unread_count == 0.
+        """
+        badge = self.notification_icon.badge
+        if unread_count > 0:
+            badge.label = str(unread_count)
+            badge.bgcolor = ft.Colors.RED
+            badge.text_color = ft.Colors.WHITE
+            badge.small_size = None     # Use label-sized badge
+        else:
+            badge.label = ""
+            badge.bgcolor = ft.Colors.TRANSPARENT
+            badge.text_color = ft.Colors.TRANSPARENT
+            badge.small_size = 8        # Collapse back to invisible dot
 
+        try:
+            self.notification_icon.update()
+        except Exception:
+            pass  # Widget not yet mounted on first background load — harmless
+
+    def refresh_current_section(self):
+        self.active_section.refresh()
         self.body.update()
-    
-    
+
     def on_nav_change_engineer(self, e):
-        """Handle navigation bar changes for engineers and update the active section accordingly, including showing the verification page if the user is not verified and tries to access the Report tab."""
         index = e.control.selected_index
 
         if index == 0:
             self.active_section = self.home_page
             self.app_bar.title = ft.Text("Cracktify")
             self.pick_file_button.visible = True
-            self.appbar_upload_button.visible = (
-                False  # Hide upload button in app bar for home page
-            )
+            self.appbar_upload_button.visible = False
             self.app_bar.automatically_imply_leading = False
 
         elif index == 1:
             self.active_section = self.gallery_page
             self.app_bar.title = ft.Text("Gallery")
             self.pick_file_button.visible = False
-            self.appbar_upload_button.visible = (
-                True  # Show upload button in app bar for gallery page
-            )
+            self.appbar_upload_button.visible = True
             self.app_bar.automatically_imply_leading = False
 
         elif index == 2:
             self.active_section = self.history_page
             self.app_bar.title = ft.Text("History")
             self.pick_file_button.visible = False
-            self.appbar_upload_button.visible = (
-                True  # Show upload button in app bar for history page
-            )
+            self.appbar_upload_button.visible = True
             self.app_bar.automatically_imply_leading = False
 
         elif index == 3:
-            ... # Report tab - only accessible to verified engineers
+            self.active_section = self.report_page
+            self.app_bar.title = ft.Text("Reports")
+            self.pick_file_button.visible = False
+            self.appbar_upload_button.visible = True
 
         elif index == 4:
             more_page = MorePage(self.page)
             self.page.views.append(more_page.build())
             return
 
-        self.prev_index = index  # Update previous index
+        self.prev_index = index
         self.app_bar.update()
         self.body.content = self.active_section.build()[0]
 
@@ -281,36 +275,28 @@ class MainPage(TemplatePage, User):
 
         self.body.update()
 
-
     def on_nav_change(self, e):
-        """Handle navigation bar changes and update the active section accordingly."""
         index = e.control.selected_index
 
         if index == 0:
             self.active_section = self.home_page
             self.app_bar.title = ft.Text("Cracktify")
             self.pick_file_button.visible = True
-            self.appbar_upload_button.visible = (
-                False  # Hide upload button in app bar for home page
-            )
+            self.appbar_upload_button.visible = False
             self.app_bar.automatically_imply_leading = False
 
         elif index == 1:
             self.active_section = self.gallery_page
             self.app_bar.title = ft.Text("Gallery")
             self.pick_file_button.visible = False
-            self.appbar_upload_button.visible = (
-                True  # Show upload button in app bar for gallery page
-            )
+            self.appbar_upload_button.visible = True
             self.app_bar.automatically_imply_leading = False
 
         elif index == 2:
             self.active_section = self.history_page
             self.app_bar.title = ft.Text("History")
             self.pick_file_button.visible = False
-            self.appbar_upload_button.visible = (
-                True  # Show upload button in app bar for history page
-            )
+            self.appbar_upload_button.visible = True
             self.app_bar.automatically_imply_leading = False
 
         elif index == 3:
@@ -318,7 +304,7 @@ class MainPage(TemplatePage, User):
             self.page.views.append(more_page.build())
             return
 
-        self.prev_index = index  # Update previous index
+        self.prev_index = index
         self.app_bar.update()
         self.body.content = self.active_section.build()[0]
 

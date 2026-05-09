@@ -4,15 +4,22 @@ from config import Config
 from .api_client import get_request, post_request
 
 
-async def get_notifications(user_id: int) -> Dict[str, Any]:
+async def get_notifications(user_id: str) -> Dict[str, Any]:
     """Fetches notifications for the given user ID."""
     try:
-        return await get_request(f"/notifications", {"user_id": user_id})
+        return await get_request(f"/notifications/user/{user_id}")
 
     except Exception as e:
         return {"success": False, "message": str(e)}
 
+async def get_notification_by_id(notification_id: int) -> Dict[str, Any]:
+    """Fetches a single notification by its ID."""
+    try:
+        return await get_request(f"/notifications/{notification_id}")
 
+    except Exception as e:
+        return {"success": False, "message": str(e)}
+    
 async def mark_notification_as_read(notification_id: int, is_read: bool = True) -> dict:
     return await post_request(
         "/notifications/mark-read",
